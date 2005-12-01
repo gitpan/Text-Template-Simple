@@ -1,11 +1,20 @@
-# http://module-build.sourceforge.net/META-spec.html
-#XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
-name:         Text-Template-Simple
-version:      0.1
-version_from: lib/Text/Template/Simple.pm
-installdirs:  site
+---
+name: Text-Template-Simple
+version: 0.2
+author:
+  - Burak Gursoy <burak@cpan.org>
+abstract: A simple template class mainly for web applications.
+license: perl
 requires:
-    Text::Template:                1.44
-
-distribution_type: module
-generated_by: ExtUtils::MakeMaker version 6.21
+  Text::Template: 1.44
+provides:
+  Text::Template::Simple:
+    file: lib/Text/Template/Simple.pm
+    version: 0.2
+  Text::Template::Simple::Dummy:
+    file: lib/Text/Template/Simple.pm
+    version: 0.2
+  Text::Template::Simple::Sub:
+    file: lib/Text/Template/Simple.pm
+    version: 0.2
+generated_by: Module::Build version 0.2611

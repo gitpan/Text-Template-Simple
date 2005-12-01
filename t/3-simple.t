@@ -9,8 +9,9 @@ use Text::Template::Simple;
 ok(simple());
 
 sub simple {
+   use Text::Template::Simple;
+
    my $template = Text::Template::Simple->new(
-      delimiters => ['{', '}'],
       globals => {
          foo  => 'bar'  , # define $foo
          bar  => ['baz'], # define @bar
@@ -18,12 +19,10 @@ sub simple {
             key => 'value',
          },
       },
-      dummy => "MY::Dummy::Class::To::Fill::In::Templates",
-      # reset_dummy => 1, # reset dummy class' symbol table explicitly
-    );
+   );
 
    my $result = $template->compile(
-                  'Hello {$foo}. Key is: {$blah{key}} and Your name is {$name}.',
+                  'Hello <%$foo%>. Key is: <%$blah{key}%> and Your name is <%$name%>.',
                   {
                      name => 'Burak',
                   });

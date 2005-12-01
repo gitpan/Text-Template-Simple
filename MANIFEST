@@ -1,8 +1,11 @@
 lib/Text/Template/Simple.pm
-t/simple.t
-Changes
+t/1-pod.t
+t/2-pod-coverage.t
+t/3-simple.t
+t/skip.test
 Makefile.PL
+Build.PL
+Changes
 MANIFEST
 README
-SIGNATURE
 META.yml
