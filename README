@@ -23,15 +23,25 @@ or under Windows:
 
 DEPENDENCIES
 
-This module requires this other module:
+This module requires these other modules:
 
-	Text::Template 1.44
+      Data::Dumper 2.101
+      File::Spec   0.6
+      File::Find   0
+      IO::Handle   1.1505
+      IO::File     1.06021
+      Fcntl        1.03
+      Safe         2.06
 
-Which is available on CPAN.
+and this module is recommended:
+
+      Devel::Size'  => 0,
+
+All are available on CPAN.
 
 COPYRIGHT AND LICENCE
 
-Copyright (C) 2004-2005 Burak Gürsoy <burak@cpan.org>. All rights reserved.
+Copyright (C) 2004-2006 Burak Gürsoy <burak@cpan.org>. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself. 

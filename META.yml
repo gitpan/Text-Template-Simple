@@ -1,20 +1,31 @@
 ---
 name: Text-Template-Simple
-version: 0.2
+version: 0.3
 author:
   - Burak Gursoy <burak@cpan.org>
-abstract: A simple template class mainly for web applications.
+abstract: Simple text template engine.
 license: perl
 requires:
-  Text::Template: 1.44
+  Data::Dumper: 2.101
+  Fcntl: 1.03
+  File::Find: 0
+  File::Spec: 0.6
+  IO::File: 1.06021
+  IO::Handle: 1.1505
+  Safe: 2.06
+recommends:
+  Devel::Size: 0.64
 provides:
   Text::Template::Simple:
     file: lib/Text/Template/Simple.pm
-    version: 0.2
+    version: 0.3
+  Text::Template::Simple::Compiler:
+    file: lib/Text/Template/Simple.pm
+    version: 0.3
+  Text::Template::Simple::Compiler::Safe:
+    file: lib/Text/Template/Simple.pm
+    version: 0.3
   Text::Template::Simple::Dummy:
     file: lib/Text/Template/Simple.pm
-    version: 0.2
-  Text::Template::Simple::Sub:
-    file: lib/Text/Template/Simple.pm
-    version: 0.2
+    version: 0.3
 generated_by: Module::Build version 0.2611

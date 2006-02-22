@@ -2,30 +2,41 @@
 # Simple test. Just try to use the module.
 use strict;
 use Test;
-BEGIN { plan tests => 1 }
+BEGIN { plan tests => 2 }
 
 use Text::Template::Simple; 
 
 ok(simple());
+ok(simple2());
 
 sub simple {
-   use Text::Template::Simple;
-
    my $template = Text::Template::Simple->new(
-      globals => {
-         foo  => 'bar'  , # define $foo
-         bar  => ['baz'], # define @bar
-         blah => {        # define %blah
-            key => 'value',
-         },
-      },
+      header   => q~my $foo = shift; my $bar = shift;~,
+      add_args => ['bar',['baz']],
    );
 
    my $result = $template->compile(
-                  'Hello <%$foo%>. Key is: <%$blah{key}%> and Your name is <%$name%>.',
-                  {
+                  '<%my $name = shift%>Hello <%=$name%>. Foo is: <%=$foo%> and bar is <%=$bar->[0]%>.',
+                  [
+                     'Burak',
+                  ]);
+   #warn "[COMPILED] $result\n";
+   return $result;
+}
+
+sub simple2 {
+   my $template = Text::Template::Simple->new;
+   my $result   = $template->compile(
+                  'Hello <%name%>. Foo is: <%foo%> and bar is <%bar%>.',
+                  [
                      name => 'Burak',
+                     foo  => 'bar',
+                     bar  => 'baz',
+                  ],
+                  {
+                     map_keys => 1
                   });
+   #warn "[COMPILED] $result\n";
    return $result;
 }
 
