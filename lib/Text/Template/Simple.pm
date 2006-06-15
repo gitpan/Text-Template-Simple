@@ -56,18 +56,17 @@ use constant DELIM_START => 0;
 use constant DELIM_END   => 1;
 use Carp qw(croak);
 
-$VERSION = '0.3';
+$VERSION = '0.40';
 
 my %ATTR = ( # class attribute / configuration table
    FAKER        => '$OUT',                         # fake output buffer variable.
    FAKER_HASH   => '$___THIS_IS_A_LANG_HASH',      # fake language hash for map_keys templates
    DEBUG        => 0,                              # debugging is disabled by default
    CACHE_EXT    => '.tmpl.cache',                  # disk cache extension
-   DELIMS       => [qw(<% %>)],                    # default delimiter pair
+   DELIMS       => [qw| <% %> |],                  # default delimiter pair
    MAX_FL       => 55,                             # Maximum template file name length
    CAN_FLOCK    =>  1,                             # can we use flock() ?
    DIGEST       => undef,                          # Digest class name. Will not be set, unless you use cache feature
-   ID           => undef,                          # holds the current template id if cache is enabled
    N_COMPILER   => __PACKAGE__.'::Compiler',       # The compiler
    N_COMPILER_S => __PACKAGE__.'::Compiler::Safe', # Safe compiler
    N_DUMMY      => __PACKAGE__.'::Dummy',          # Dummy class
@@ -88,18 +87,28 @@ my %ATTR = ( # class attribute / configuration table
 
 my $CACHE = {}; # in-memory template cache
 
-if($^O eq 'MSWin32') {
-   require Win32;
-   $ATTR{CAN_FLOCK} = 0 if Win32::IsWin95(); # we're running under dumb OS
+# making this conditional gains us some milisecs
+my $__CHECK_FLOCK = 0;
+sub __CHECK_FLOCK () {
+   if($^O eq 'MSWin32') {
+      require Win32;
+      # we're running under dumb OS
+      $ATTR{CAN_FLOCK} = 0 if Win32::IsWin95();
+   }
+   $__CHECK_FLOCK = 1;
+   return;
 }
 
 # -------------------[ CLASS  METHODS ]------------------- #
 
 sub DEBUG {
    my $thing = shift;
-      $thing = shift  if defined $thing and ref $thing || $thing eq __PACKAGE__; # so that one can use: $self->DEBUG or DEBUG
-      $ATTR{DEBUG} = $thing if defined $thing;
-      $ATTR{DEBUG};
+   if(defined $thing and ref $thing || $thing eq __PACKAGE__) {
+      # so that one can use: $self->DEBUG or DEBUG
+      $thing = shift;
+   }
+   $ATTR{DEBUG} = $thing if defined $thing;
+   $ATTR{DEBUG};
 }
 
 sub DIGEST {
@@ -134,9 +143,13 @@ sub DIGEST {
 # -------------------[ OBJECT METHODS ]------------------- #
 
 sub new {
+   if(DEBUG) {
+      my $p    = __PACKAGE__;
+      my $date = scalar localtime time;
+      warn "[CONSTRUCT ] $p v$VERSION @ $date\n";
+   }
    my $class = shift;
    my %param = scalar(@_) % 2 ? () : (@_);
-
    my $self  = {
       delimiters => [@{ $ATTR{DELIMS} }], # default delimiters
       as_string  =>  0, # if true, resulting template will not be eval()ed
@@ -148,9 +161,10 @@ sub new {
       safe       =>  0, # use safe compartment?
       header     =>  0, # template header. i.e. global codes.
       add_args   => '', # will unshift template argument list. ARRAYref.
+      %param,           # user can alter above options
       _type      => '', # template type. will be set in _examine()
       COUNTER    =>  0,
-      %param,                  # user can alter options
+      CID        => '', # holds the current template id if cache is enabled
    };
    bless $self, $class;
 
@@ -172,7 +186,7 @@ sub new {
 }
 
 sub reset_cache {
-   my $self = shift;
+   my $self  = shift;
    %{$CACHE} = ();
    if ($self->{cache} && $self->{cache_dir}) {
       local  *CACHE_DIR;
@@ -330,14 +344,14 @@ sub compile {
       $self->_set_faker($old_faker) if $self->{faker};
    }
 
-   $ATTR{ID} = $cache_id; # if $cache_id;
+   $self->{CID} = $cache_id; # if $cache_id;
    my   @args;
    push @args, @{ $self->{add_args} } if $self->{add_args};
    push @args, @{ $param };
    return $CODE->(@args);
 }
 
-sub get_id { $ATTR{ID} }
+sub get_id { shift->{CID} }
 
 # -------------------[ PRIVATE METHODS ]------------------- #
 
@@ -358,9 +372,10 @@ sub _examine {
    my $rv;
    if (my $ref = ref($tmp)) {
       if ($ref eq 'GLOB') {
-         no strict 'refs';
-         unless (defined *{$tmp}{IO}) { # We need 5.004 at least for that
-            croak "This GLOB is not a filehandle!";
+         #no strict 'refs';
+         #unless (defined *{$tmp}{IO}) { # We need 5.004 at least for that
+         unless (fileno $tmp) {
+            croak "This GLOB is not a filehandle";
          }
          warn "[IS HANDLE ]\n" if DEBUG;
          # hmmm...
@@ -399,6 +414,7 @@ sub _examine {
 
 sub _slurp {
    my $self = shift->_hasta_la_vista_baby;
+   __CHECK_FLOCK unless $__CHECK_FLOCK;
    my $file = shift;
    require IO::File;
    require Fcntl;
@@ -460,11 +476,12 @@ sub _populate_cache {
    my $CODE;
    if($self->{cache}) {
       if($self->{cache_dir}) {
+         __CHECK_FLOCK unless $__CHECK_FLOCK;
          require File::Spec;
          require Fcntl;
          require IO::File;
          my $cache = File::Spec->catfile($self->{cache_dir}, $cache_id . $ATTR{CACHE_EXT});
-         my $fh = IO::File->new;
+         my $fh    = IO::File->new;
          $fh->open($cache, '>') or croak "Error writing disk-cache $cache : $!";
          flock $fh, Fcntl::LOCK_EX() if $ATTR{CAN_FLOCK};
          print $fh $chkmt ? "#$chkmt#\n" : "##\n", $self->_cache_comment, $parsed; 
@@ -564,14 +581,29 @@ sub _parse {
             ++$is_open;
          }
       }
-      # check if this is a <%=$foo%>
-      if ($token =~ m{\A (?:\s+|)=(.+?)(?:;+|) \z}xmso) {
-         # A statement can not have a comment at the end.
-         # This is do-able with a "\n", but it'll also break
-         # line numbers in templates
-         $fragment .= sprintf "%s .= sub {%s}->();", $ATTR{FAKER}, $1;
-         warn "[CASE '='  ] state: $is_code; open $is_open; match $1\n" if DEBUG;
-         next PARSER;
+      unless ($map_keys) { # useless if map_keys is in effect
+         # check if this is a <%=$foo%>
+         if ($token =~ m{\A (?:\s+|)([=+\*])(.+?)(?:;+|) \z}xmso) {
+            my $cmd  = $1;
+            my $what = $2;
+            if(DEBUG) {
+               warn "[CASE '='  ] state: $is_code; open $is_open; type $1; match $2\n";
+            }
+            # A statement can not have a comment at the end.
+            # This is do-able with a "\n", but it'll also break
+            # line numbers in templates
+            if ($cmd eq '=') { # perl code
+               $fragment .= sprintf "%s .= sub {%s}->();", $ATTR{FAKER}, $what;
+            }
+            elsif ($cmd eq '+') { # static include
+               $fragment .= sprintf "%s .= sub {%s}->();", $ATTR{FAKER}, $self->_inc(static => $what);
+            }
+            elsif ($cmd eq '*') { # normal include
+               $fragment .= sprintf "%s .= sub {%s}->();", $ATTR{FAKER}, $self->_inc(normal => $what);
+            }
+            else {}
+            next PARSER;
+         }
       }
       $token     =~ s{\~}{\\\~}sog unless $is_code; # tilde is a private character (see $qq above)
       $fragment .= $token;
@@ -590,6 +622,36 @@ sub _parse {
    $fragment    = $code_start.$fragment.";return $ATTR{FAKER};}";
    warn "\n\n#FRAGMENT\n$fragment\n#/FRAGMENT\n" if DEBUG > 1;
    return $fragment;
+}
+
+sub _inc {
+   my $self = shift->_hasta_la_vista_baby;
+   my $type = shift;
+   my $is_static = $type eq 'static';
+   my $is_normal = $type eq 'normal';
+   croak "Unknown include type: $type" unless $is_static || $is_normal;
+   my $file = shift;
+   my $err  = '['.($is_static ? ' static' : '').' include error ]';
+   $file =~ s{\A \s+}{}xms;
+   $file =~ s{ \s+ \z}{}xms;
+   -e $file  or return "q~$err '$file' does not exist~";
+   -d $file and return "q~$err '$file' is a directory~";
+   my $text;
+   warn "[INCLUDE   ] $type => '$file'\n" if DEBUG;
+   eval { $text = $self->_slurp($file) };
+   return "q~$err $@~" if $@;
+   if($is_normal) {
+      # creates endless recursive loop if template includes itself
+      # cloning $self can help to overcome this issue
+      return "q~$err dynamic include is disabled. file: '$file'~";
+      $text = $self->_parse($text);
+      return $text;
+   }
+   if($is_static) {
+      $text =~ s{\~}{\\~}xmsog;
+      return 'q~'.$text.'~;';
+   }
+   return "$err This can not happen!";
 }
 
 sub _tokenize {
@@ -625,9 +687,9 @@ sub _hasta_la_vista_baby {
 }
 
 sub AUTOLOAD {
-   my $self = shift;
+   my $self  = shift;
    my $class = ref($self) || __PACKAGE__;
-  (my $name = $AUTOLOAD) =~ s{.*:}{};
+  (my $name  = $AUTOLOAD) =~ s{.*:}{};
    croak qq~Unknown method name $name called via $class object~;
 }
 
@@ -639,7 +701,7 @@ __END__
 
 =head1 NAME
 
-Text::Template::Simple - Simple text template engine.
+Text::Template::Simple - Simple text template engine
 
 =head1 SYNOPSIS
 
@@ -664,8 +726,9 @@ manager.
 
 =head1 SYNTAX
 
-Template syntax is very simple. There are two kind of delimiters;
-code blocks (<%%>) and self-printing blocks (<%=%>):
+Template syntax is very simple. There are three kinds of delimiters;
+code blocks (C<< <% %> >>), self-printing blocks (C<< <%= %> >>)
+and static include directive (C<< <%+ %> >>):
 
    <%
       my @foo = qw(bar baz);
@@ -689,6 +752,14 @@ then you can use them inside templates:
    ?>
    Element is <?perl= $x ?>
    <?perl } ?>
+
+If you want to include a text or html file, you can use the
+static include directive:
+
+   <%+ my_other.html %>
+   <%+ my_other.txt %>
+
+Included files won't be parsed and included statically.
 
 =head2 Template parameters
 
@@ -727,7 +798,7 @@ the opening delimiter and the closing delimiter:
       delimiters => ['<?perl', '?>'],
    );
 
-Default values are C<E<lt>%> and C<E<gt>%>. 
+Default values are C<< <% >> and C<< %> >>. 
 
 =head3 faker
 
@@ -975,7 +1046,7 @@ Returns a string version of the dumped in-memory or disk-cache.
 Cache is dumped via L<Data::Dumper>. C<Deparse> option is enabled
 for in-memory cache. 
 
-Early versions of C<Data::Dumper> does not have a C<Deparse>
+Early versions of C<Data::Dumper> don' t have a C<Deparse>
 method, so you may need to upgrade your C<Data::Dumper> if
 you want to use this method.
 
@@ -1001,13 +1072,13 @@ on your system or your code will die.
 This method can be called with C<data> or C<id> named parameter. If you 
 use the two together, C<id> will be used:
 
-   if($template->in_cache(id => 'e369853df766fa44e1ed0ff613f563bd') {
+   if($template->in_cache(id => 'e369853df766fa44e1ed0ff613f563bd')) {
       print "ok!";
    }
 
 or
 
-   if($template->in_cache(data => q~Foo is <%=$bar%>~) {
+   if($template->in_cache(data => q~Foo is <%=$bar%>~)) {
       print "ok!";
    }
 
@@ -1107,8 +1178,8 @@ There is an initialization cost and this'll show itself after
 the first compilation process. The second and any following compilations
 will be much faster. Using cache can also improve speed, since this'll
 eliminate the parsing phase. Also, using memory cache will make
-the program more faster under persistent environments. But the 
-overall speed depends on your environment.
+the program run more faster under persistent environments. But the 
+overall speed really depends on your environment.
 
 =head2 Interface Change
 
@@ -1126,7 +1197,7 @@ This module's parser is based on L<Apache::SimpleTemplate>.
 Also see L<Text::Template> for a similar functionality.
 L<HTML::Template::Compiled> has a similar approach
 for compiled templates. There is another similar module
-named L<Text-ScriptTemplate>. Also see L<Safe> and
+named L<Text::ScriptTemplate>. Also see L<Safe> and
 L<Opcode>.
 
 =head1 AUTHOR
@@ -1140,7 +1211,7 @@ Copyright 2004-2006 Burak Gürsoy. All rights reserved.
 =head1 LICENSE
 
 This library is free software; you can redistribute it and/or modify 
-it under the same terms as Perl itself, either Perl version 5.8.7 or, 
+it under the same terms as Perl itself, either Perl version 5.8.8 or, 
 at your option, any later version of Perl 5 you may have available.
 
 =cut

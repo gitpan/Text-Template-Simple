@@ -15,7 +15,7 @@ WriteMakefile(
    },
    ($] >= 5.005 ? (
    AUTHOR   => 'Burak Gursoy <burak@cpan.org>',
-   ABSTRACT => 'A simple template class mainly for web applications',
+   ABSTRACT => 'Simple text template engine',
    ) : ()),
    PL_FILES => {},
 );

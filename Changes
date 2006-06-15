@@ -2,6 +2,14 @@ Revision history for Perl extension Text::Template::Simple.
 
 Time zone is GMT+2.
 
+0.40 Thu Jun 15 21:03:27 2006
+	=> Several optimizations.
+	=> Fixed README & Makefile.PL ABSTRACT.
+	=> Added compat code to Build.PL
+	=> Changed get_id().
+	=> Added 'static' includes.
+	=> Changed FH detection in _examine().
+
 0.3 Wed Feb 22 21:15:59 2006
 	=> Completely new API and new design.
 
