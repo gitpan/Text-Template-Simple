@@ -2,6 +2,11 @@ Revision history for Perl extension Text::Template::Simple.
 
 Time zone is GMT+2.
 
+1.41 Tue Aug  8 04:01:44 2006
+	=> Fixed flock() check.
+	=> New option to new(): warn_ids.
+	=> Fixed a nasty bug in self printing blocks.
+
 0.40 Thu Jun 15 21:03:27 2006
 	=> Several optimizations.
 	=> Fixed README & Makefile.PL ABSTRACT.

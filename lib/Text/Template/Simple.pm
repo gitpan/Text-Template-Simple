@@ -54,9 +54,10 @@ use strict;
 use vars qw($VERSION $AUTOLOAD);
 use constant DELIM_START => 0;
 use constant DELIM_END   => 1;
+use constant IS_WINDOWS  => $^O eq 'MSWin32';
 use Carp qw(croak);
 
-$VERSION = '0.40';
+$VERSION = '0.41';
 
 my %ATTR = ( # class attribute / configuration table
    FAKER        => '$OUT',                         # fake output buffer variable.
@@ -90,10 +91,12 @@ my $CACHE = {}; # in-memory template cache
 # making this conditional gains us some milisecs
 my $__CHECK_FLOCK = 0;
 sub __CHECK_FLOCK () {
-   if($^O eq 'MSWin32') {
+   if(IS_WINDOWS) {
       require Win32;
-      # we're running under dumb OS
-      $ATTR{CAN_FLOCK} = 0 if Win32::IsWin95();
+      # are we running under dumb OS?
+      $ATTR{CAN_FLOCK} = Win32::IsWin95() ? 0 : 1;
+   } else {
+      $ATTR{CAN_FLOCK} = 1; # TODO: test flock() directly
    }
    $__CHECK_FLOCK = 1;
    return;
@@ -161,6 +164,7 @@ sub new {
       safe       =>  0, # use safe compartment?
       header     =>  0, # template header. i.e. global codes.
       add_args   => '', # will unshift template argument list. ARRAYref.
+      warn_ids   =>  0, # warn template ids?
       %param,           # user can alter above options
       _type      => '', # template type. will be set in _examine()
       COUNTER    =>  0,
@@ -180,7 +184,7 @@ sub new {
    }
    my $d = $self->{delimiters};
    unless ($d && ref($d) && ref($d) eq 'ARRAY' && scalar(@{$d}) == 2) {
-      croak "Malformed delimiter parameter! 'delimiters' must be a two element arrayref!";
+      croak "Malformed delimiters parameter! 'delimiters' must be a two element arrayref!";
    }
    $self;
 }
@@ -302,7 +306,7 @@ sub idgen { # cache id generator
 
 sub compile {
    my $self  = shift;
-   my $tmpx  = shift or croak "No template specified!";
+   my $tmpx  = shift or croak "No template specified";
    my $param = shift || [];
    my $opt   = shift || {
       id       => '', # id is AUTO
@@ -430,6 +434,14 @@ sub _slurp {
 
 sub _compiler { $_[0]->{safe} ? $ATTR{N_COMPILER_S} : $ATTR{N_COMPILER} }
 
+sub _wrap_compile {
+   my $self   = shift->_hasta_la_vista_baby;
+   my $parsed = shift or die "nothing to compile";
+   warn "CID: $self->{CID}\n" if $self->{warn_ids} && $self->{CID};
+   my $CODE   = $self->_compiler->_compile($parsed);
+   return $CODE;  
+}
+
 sub _cache_hit {
    my $self     = shift->_hasta_la_vista_baby;
    my $cache_id = shift;
@@ -448,9 +460,10 @@ sub _cache_hit {
                }
             }
          }
-         my $CODE = $self->_compiler->_compile($disk_cache);
+         my $CODE = $self->_wrap_compile($disk_cache);
          croak "Error loading from disk cache: $@" if $@;
          warn "[FILE CACHE]\n" if DEBUG;
+         #$self->{COUNTER}++;
          return $CODE;
       }
    }
@@ -487,16 +500,16 @@ sub _populate_cache {
          print $fh $chkmt ? "#$chkmt#\n" : "##\n", $self->_cache_comment, $parsed; 
          flock $fh, Fcntl::LOCK_UN() if $ATTR{CAN_FLOCK};
          close $fh;
-         $CODE = $self->_compiler->_compile($parsed);
+         $CODE = $self->_wrap_compile($parsed);
       } 
       else {
          $CACHE->{$cache_id} = {CODE => undef, MTIME => 0}; # init
-         $CODE = $CACHE->{$cache_id}->{CODE} = $self->_compiler->_compile($parsed);
+         $CODE = $CACHE->{$cache_id}->{CODE} = $self->_wrap_compile($parsed);
          $CACHE->{$cache_id}->{MTIME} = $chkmt if $chkmt;
       }
    }
    else {
-      $CODE = $self->_compiler->_compile($parsed); # cache is disabled
+      $CODE = $self->_wrap_compile($parsed); # cache is disabled
    }
 
    if($@) {
@@ -564,7 +577,9 @@ sub _parse {
    warn "[PARSING   ]\n" if DEBUG;
    my $ds = $self->{delimiters}[DELIM_START];
    my $de = $self->{delimiters}[DELIM_END  ];
+   my $bugfix = 0;
    PARSER: foreach my $token ($self->_tokenize($tmp)) {
+      $bugfix = 0;
       if ($token eq $ds) { ++$is_code;                                   next PARSER; }
       if ($token eq $de) { --$is_code; $fragment .= ';' unless $is_fake; next PARSER; }
       if($is_code) {
@@ -587,13 +602,18 @@ sub _parse {
             my $cmd  = $1;
             my $what = $2;
             if(DEBUG) {
-               warn "[CASE '='  ] state: $is_code; open $is_open; type $1; match $2\n";
+               warn "[CASE '='  ] state: $is_code; open $is_open; type $cmd; match $what\n";
             }
             # A statement can not have a comment at the end.
             # This is do-able with a "\n", but it'll also break
             # line numbers in templates
             if ($cmd eq '=') { # perl code
-               $fragment .= sprintf "%s .= sub {%s}->();", $ATTR{FAKER}, $what;
+               if($is_code) {
+                  $fragment .= sprintf "%s .= sub {%s}->();", $ATTR{FAKER}, $what;
+               } else {
+                  warn "[NOT A CODE] $what\n" if DEBUG > 2;
+                  $bugfix = 1;
+               }
             }
             elsif ($cmd eq '+') { # static include
                $fragment .= sprintf "%s .= sub {%s}->();", $ATTR{FAKER}, $self->_inc(static => $what);
@@ -602,7 +622,7 @@ sub _parse {
                $fragment .= sprintf "%s .= sub {%s}->();", $ATTR{FAKER}, $self->_inc(normal => $what);
             }
             else {}
-            next PARSER;
+            next PARSER unless $bugfix;
          }
       }
       $token     =~ s{\~}{\\\~}sog unless $is_code; # tilde is a private character (see $qq above)
@@ -611,7 +631,7 @@ sub _parse {
    $fragment .= $qc if $is_open;
    $fragment .= $fc if $is_fake;
    warn "[CASE 'END'] state: $is_code; open: $is_open\n" if DEBUG;
-   croak "Unbalanced delimiter in template!" if $is_code;
+   croak "Unbalanced delimiter in template" if $is_code;
    my $code_start;
    $code_start  = 'package '.$ATTR{N_DUMMY}.';';
    $code_start .= 'use strict;' if $self->{strict};
@@ -907,6 +927,12 @@ and then you can use it inside any template that is compiled with
 C<$template> object without manually fetching:
 
    Foo is <%= $self->{foo} %>. Test: <%= $self->method('test') %>
+
+=head3 warn_ids
+
+If enabled, the module will warn you about compile steps using 
+template ids. You must both enable this and the cache. If
+cache is disabled, no warnings will be generated.
 
 =head2 compile DATA [, FILL_IN_PARAM, OPTIONS]
 
