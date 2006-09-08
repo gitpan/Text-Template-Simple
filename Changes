@@ -2,6 +2,12 @@ Revision history for Perl extension Text::Template::Simple.
 
 Time zone is GMT+2.
 
+1.42 Fri Sep  8 14:23:34 2006
+	=> Added fix_uncuddled option (bool) to new & 
+	   implemented it. If you are a uncuddled else/elsif
+	   fan, enable this or your template will die a horrible
+	   death.
+
 1.41 Tue Aug  8 04:01:44 2006
 	=> Fixed flock() check.
 	=> New option to new(): warn_ids.

@@ -57,7 +57,7 @@ use constant DELIM_END   => 1;
 use constant IS_WINDOWS  => $^O eq 'MSWin32';
 use Carp qw(croak);
 
-$VERSION = '0.41';
+$VERSION = '0.42';
 
 my %ATTR = ( # class attribute / configuration table
    FAKER        => '$OUT',                         # fake output buffer variable.
@@ -154,21 +154,22 @@ sub new {
    my $class = shift;
    my %param = scalar(@_) % 2 ? () : (@_);
    my $self  = {
-      delimiters => [@{ $ATTR{DELIMS} }], # default delimiters
-      as_string  =>  0, # if true, resulting template will not be eval()ed
-      delete_ws  =>  0, # delete whitespace-only fragments?
-      faker      => '', # optionally, you can set FAKER to whatever you want
-      cache      =>  0, # use cache or not
-      cache_dir  => '', # will use hdd intead of memory for caching...
-      strict     =>  1, # if you want toleration to un-declared vars, set this to false
-      safe       =>  0, # use safe compartment?
-      header     =>  0, # template header. i.e. global codes.
-      add_args   => '', # will unshift template argument list. ARRAYref.
-      warn_ids   =>  0, # warn template ids?
-      %param,           # user can alter above options
-      _type      => '', # template type. will be set in _examine()
-      COUNTER    =>  0,
-      CID        => '', # holds the current template id if cache is enabled
+      delimiters    => [@{ $ATTR{DELIMS} }], # default delimiters
+      as_string     =>  0, # if true, resulting template will not be eval()ed
+      delete_ws     =>  0, # delete whitespace-only fragments?
+      faker         => '', # optionally, you can set FAKER to whatever you want
+      cache         =>  0, # use cache or not
+      cache_dir     => '', # will use hdd intead of memory for caching...
+      strict        =>  1, # if you want toleration to un-declared vars, set this to false
+      safe          =>  0, # use safe compartment?
+      header        =>  0, # template header. i.e. global codes.
+      add_args      => '', # will unshift template argument list. ARRAYref.
+      warn_ids      =>  0, # warn template ids?
+      fix_uncuddled => 0,  # do some worst practice?
+      %param,              # user can alter above options
+      _type         => '', # template type. will be set in _examine()
+      COUNTER       =>  0,
+      CID           => '', # holds the current template id if cache is enabled
    };
    bless $self, $class;
 
@@ -327,7 +328,7 @@ sub compile {
       }
    }
 
-   warn "[COMPILE] $opt->{id}\n" if defined $opt->{id} && DEBUG;
+   warn "[ COMPILE  ] $opt->{id}\n" if defined $opt->{id} && DEBUG;
 
    my($CODE, $ok);
    my $cache_id = '';
@@ -555,6 +556,47 @@ return sprintf <<'DISK_CACHE_COMMENT', __PACKAGE__, $VERSION, scalar localtime t
 DISK_CACHE_COMMENT
 }
 
+sub _fix_uncuddled {
+   my $self = shift->_hasta_la_vista_baby;
+   my $tmp  = shift;
+   my $ds   = shift;
+   my $de   = shift;
+   warn "[  FIXING  ] Worst practice: Cuddling uncuddled else/elsif\n";
+   # common part
+   my $start = qr{
+      $ds         # delimiter start
+      (?:\s+|)    # ws or not
+      \}          # block ending
+      (?:\s+|)    # ws or not
+      $de         # delimiter end
+      (?:\s+|)    # ws or not
+      $ds         # delimiter start
+      (?:\s+|)    # ws or not
+   }xms;
+   # fix else
+   $$tmp =~ s{
+      $start
+      else        # keyword
+      (?:\s+|)    # ws or not
+      \{          # block opening
+      (?:\s+|)    # ws or not
+      $de         # delimiter-end
+   }{$ds\} else \{$de}xmsgo;
+   # fix elsif
+   $$tmp =~ s{
+      $start
+      elsif       # keyword
+      (?:\s+|)    # ws or not
+      \( (.+?) \) # elsif bool
+      (?:\s+|)    # ws or not
+      \{          # block opening
+      (?:\s+|)    # ws or not
+      $de
+   }{$ds\} elsif ($1) \{$de}xmsgo;
+   warn "#FIXED\n$$tmp\n#/FIXED\n" if DEBUG > 2;
+   return;
+}
+
 sub _parse {
    my $self      = shift->_hasta_la_vista_baby;
    my $tmp       = shift;
@@ -566,7 +608,6 @@ sub _parse {
    my $is_code   = 0; # we are inside a code section
    my $is_open   = 0; # if true: quote was not closed inside the parser
    my $is_fake   = 0; # fake hash is open
-   my $qq        = ';'.$ATTR{FAKER}.' .= qq~'; # double quote open tag
    my $q         = ';'.$ATTR{FAKER}.' .= q~';  # single quote open tag
    my $qc        = '~;';                 # quote close tag
    my $fo        = '%s .= %s->{';        # fake hash open
@@ -578,6 +619,9 @@ sub _parse {
    my $ds = $self->{delimiters}[DELIM_START];
    my $de = $self->{delimiters}[DELIM_END  ];
    my $bugfix = 0;
+
+   $self->_fix_uncuddled(\$tmp, $ds, $de) if $self->{fix_uncuddled};
+
    PARSER: foreach my $token ($self->_tokenize($tmp)) {
       $bugfix = 0;
       if ($token eq $ds) { ++$is_code;                                   next PARSER; }
@@ -625,7 +669,7 @@ sub _parse {
             next PARSER unless $bugfix;
          }
       }
-      $token     =~ s{\~}{\\\~}sog unless $is_code; # tilde is a private character (see $qq above)
+      $token     =~ s{\~}{\\\~}sog unless $is_code; # tilde is a private character (see $q above)
       $fragment .= $token;
    }
    $fragment .= $qc if $is_open;
@@ -934,6 +978,13 @@ If enabled, the module will warn you about compile steps using
 template ids. You must both enable this and the cache. If
 cache is disabled, no warnings will be generated.
 
+=head3 fix_uncuddled
+
+If you are using uncuddled elses/elsifs (which became popular after
+Damian Conway' s PBP Book) in your templates, this will break the parser.
+If you supply this parameter with a true value, the parser will
+reformat the data with cuddled versions before parsing it.
+
 =head2 compile DATA [, FILL_IN_PARAM, OPTIONS]
 
 Compiles the template you have passed and manages template cache,
@@ -1228,11 +1279,11 @@ L<Opcode>.
 
 =head1 AUTHOR
 
-Burak Gürsoy, E<lt>burakE<64>cpan.orgE<gt>
+Burak GE<252>rsoy, E<lt>burakE<64>cpan.orgE<gt>
 
 =head1 COPYRIGHT
 
-Copyright 2004-2006 Burak Gürsoy. All rights reserved.
+Copyright 2004-2006 Burak GE<252>rsoy. All rights reserved.
 
 =head1 LICENSE
 
