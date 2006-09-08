@@ -52,12 +52,18 @@ sub _permit {
 package Text::Template::Simple;
 use strict;
 use vars qw($VERSION $AUTOLOAD);
-use constant DELIM_START => 0;
-use constant DELIM_END   => 1;
-use constant IS_WINDOWS  => $^O eq 'MSWin32';
-use Carp qw(croak);
+use constant DELIM_START   => 0;
+use constant DELIM_END     => 1;
+use constant IS_WINDOWS    => $^O eq 'MSWin32';
+use constant RE_NONFILE    => qr{ [ \n \r < > \* ] }xmso;
+use constant RE_COMMAND    => qr{\A (?:\s+|)([=+\*])(.+?)(?:;+|) \z}xmso;
+use constant ERROR_NOTGLOB => "Unknown template parameter passed as %s reference! Supported types are GLOB, PATH and STRING.";
+use constant ERROR_NOTFH   => "This GLOB is not a filehandle";
+use Carp (); # qw(croak);
 
-$VERSION = '0.42';
+BEGIN{local $^W; no strict;*croak = \&Carp::confess;} #YOKET!!!
+
+$VERSION = '0.43';
 
 my %ATTR = ( # class attribute / configuration table
    FAKER        => '$OUT',                         # fake output buffer variable.
@@ -174,7 +180,22 @@ sub new {
    bless $self, $class;
 
    if ($self->{cache_dir}) {
-      if (not -d $self->{cache_dir}) {
+      require File::Spec;
+      $self->{cache_dir} = File::Spec->canonpath($self->{cache_dir});
+      my $wdir;
+      if(IS_WINDOWS) {
+         require Win32;
+         $wdir = Win32::GetFullPathName($self->{cache_dir});
+         if( Win32::GetLastError() ) {
+            warn "[  FAIL  ] Win32::GetFullPathName\n" if DEBUG;
+            $wdir = ''; # croak "Win32::GetFullPathName: $^E";
+         }
+         else {
+            $wdir = '' unless -e $wdir && -d _;
+         }
+      }
+      $self->{cache_dir} = $wdir if $wdir;
+      unless (-e $self->{cache_dir} && -d _) {
          croak "Cache dir $self->{cache_dir} does not exist!";
       }
    }
@@ -187,7 +208,7 @@ sub new {
    unless ($d && ref($d) && ref($d) eq 'ARRAY' && scalar(@{$d}) == 2) {
       croak "Malformed delimiters parameter! 'delimiters' must be a two element arrayref!";
    }
-   $self;
+   return $self;
 }
 
 sub reset_cache {
@@ -222,10 +243,11 @@ sub dump_cache {
       my $id;
       my($content, $ok, $_temp, $line);
       my $pattern = quotemeta '# [line 10]';
-      File::Find::find(sub {
+      my $wanted = sub {
          return unless $_ =~ m{(.+?) $ext \z}xms;
          $id      = $1;
-         $content = $self->_slurp(File::Spec->catfile($self->{cache_dir}, $_));
+         $id      =~ s{.*[\\/]}{};
+         $content = $self->_slurp(File::Spec->canonpath($_));
          $ok      = 0;  # reset
          $_temp   = ''; # reset
          foreach $line (split /\n/, $content) {
@@ -240,7 +262,8 @@ sub dump_cache {
             MTIME => (stat $_)[9],
             CODE  => $_temp,
          };
-      }, $self->{cache_dir});
+      };
+      File::Find::find({ wanted => $wanted, no_chdir => 1 }, $self->{cache_dir});
    }
    $d = Data::Dumper->new([$disk_cache ? $disk_cache : $CACHE], ['$CACHE']);
    unless($disk_cache) {
@@ -260,10 +283,11 @@ sub cache_size {
       require File::Find;
       my $total = 0;
       my $ext   = quotemeta $ATTR{CACHE_EXT};
-      File::Find::find(sub {
+      my $wanted = sub {
          return unless /$ext$/; # only calculate "our" files
          $total += (stat $_)[7];
-      }, $self->{cache_dir});
+      };
+      File::Find::find({ wanted => $wanted, no_chdir => 1 }, $self->{cache_dir});
       return $total;
    }
    else { # in memory cache
@@ -372,53 +396,37 @@ sub _fake_idgen {
 }
 
 sub _examine {
-   my $self = shift->_hasta_la_vista_baby;
-   my $tmp  = shift;
+   my $self   = shift;
+   my $tmp    = shift;
+   my $length = 0;
    my $rv;
    if (my $ref = ref($tmp)) {
-      if ($ref eq 'GLOB') {
-         #no strict 'refs';
-         #unless (defined *{$tmp}{IO}) { # We need 5.004 at least for that
-         unless (fileno $tmp) {
-            croak "This GLOB is not a filehandle";
-         }
-         warn "[IS HANDLE ]\n" if DEBUG;
-         # hmmm...
-         #require Fcntl;
-         #flock $tmp, Fcntl::LOCK_SH() if $ATTR{CAN_FLOCK};
-         local $/;
-         $rv = <$tmp>;
-         #flock $tmp, Fcntl::LOCK_UN() if $ATTR{CAN_FLOCK};
-         close $tmp; # ??? can this be a user option?
-         $self->{_type} = 'GLOB';
-      }
-      else {
-         croak "Unknown template parameter passed as $ref reference! Supported types are GLOB, PATH and STRING.";
-      }
+      croak sprintf(ERROR_NOTGLOB, $ref) if $ref ne 'GLOB';
+      croak         ERROR_NOTFH          if not  fileno $tmp;
+      # hmmm... require Fcntl; flock $tmp, Fcntl::LOCK_SH() if $ATTR{CAN_FLOCK};
+      local $/;
+      $rv = <$tmp>;
+      #flock $tmp, Fcntl::LOCK_UN() if $ATTR{CAN_FLOCK};
+      close $tmp; # ??? can this be a user option?
+      $self->{_type} = 'GLOB';
    }
    else {
-      my $len = length $tmp;
-      if (
-          $len  <=  255              &&
-          $tmp  !~  m{[\n\r<>\*]}xms &&
-                -e  $tmp             &&
-          not   -d  _
-      ) {
-         warn "[IS FILE   ] $tmp\n" if DEBUG;
+      my $length = length $tmp;
+      if ($length  <=  255 and $tmp !~ RE_NONFILE and -e $tmp and not -d  _) {
          $self->{_type} = 'FILE';
          $rv = $self->_slurp($tmp);
       }
       else {
          $self->{_type} = 'STRING';
-         warn "[IS STRING ] LENGTH: $len\n" if DEBUG;
          $rv = $tmp;
       }
    }
+   warn "[ EXAMINE  ] $self->{_type}; LENGTH: $length\n" if DEBUG;
    return $rv;
 }
 
 sub _slurp {
-   my $self = shift->_hasta_la_vista_baby;
+   my $self = shift;
    __CHECK_FLOCK unless $__CHECK_FLOCK;
    my $file = shift;
    require IO::File;
@@ -436,7 +444,7 @@ sub _slurp {
 sub _compiler { $_[0]->{safe} ? $ATTR{N_COMPILER_S} : $ATTR{N_COMPILER} }
 
 sub _wrap_compile {
-   my $self   = shift->_hasta_la_vista_baby;
+   my $self   = shift;
    my $parsed = shift or die "nothing to compile";
    warn "CID: $self->{CID}\n" if $self->{warn_ids} && $self->{CID};
    my $CODE   = $self->_compiler->_compile($parsed);
@@ -444,7 +452,7 @@ sub _wrap_compile {
 }
 
 sub _cache_hit {
-   my $self     = shift->_hasta_la_vista_baby;
+   my $self     = shift;
    my $cache_id = shift;
    my $chkmt    = shift || 0;
    if($self->{cache_dir}) {
@@ -483,7 +491,7 @@ sub _cache_hit {
 }
 
 sub _populate_cache {
-   my $self     = shift->_hasta_la_vista_baby;
+   my $self     = shift;
    my $cache_id = shift;
    my $parsed   = shift;
    my $chkmt    = shift;
@@ -516,7 +524,7 @@ sub _populate_cache {
    if($@) {
       my $cid = $cache_id ? $cache_id : 'N/A';
       my $p   = $parsed;
-         $p   =~ s{;}{;\n}xmsg; # new lines makes it easy to debug
+         $p   =~ s{;}{;\n}xmsgo; # new lines makes it easy to debug
       croak sprintf $self->_compile_error_tmp, $cid, $@, $parsed, $p;
    }
    $self->{COUNTER}++;
@@ -543,9 +551,11 @@ COMPILE_ERROR_TMP
 }
 
 sub _cache_comment {
-return sprintf <<'DISK_CACHE_COMMENT', __PACKAGE__, $VERSION, scalar localtime time;
+   my $class = __PACKAGE__;
+   my $now   = scalar localtime time;
+return <<"DISK_CACHE_COMMENT";
 # !!!   W A R N I N G      W A R N I N G      W A R N I N G   !!!
-# This file is automatically generated by %s v%s on %s.
+# This file is automatically generated by $class v$VERSION on $now.
 # This file is a compiled template cache.
 # Any changes you make here will be lost.
 #
@@ -557,7 +567,7 @@ DISK_CACHE_COMMENT
 }
 
 sub _fix_uncuddled {
-   my $self = shift->_hasta_la_vista_baby;
+   my $self = shift;
    my $tmp  = shift;
    my $ds   = shift;
    my $de   = shift;
@@ -598,43 +608,47 @@ sub _fix_uncuddled {
 }
 
 sub _parse {
-   my $self      = shift->_hasta_la_vista_baby;
+   my $self      = shift;
    my $tmp       = shift;
    my $map_keys  = shift; # code sections are hash keys
    my $finit     = ''; # map_keys init code
-   if ($map_keys && $map_keys eq 'init') {
-      $finit = q~ || ''~;
-   }
+      $finit     = q~ || ''~ if $map_keys && $map_keys eq 'init';
    my $is_code   = 0; # we are inside a code section
    my $is_open   = 0; # if true: quote was not closed inside the parser
    my $is_fake   = 0; # fake hash is open
-   my $q         = ';'.$ATTR{FAKER}.' .= q~';  # single quote open tag
-   my $qc        = '~;';                 # quote close tag
-   my $fo        = '%s .= %s->{';        # fake hash open
-   my $fc        = "}$finit;";           # fake hash close
-   my $fstart    = '';                   # fake hash start
-   my $fragment  = '';                   # will be the code to compile
-      $fstart    = sprintf($fo, $ATTR{FAKER}, $ATTR{FAKER_HASH}) if $map_keys;
-   warn "[PARSING   ]\n" if DEBUG;
+   my $q         = ';'.$ATTR{FAKER}.' .= q~'; # single quote open tag
+   my $qc        = '~;';                      # quote close tag
+   my $fo        = '';                        # fake hash open
+   my $fc        = "}$finit;";                # fake hash close
+   my $fragment  = '';                        # will be the code to compile
+      $fo        = "$ATTR{FAKER} .= $ATTR{FAKER_HASH}".'->{' if $map_keys;
+
    my $ds = $self->{delimiters}[DELIM_START];
    my $de = $self->{delimiters}[DELIM_END  ];
-   my $bugfix = 0;
 
    $self->_fix_uncuddled(\$tmp, $ds, $de) if $self->{fix_uncuddled};
 
-   PARSER: foreach my $token ($self->_tokenize($tmp)) {
+   my @tokens;
+   foreach my $chunk (split /($ds)/, $tmp) {
+      push @tokens, split /($de)/, $chunk;
+   }
+
+   warn "[PARSING   ]\n" if DEBUG;
+   my($cmd, $what);
+   my $bugfix = 0;
+   PARSER: foreach my $token (@tokens) {
       $bugfix = 0;
       if ($token eq $ds) { ++$is_code;                                   next PARSER; }
       if ($token eq $de) { --$is_code; $fragment .= ';' unless $is_fake; next PARSER; }
       if($is_code) {
-         if ($is_open ) { $fragment .= $qc;     --$is_open; }
-         if ($map_keys) { $fragment .= $fstart; ++$is_fake; }
+         if ($is_open ) { $fragment .= $qc; --$is_open; }
+         if ($map_keys) { $fragment .= $fo; ++$is_fake; }
       }
       else {
          if (not $is_open) {
             if($is_fake) {
-               --$is_fake;
                $fragment .= $fc;
+               --$is_fake;
             }
             $fragment .= $q;
             ++$is_open;
@@ -642,30 +656,31 @@ sub _parse {
       }
       unless ($map_keys) { # useless if map_keys is in effect
          # check if this is a <%=$foo%>
-         if ($token =~ m{\A (?:\s+|)([=+\*])(.+?)(?:;+|) \z}xmso) {
-            my $cmd  = $1;
-            my $what = $2;
-            if(DEBUG) {
-               warn "[CASE '='  ] state: $is_code; open $is_open; type $cmd; match $what\n";
-            }
+         if ($token =~ RE_COMMAND) {
+            $cmd  = $1;
+            $what = $2;
+            warn "[CASE '='  ] state: $is_code; open $is_open; type $cmd; match $what\n"
+               if DEBUG;
             # A statement can not have a comment at the end.
             # This is do-able with a "\n", but it'll also break
             # line numbers in templates
             if ($cmd eq '=') { # perl code
                if($is_code) {
-                  $fragment .= sprintf "%s .= sub {%s}->();", $ATTR{FAKER}, $what;
+                  $fragment .= "$ATTR{FAKER} .= sub {$what}->();";
                } else {
                   warn "[NOT A CODE] $what\n" if DEBUG > 2;
                   $bugfix = 1;
                }
             }
             elsif ($cmd eq '+') { # static include
-               $fragment .= sprintf "%s .= sub {%s}->();", $ATTR{FAKER}, $self->_inc(static => $what);
+               $fragment .= "$ATTR{FAKER} .= sub {".$self->_inc(static => $what)."}->();";
             }
             elsif ($cmd eq '*') { # normal include
-               $fragment .= sprintf "%s .= sub {%s}->();", $ATTR{FAKER}, $self->_inc(normal => $what);
+               $fragment .= "$ATTR{FAKER} .= sub {".$self->_inc(normal => $what)."}->();";
             }
-            else {}
+            else {
+               # do nothing
+            }
             next PARSER unless $bugfix;
          }
       }
@@ -675,7 +690,7 @@ sub _parse {
    $fragment .= $qc if $is_open;
    $fragment .= $fc if $is_fake;
    warn "[CASE 'END'] state: $is_code; open: $is_open\n" if DEBUG;
-   croak "Unbalanced delimiter in template" if $is_code;
+   croak "Unbalanced delimiter in template"              if $is_code;
    my $code_start;
    $code_start  = 'package '.$ATTR{N_DUMMY}.';';
    $code_start .= 'use strict;' if $self->{strict};
@@ -689,7 +704,7 @@ sub _parse {
 }
 
 sub _inc {
-   my $self = shift->_hasta_la_vista_baby;
+   my $self = shift;
    my $type = shift;
    my $is_static = $type eq 'static';
    my $is_normal = $type eq 'normal';
@@ -718,25 +733,13 @@ sub _inc {
    return "$err This can not happen!";
 }
 
-sub _tokenize {
-   my $self = shift->_hasta_la_vista_baby;
-   my $tmp  = shift;
-   my $ds   = quotemeta $self->{delimiters}[DELIM_START];
-   my $de   = quotemeta $self->{delimiters}[DELIM_END  ];
-   my @parse;
-   foreach my $token (split /($ds)/, $tmp) {
-      push @parse, split /($de)/, $token;
-   }
-   return @parse;
-}
-
 sub _set_faker {
-   my $self = shift->_hasta_la_vista_baby;
-   my $fake = shift or return;
+   my $self = shift;
+   my $fake = shift || return;
 
-   if($fake =~ m{[^\$a-zA-Z_0-9]} || # can not be non-alphanumeric
-      $fake =~ m{^[0-9]}          || # can not start with number
-      $fake !~ m{^\$}                # must start with a dollar
+   if($fake =~ m{[^\$a-zA-Z_0-9]}o || # can not be non-alphanumeric
+      $fake =~ m{^[0-9]}o          || # can not start with number
+      $fake !~ m{^\$}o                # must start with a dollar
       ) {
       warn "Bogus fake scalar '$fake'! Falling back to default value!" if DEBUG; # warn or die?
       return;
@@ -745,10 +748,10 @@ sub _set_faker {
    $ATTR{FAKER} = $fake;
 }
 
-sub _hasta_la_vista_baby {
-   caller(1) eq __PACKAGE__ or croak +(caller 1)[3]."() is a private method!";
-   $_[0];
-}
+#sub _hasta_la_vista_baby {
+#   caller(1)->isa(__PACKAGE__) or croak +(caller 1)[3]."() is a private method!";
+#   $_[0];
+#}
 
 sub AUTOLOAD {
    my $self  = shift;
@@ -1257,6 +1260,9 @@ will be much faster. Using cache can also improve speed, since this'll
 eliminate the parsing phase. Also, using memory cache will make
 the program run more faster under persistent environments. But the 
 overall speed really depends on your environment.
+
+Internal cache manager generates ids for all templates. If you supply 
+your own id parameter, this will improve performance.
 
 =head2 Interface Change
 
