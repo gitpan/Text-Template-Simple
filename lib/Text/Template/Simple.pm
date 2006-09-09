@@ -59,11 +59,9 @@ use constant RE_NONFILE    => qr{ [ \n \r < > \* ] }xmso;
 use constant RE_COMMAND    => qr{\A (?:\s+|)([=+\*])(.+?)(?:;+|) \z}xmso;
 use constant ERROR_NOTGLOB => "Unknown template parameter passed as %s reference! Supported types are GLOB, PATH and STRING.";
 use constant ERROR_NOTFH   => "This GLOB is not a filehandle";
-use Carp (); # qw(croak);
+use Carp qw(croak);
 
-BEGIN{local $^W; no strict;*croak = \&Carp::confess;} #YOKET!!!
-
-$VERSION = '0.43';
+$VERSION = '0.44';
 
 my %ATTR = ( # class attribute / configuration table
    FAKER        => '$OUT',                         # fake output buffer variable.
