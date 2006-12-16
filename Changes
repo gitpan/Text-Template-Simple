@@ -2,6 +2,15 @@ Revision history for Perl extension Text::Template::Simple.
 
 Time zone is GMT+2.
 
+0.45 Sat Dec 16 22:15:18 2006
+	=> Internal optimization.
+	=> Added line number and file name emulation to parser.
+	   You have to use file templates or enable cache to 
+	   enable this feature.
+	=> Implemented a resume method. If enabled, the compiler 
+	   will resume on fatal errors. There are some buggy parts
+	   and it will slow down the compilation process.
+
 0.44 Sat Sep  9 10:44:43 2006
 	=> Forgot to remove development code.
 	   Fixed versions in this file.

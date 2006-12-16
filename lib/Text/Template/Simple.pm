@@ -26,8 +26,10 @@ sub _compile { return __PACKAGE__->_object->reval($_[1]) }
 sub _object {
    if (__PACKAGE__->can('object')) {
       my $safe = __PACKAGE__->object;
-      if ($safe && ref($safe) && eval {$safe->isa('Safe'); 1}) {
-         return $safe;
+      if ($safe && ref($safe)) {
+         my $ok;
+         eval {$ok = $safe->isa('Safe')};
+         return $safe if $ok;
       } else {
          warn "Safe object failed, falling back to default".($@ ? ': '.$@ : '.');
       }
@@ -51,25 +53,73 @@ sub _permit {
 
 package Text::Template::Simple;
 use strict;
-use vars qw($VERSION $AUTOLOAD);
+use vars qw($VERSION $AUTOLOAD @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS $OID);
+
+use constant IS_ARRAY      => sub {$_[0] && ref($_[0]) && ref($_[0]) eq 'ARRAY'};
+
 use constant DELIM_START   => 0;
 use constant DELIM_END     => 1;
 use constant IS_WINDOWS    => $^O eq 'MSWin32';
 use constant RE_NONFILE    => qr{ [ \n \r < > \* ] }xmso;
 use constant RE_COMMAND    => qr{\A (?:\s+|)([=+\*])(.+?)(?:;+|) \z}xmso;
-use constant ERROR_NOTGLOB => "Unknown template parameter passed as %s reference! Supported types are GLOB, PATH and STRING.";
-use constant ERROR_NOTFH   => "This GLOB is not a filehandle";
-use Carp qw(croak);
 
-$VERSION = '0.44';
+# object fields
+BEGIN { $OID = -1 } # init object field id counter
+use constant DELIMITERS    => ++$OID;
+use constant AS_STRING     => ++$OID;
+use constant DELETE_WS     => ++$OID;
+use constant FAKER         => ++$OID;
+use constant CACHE         => ++$OID;
+use constant CACHE_DIR     => ++$OID;
+use constant STRICT        => ++$OID;
+use constant SAFE          => ++$OID;
+use constant HEADER        => ++$OID;
+use constant ADD_ARGS      => ++$OID;
+use constant WARN_IDS      => ++$OID;
+use constant FIX_UNCUDDLED => ++$OID;
+use constant TYPE          => ++$OID;
+use constant COUNTER       => ++$OID;
+use constant CID           => ++$OID;
+use constant FILENAME      => ++$OID;
+use constant RESUME        => ++$OID;
+# number of the last object field
+use constant MAXOBJFIELD   =>   $OID;
+
+use Carp qw(croak);
+require Exporter;
+
+$VERSION     = '0.45';
+@ISA         = qw(Exporter);
+
+%EXPORT_TAGS = (
+   object => [
+                qw/
+                   DELIMITERS AS_STRING   DELETE_WS FAKER
+                   CACHE      CACHE_DIR   STRICT    SAFE
+                   HEADER     ADD_ARGS    WARN_IDS  FIX_UNCUDDLED
+                   TYPE       COUNTER     CID       FILENAME
+                   RESUME     MAXOBJFIELD
+                  /
+             ],
+   delim  => [
+                qw/
+                   DELIM_START DELIM_END
+                  /
+             ],
+);
+
+@EXPORT_OK        = map { @{$_} } values %EXPORT_TAGS;
+$EXPORT_TAGS{all} = [@EXPORT_OK];
+
+my $PID = __PACKAGE__ . " v$VERSION";
 
 my %ATTR = ( # class attribute / configuration table
-   FAKER        => '$OUT',                         # fake output buffer variable.
+   FAKER_NAME   => '$OUT',                         # fake output buffer variable.
    FAKER_HASH   => '$___THIS_IS_A_LANG_HASH',      # fake language hash for map_keys templates
    DEBUG        => 0,                              # debugging is disabled by default
    CACHE_EXT    => '.tmpl.cache',                  # disk cache extension
    DELIMS       => [qw| <% %> |],                  # default delimiter pair
-   MAX_FL       => 55,                             # Maximum template file name length
+   MAX_FL       => 80,                             # Maximum template file name length
    CAN_FLOCK    =>  1,                             # can we use flock() ?
    DIGEST       => undef,                          # Digest class name. Will not be set, unless you use cache feature
    N_COMPILER   => __PACKAGE__.'::Compiler',       # The compiler
@@ -79,18 +129,47 @@ my %ATTR = ( # class attribute / configuration table
    # Pure-Perl ones are slower, but they are fail-safes.
    # However, Digest::SHA::PurePerl does not work under $perl < 5.6.
    # But, Digest::Perl::MD5 seems to work under older perls (5.5.4 at least).
-   __DIGEST_MODS => [qw(
-                         Digest::SHA
-                         Digest::SHA1
-                         Digest::SHA2
-                         Digest::SHA::PurePerl
-                         Digest::MD5
-                         MD5
-                         Digest::Perl::MD5
-   )],
+   DIGEST_MODS => [
+      qw(
+         Digest::SHA
+         Digest::SHA1
+         Digest::SHA2
+         Digest::SHA::PurePerl
+         Digest::MD5
+         MD5
+         Digest::Perl::MD5
+      )
+   ],
+);
+
+my %DEFAULT = (
+      delimiters    => [@{ $ATTR{DELIMS} }], # default delimiters
+      as_string     =>  0, # if true, resulting template will not be eval()ed
+      delete_ws     =>  0, # delete whitespace-only fragments?
+      faker         => '', # optionally, you can set FAKER to whatever you want
+      cache         =>  0, # use cache or not
+      cache_dir     => '', # will use hdd intead of memory for caching...
+      strict        =>  1, # if you want toleration to un-declared vars, set this to false
+      safe          =>  0, # use safe compartment?
+      header        =>  0, # template header. i.e. global codes.
+      add_args      => '', # will unshift template argument list. ARRAYref.
+      warn_ids      =>  0, # warn template ids?
+      fix_uncuddled =>  0, # do some worst practice?
+      resume        =>  0, # resume on error?
+);
+
+my %ERROR = (
+   NOTGLOB  => "Unknown template parameter passed as %s reference! Supported types are GLOB, PATH and STRING.",
+   NOTFH    => "This GLOB is not a filehandle",
+   CDIR     => "Cache dir %s does not exist!",
+   ARGS     => "Malformed add_args parameter! 'add_args' must be an arrayref!",
+   DELIMS   => "Malformed delimiters parameter! 'delimiters' must be a two element arrayref!",
+   CDIROPEN => "Can not open cache dir (%s) for reading: %s",
 );
 
 my $CACHE = {}; # in-memory template cache
+
+my %RESUME; # Regexen for _resume
 
 # making this conditional gains us some milisecs
 my $__CHECK_FLOCK = 0;
@@ -108,6 +187,8 @@ sub __CHECK_FLOCK () {
 
 # -------------------[ CLASS  METHODS ]------------------- #
 
+sub IS_DEBUG () { $ATTR{DEBUG} }
+
 sub DEBUG {
    my $thing = shift;
    if(defined $thing and ref $thing || $thing eq __PACKAGE__) {
@@ -123,12 +204,12 @@ sub DIGEST {
 
    local $SIG{__DIE__};
    my $file;
-   foreach my $mod (@{ $ATTR{__DIGEST_MODS} }) {
+   foreach my $mod (@{ $ATTR{DIGEST_MODS} }) {
      ($file  = $mod) =~ s{::}{/}xmsog;
       $file .= '.pm';
       eval { require $file;};
       if($@) {
-         warn "[FAILED    ] $mod - $file\n" if DEBUG;
+         warn "[FAILED    ] $mod - $file\n" if IS_DEBUG;
          next;
       }
       $ATTR{DIGEST} = $mod;
@@ -136,95 +217,81 @@ sub DIGEST {
    }
 
    if (not $ATTR{DIGEST}) {
-      my @report = @{ $ATTR{__DIGEST_MODS} };
+      my @report = @{ $ATTR{DIGEST_MODS} };
       my $last   = pop @report;
       croak "Can not load a digest module. Disable cache or install one of these ("
             .join(', ', @report)
             ." or $last). Last error was: $@";
    }
 
-   warn "[DIGESTER  ] $ATTR{DIGEST}\n" if DEBUG;
+   warn "[DIGESTER  ] $ATTR{DIGEST}\n" if IS_DEBUG;
    return $ATTR{DIGEST}->new;
 }
 
 # -------------------[ OBJECT METHODS ]------------------- #
 
 sub new {
-   if(DEBUG) {
-      my $p    = __PACKAGE__;
-      my $date = scalar localtime time;
-      warn "[CONSTRUCT ] $p v$VERSION @ $date\n";
-   }
+   warn "[CONSTRUCT ] ".__PACKAGE__." v$VERSION @ ".(scalar localtime time)."\n" if IS_DEBUG;
    my $class = shift;
    my %param = scalar(@_) % 2 ? () : (@_);
-   my $self  = {
-      delimiters    => [@{ $ATTR{DELIMS} }], # default delimiters
-      as_string     =>  0, # if true, resulting template will not be eval()ed
-      delete_ws     =>  0, # delete whitespace-only fragments?
-      faker         => '', # optionally, you can set FAKER to whatever you want
-      cache         =>  0, # use cache or not
-      cache_dir     => '', # will use hdd intead of memory for caching...
-      strict        =>  1, # if you want toleration to un-declared vars, set this to false
-      safe          =>  0, # use safe compartment?
-      header        =>  0, # template header. i.e. global codes.
-      add_args      => '', # will unshift template argument list. ARRAYref.
-      warn_ids      =>  0, # warn template ids?
-      fix_uncuddled => 0,  # do some worst practice?
-      %param,              # user can alter above options
-      _type         => '', # template type. will be set in _examine()
-      COUNTER       =>  0,
-      CID           => '', # holds the current template id if cache is enabled
-   };
+   my $self  = [ map { undef } 0 .. MAXOBJFIELD ];
    bless $self, $class;
 
-   if ($self->{cache_dir}) {
+   my $fid;
+   foreach my $field (keys %DEFAULT) {
+      $fid = uc $field;
+      next if not $class->can($fid);
+      $self->[$class->$fid()] = defined $param{$field} ? $param{$field} : $DEFAULT{$field};
+   }
+   $self->[TYPE]    = '';
+   $self->[COUNTER] = 0;
+   $self->[CID]     = '';
+   $self->[FAKER]   = $ATTR{FAKER_NAME} if not $self->[FAKER]; 
+
+   $self->_init;
+   return $self;
+}
+
+sub _init {
+   my $self = shift;
+   if ($self->[CACHE_DIR]) {
       require File::Spec;
-      $self->{cache_dir} = File::Spec->canonpath($self->{cache_dir});
+      $self->[CACHE_DIR] = File::Spec->canonpath($self->[CACHE_DIR]);
       my $wdir;
       if(IS_WINDOWS) {
          require Win32;
-         $wdir = Win32::GetFullPathName($self->{cache_dir});
+         $wdir = Win32::GetFullPathName($self->[CACHE_DIR]);
          if( Win32::GetLastError() ) {
-            warn "[  FAIL  ] Win32::GetFullPathName\n" if DEBUG;
+            warn "[   FAIL   ] Win32::GetFullPathName\n" if IS_DEBUG;
             $wdir = ''; # croak "Win32::GetFullPathName: $^E";
          }
          else {
             $wdir = '' unless -e $wdir && -d _;
          }
       }
-      $self->{cache_dir} = $wdir if $wdir;
-      unless (-e $self->{cache_dir} && -d _) {
-         croak "Cache dir $self->{cache_dir} does not exist!";
-      }
+      $self->[CACHE_DIR] = $wdir if $wdir;
+      croak _fatal('CDIR', $self->[CACHE_DIR]) unless -e $self->[CACHE_DIR] && -d _;
    }
-   if(my $add_args = $self->{add_args}) {
-      unless (ref($add_args) && ref($add_args) eq 'ARRAY') {
-         croak "Malformed add_args parameter! 'add_args' must be an arrayref!";
-      }
-   }
-   my $d = $self->{delimiters};
-   unless ($d && ref($d) && ref($d) eq 'ARRAY' && scalar(@{$d}) == 2) {
-      croak "Malformed delimiters parameter! 'delimiters' must be a two element arrayref!";
-   }
-   return $self;
+   croak _fatal('ARGS')   if $self->[ADD_ARGS] and not IS_ARRAY->($self->[ADD_ARGS]);
+   croak _fatal('DELIMS') unless IS_ARRAY->($self->[DELIMITERS]) && scalar(@{$self->[DELIMITERS]}) == 2;
 }
 
 sub reset_cache {
    my $self  = shift;
    %{$CACHE} = ();
-   if ($self->{cache} && $self->{cache_dir}) {
-      local  *CACHE_DIR;
-      opendir CACHE_DIR, $self->{cache_dir} or croak "Can not open cache dir ($self->{cache_dir}) for reading: $!";
+   if ($self->[CACHE] && $self->[CACHE_DIR]) {
+      local  *CDIRH;
+      opendir CDIRH, $self->[CACHE_DIR] or croak _fatal(CDIROPEN => $self->[CACHE_DIR], $!);
       require File::Spec;
       my $ext = quotemeta $ATTR{CACHE_EXT};
       my $file;
-      while (defined($file = readdir CACHE_DIR)) {
-         next unless $file =~ m{$ext \z}xms;
-         $file = File::Spec->catfile($self->{cache_dir}, $file);
-         warn "[UNLINK    ] $file\n" if DEBUG;
+      while (defined($file = readdir CDIRH)) {
+         next unless $file =~ m{$ext \z}xmsi;
+         $file = File::Spec->catfile($self->[CACHE_DIR], $file);
+         warn "[UNLINK    ] $file\n" if IS_DEBUG;
          unlink $file;
       }
-      closedir CACHE_DIR;
+      closedir CDIRH;
    }
 }
 
@@ -233,7 +300,7 @@ sub dump_cache {
    require Data::Dumper;
    my $d;
    my $disk_cache;
-   if($self->{cache_dir}) {
+   if($self->[CACHE_DIR]) {
       require File::Find;
       require File::Spec;
       $disk_cache = {}; # init
@@ -261,7 +328,7 @@ sub dump_cache {
             CODE  => $_temp,
          };
       };
-      File::Find::find({ wanted => $wanted, no_chdir => 1 }, $self->{cache_dir});
+      File::Find::find({ wanted => $wanted, no_chdir => 1 }, $self->[CACHE_DIR]);
    }
    $d = Data::Dumper->new([$disk_cache ? $disk_cache : $CACHE], ['$CACHE']);
    unless($disk_cache) {
@@ -276,25 +343,25 @@ sub dump_cache {
 
 sub cache_size {
    my $self = shift;
-   return 0 unless $self->{cache}; # calculate only if cache is enabled
-   if($self->{cache_dir}) { # disk cache
+   return 0 unless $self->[CACHE]; # calculate only if cache is enabled
+   if($self->[CACHE_DIR]) { # disk cache
       require File::Find;
-      my $total = 0;
-      my $ext   = quotemeta $ATTR{CACHE_EXT};
+      my $total  = 0;
+      my $ext    = quotemeta $ATTR{CACHE_EXT};
       my $wanted = sub {
          return unless /$ext$/; # only calculate "our" files
          $total += (stat $_)[7];
       };
-      File::Find::find({ wanted => $wanted, no_chdir => 1 }, $self->{cache_dir});
+      File::Find::find({ wanted => $wanted, no_chdir => 1 }, $self->[CACHE_DIR]);
       return $total;
    }
    else { # in memory cache
       local $SIG{__DIE__};
       if(eval {require Devel::Size; 1;}) {
-         warn "[DEBUG     ] Devel::Size v$Devel::Size::VERSION is loaded.\n" if DEBUG;
+         warn "[DEBUG     ] Devel::Size v$Devel::Size::VERSION is loaded.\n" if IS_DEBUG;
          return Devel::Size::total_size($CACHE);
       } else {
-         warn "Failed to load Devel::Size: $@" if DEBUG;
+         warn "Failed to load Devel::Size: $@" if IS_DEBUG;
          return 0;
       }
    }
@@ -302,8 +369,8 @@ sub cache_size {
 
 sub in_cache {
    my $self = shift;
-   unless($self->{cache}) {
-      warn "Cache is disabled!" if DEBUG;
+   unless($self->[CACHE]) {
+      warn "Cache is disabled!" if IS_DEBUG;
       return;
    }
    croak "Parameters must be in 'param => value' format" if scalar(@_) % 2;
@@ -311,9 +378,9 @@ sub in_cache {
    my $id  = $opt{id}   ? $self->idgen($opt{id}  , 'custom')
            : $opt{data} ? $self->idgen($opt{data}          )
            :              croak "I need an 'id' or a 'data' parameter for cache check!";
-   if($self->{cache_dir}) {
+   if($self->[CACHE_DIR]) {
       require File::Spec;
-      return -e File::Spec->catfile($self->{cache_dir}, $id . $ATTR{CACHE_EXT}) ? 1 : 0;
+      return -e File::Spec->catfile($self->[CACHE_DIR], $id . $ATTR{CACHE_EXT}) ? 1 : 0;
    } else {
       return exists $CACHE->{$id} ? 1 : 0;
    }
@@ -337,50 +404,58 @@ sub compile {
       chkmt    => 0,  # check mtime of file template?
    };
 
-   croak "params must be an arrayref!" unless ref($param) && ref($param) eq 'ARRAY';
+   croak "params must be an arrayref!" unless IS_ARRAY->($param);
    croak "opts must be a hashref!"     unless ref($opt)   && ref($opt)   eq 'HASH';
 
    my $tmp = $self->_examine($tmpx);
    if($opt->{chkmt}) {
-      if($self->{_type} eq 'FILE') { 
+      if($self->[TYPE] eq 'FILE') { 
          $opt->{chkmt} = (stat $tmpx)[9];
       } else {
-         warn "[DISABLE MT] Disabling chkmt. Template is not a file\n" if DEBUG;
+         warn "[DISABLE MT] Disabling chkmt. Template is not a file\n" if IS_DEBUG;
          $opt->{chkmt} = 0;
       }
    }
 
-   warn "[ COMPILE  ] $opt->{id}\n" if defined $opt->{id} && DEBUG;
+   warn "[ COMPILE  ] $opt->{id}\n" if defined $opt->{id} && IS_DEBUG;
 
    my($CODE, $ok);
    my $cache_id = '';
-   if($self->{cache}) {
+   if($self->[CACHE]) {
       my $method = $opt->{id};
       $cache_id  = (not $method or $method eq 'AUTO') ? $self->idgen($tmp) : $self->idgen($method, 'custom');
       if($CODE = $self->_cache_hit($cache_id, $opt->{chkmt})) {
-         warn "[CACHE HIT ] $cache_id\n" if DEBUG;
+         warn "[CACHE HIT ] $cache_id\n" if IS_DEBUG;
          $ok = 1;
       }
    }
 
+   $self->[CID]      = $cache_id; # if $cache_id;
+   $self->[FILENAME] = $self->[TYPE] eq 'FILE' ? $tmpx : $self->[CID];
+
    if(not $ok) { # we have a cache miss; parse and compile
-      warn "[CACHE MISS] $cache_id\n" if DEBUG;
-      my $old_faker = $ATTR{FAKER};
-      $self->_set_faker($self->{faker}) if $self->{faker}; # faker must be set before parsing begins
-      $CODE = $self->_populate_cache( $cache_id, $self->_parse($tmp, $opt->{map_keys}), $opt->{chkmt} );
-      $self->_set_faker($old_faker) if $self->{faker};
+      warn "[CACHE MISS] $cache_id\n" if IS_DEBUG;
+      $self->_set_faker; # faker must be set before parsing begins
+      my $parsed = $self->_parse($tmp, $opt->{map_keys}, $cache_id);
+      $CODE = $self->_populate_cache( $cache_id, $parsed, $opt->{chkmt} );
    }
 
-   $self->{CID} = $cache_id; # if $cache_id;
    my   @args;
-   push @args, @{ $self->{add_args} } if $self->{add_args};
+   push @args, @{ $self->[ADD_ARGS] } if $self->[ADD_ARGS];
    push @args, @{ $param };
    return $CODE->(@args);
 }
 
-sub get_id { shift->{CID} }
+sub get_id { shift->[CID] }
 
 # -------------------[ PRIVATE METHODS ]------------------- #
+
+sub _fatal {
+   my $ID = shift;
+   my $str = $ERROR{$ID} || croak "$ID is not defined as an error";
+   return $str if not @_;
+   return sprintf $str, @_;
+}
 
 sub _fake_idgen {
    my $self = shift;
@@ -399,27 +474,27 @@ sub _examine {
    my $length = 0;
    my $rv;
    if (my $ref = ref($tmp)) {
-      croak sprintf(ERROR_NOTGLOB, $ref) if $ref ne 'GLOB';
-      croak         ERROR_NOTFH          if not  fileno $tmp;
+      croak _fatal('NOTGLOB', $ref) if $ref ne 'GLOB';
+      croak _fatal('NOTFH'        ) if not  fileno $tmp;
       # hmmm... require Fcntl; flock $tmp, Fcntl::LOCK_SH() if $ATTR{CAN_FLOCK};
       local $/;
       $rv = <$tmp>;
       #flock $tmp, Fcntl::LOCK_UN() if $ATTR{CAN_FLOCK};
       close $tmp; # ??? can this be a user option?
-      $self->{_type} = 'GLOB';
+      $self->[TYPE] = 'GLOB';
    }
    else {
       my $length = length $tmp;
       if ($length  <=  255 and $tmp !~ RE_NONFILE and -e $tmp and not -d  _) {
-         $self->{_type} = 'FILE';
+         $self->[TYPE] = 'FILE';
          $rv = $self->_slurp($tmp);
       }
       else {
-         $self->{_type} = 'STRING';
+         $self->[TYPE] = 'STRING';
          $rv = $tmp;
       }
    }
-   warn "[ EXAMINE  ] $self->{_type}; LENGTH: $length\n" if DEBUG;
+   warn "[ EXAMINE  ] ".$self->[TYPE]."; LENGTH: $length\n" if IS_DEBUG;
    return $rv;
 }
 
@@ -439,13 +514,19 @@ sub _slurp {
    return $tmp;
 }
 
-sub _compiler { $_[0]->{safe} ? $ATTR{N_COMPILER_S} : $ATTR{N_COMPILER} }
+sub _compiler { $_[0]->[SAFE] ? $ATTR{N_COMPILER_S} : $ATTR{N_COMPILER} }
 
 sub _wrap_compile {
    my $self   = shift;
    my $parsed = shift or die "nothing to compile";
-   warn "CID: $self->{CID}\n" if $self->{warn_ids} && $self->{CID};
-   my $CODE   = $self->_compiler->_compile($parsed);
+   warn "CID: ".$self->[CID]."\n" if $self->[WARN_IDS] && $self->[CID];
+   my $CODE;
+   $CODE = $self->_compiler->_compile($parsed);
+   if(my $error = $@) {
+      die $@ if not $self->[RESUME];
+      $CODE = eval "sub { return qq([$PID Fatal Error] $error) }";
+      die $@ if $@;
+   }
    return $CODE;  
 }
 
@@ -453,24 +534,24 @@ sub _cache_hit {
    my $self     = shift;
    my $cache_id = shift;
    my $chkmt    = shift || 0;
-   if($self->{cache_dir}) {
+   if($self->[CACHE_DIR]) {
       require File::Spec;
-      my $cache = File::Spec->catfile($self->{cache_dir}, $cache_id . $ATTR{CACHE_EXT});
+      my $cache = File::Spec->catfile($self->[CACHE_DIR], $cache_id . $ATTR{CACHE_EXT});
       if(-e $cache && not -d _ && -f _) {
          my $disk_cache = $self->_slurp($cache);
          if($chkmt) {
             if($disk_cache =~ m,^#(\d+)#,) {
                my $mtime  = $1;
                if($mtime != $chkmt) {
-                  warn "[MTIME DIFF]\tOLD: $mtime\n\t\tNEW: $chkmt\n" if DEBUG;
+                  warn "[MTIME DIFF]\tOLD: $mtime\n\t\tNEW: $chkmt\n" if IS_DEBUG;
                   return; # i.e.: Update cache
                }
             }
          }
          my $CODE = $self->_wrap_compile($disk_cache);
          croak "Error loading from disk cache: $@" if $@;
-         warn "[FILE CACHE]\n" if DEBUG;
-         #$self->{COUNTER}++;
+         warn "[FILE CACHE]\n" if IS_DEBUG;
+         #$self->[COUNTER]++;
          return $CODE;
       }
    }
@@ -478,11 +559,11 @@ sub _cache_hit {
       if($chkmt) {
          my $mtime = $CACHE->{$cache_id}{MTIME} || 0;
          if($mtime != $chkmt) {
-            warn "[MTIME DIFF]\tOLD: $mtime\n\t\tNEW: $chkmt\n" if DEBUG;
+            warn "[MTIME DIFF]\tOLD: $mtime\n\t\tNEW: $chkmt\n" if IS_DEBUG;
             return; # i.e.: Update cache
          }
       }
-      warn "[MEM CACHE ]\n" if DEBUG;
+      warn "[MEM CACHE ]\n" if IS_DEBUG;
       return $CACHE->{$cache_id}->{CODE};
    }
    return;
@@ -494,13 +575,13 @@ sub _populate_cache {
    my $parsed   = shift;
    my $chkmt    = shift;
    my $CODE;
-   if($self->{cache}) {
-      if($self->{cache_dir}) {
+   if($self->[CACHE]) {
+      if($self->[CACHE_DIR]) {
          __CHECK_FLOCK unless $__CHECK_FLOCK;
          require File::Spec;
          require Fcntl;
          require IO::File;
-         my $cache = File::Spec->catfile($self->{cache_dir}, $cache_id . $ATTR{CACHE_EXT});
+         my $cache = File::Spec->catfile($self->[CACHE_DIR], $cache_id . $ATTR{CACHE_EXT});
          my $fh    = IO::File->new;
          $fh->open($cache, '>') or croak "Error writing disk-cache $cache : $!";
          flock $fh, Fcntl::LOCK_EX() if $ATTR{CAN_FLOCK};
@@ -525,7 +606,7 @@ sub _populate_cache {
          $p   =~ s{;}{;\n}xmsgo; # new lines makes it easy to debug
       croak sprintf $self->_compile_error_tmp, $cid, $@, $parsed, $p;
    }
-   $self->{COUNTER}++;
+   $self->[COUNTER]++;
    return $CODE;
 }
 
@@ -601,7 +682,7 @@ sub _fix_uncuddled {
       (?:\s+|)    # ws or not
       $de
    }{$ds\} elsif ($1) \{$de}xmsgo;
-   warn "#FIXED\n$$tmp\n#/FIXED\n" if DEBUG > 2;
+   warn "#FIXED\n$$tmp\n#/FIXED\n" if IS_DEBUG > 2;
    return;
 }
 
@@ -614,24 +695,25 @@ sub _parse {
    my $is_code   = 0; # we are inside a code section
    my $is_open   = 0; # if true: quote was not closed inside the parser
    my $is_fake   = 0; # fake hash is open
-   my $q         = ';'.$ATTR{FAKER}.' .= q~'; # single quote open tag
-   my $qc        = '~;';                      # quote close tag
-   my $fo        = '';                        # fake hash open
-   my $fc        = "}$finit;";                # fake hash close
-   my $fragment  = '';                        # will be the code to compile
-      $fo        = "$ATTR{FAKER} .= $ATTR{FAKER_HASH}".'->{' if $map_keys;
+   my $q         = ';'.$self->[FAKER].' .= q~'; # single quote open tag
+   my $qc        = '~;';                        # quote close tag
+   my $fo        = '';                          # fake hash open
+   my $fc        = qq|\"}$finit;|;              # fake hash close
+   my $fragment  = '';                          # will be the code to compile
+      $fo        = $self->[FAKER]." .= $ATTR{FAKER_HASH}".'->{"' if $map_keys;
 
-   my $ds = $self->{delimiters}[DELIM_START];
-   my $de = $self->{delimiters}[DELIM_END  ];
+   my $ds = $self->[DELIMITERS][DELIM_START];
+   my $de = $self->[DELIMITERS][DELIM_END  ];
 
-   $self->_fix_uncuddled(\$tmp, $ds, $de) if $self->{fix_uncuddled};
+   $self->_fix_uncuddled(\$tmp, $ds, $de) if $self->[FIX_UNCUDDLED];
 
    my @tokens;
    foreach my $chunk (split /($ds)/, $tmp) {
       push @tokens, split /($de)/, $chunk;
    }
+   my $resume = $self->[RESUME] || '';
 
-   warn "[PARSING   ]\n" if DEBUG;
+   warn "[PARSING   ]\n" if IS_DEBUG;
    my($cmd, $what);
    my $bugfix = 0;
    PARSER: foreach my $token (@tokens) {
@@ -658,23 +740,24 @@ sub _parse {
             $cmd  = $1;
             $what = $2;
             warn "[CASE '='  ] state: $is_code; open $is_open; type $cmd; match $what\n"
-               if DEBUG;
+               if IS_DEBUG;
             # A statement can not have a comment at the end.
             # This is do-able with a "\n", but it'll also break
             # line numbers in templates
             if ($cmd eq '=') { # perl code
                if($is_code) {
-                  $fragment .= "$ATTR{FAKER} .= sub {$what}->();";
+                  $fragment .= $self->[FAKER];
+                  $fragment .= $resume ? $self->_resume($what, 1) : " .= sub {" . $what . "}->();";
                } else {
-                  warn "[NOT A CODE] $what\n" if DEBUG > 2;
+                  warn "[NOT A CODE] $what\n" if IS_DEBUG > 2;
                   $bugfix = 1;
                }
             }
             elsif ($cmd eq '+') { # static include
-               $fragment .= "$ATTR{FAKER} .= sub {".$self->_inc(static => $what)."}->();";
+               $fragment .= $self->[FAKER]." .= sub {".$self->_inc(static => $what)."}->();";
             }
             elsif ($cmd eq '*') { # normal include
-               $fragment .= "$ATTR{FAKER} .= sub {".$self->_inc(normal => $what)."}->();";
+               $fragment .= $self->[FAKER]." .= sub {".$self->_inc(normal => $what)."}->();";
             }
             else {
                # do nothing
@@ -682,23 +765,91 @@ sub _parse {
             next PARSER unless $bugfix;
          }
       }
-      $token     =~ s{\~}{\\\~}sog unless $is_code; # tilde is a private character (see $q above)
+      # tilde and quote may be special
+      if($is_code) {
+         if($map_keys) {
+            $token =~ s{"}{\\"}sog;
+         } else {
+            $token = $self->_resume($token);
+         }
+      } else {
+         $token =~ s{\~}{\\\~}sog;
+      }
       $fragment .= $token;
    }
    $fragment .= $qc if $is_open;
    $fragment .= $fc if $is_fake;
-   warn "[CASE 'END'] state: $is_code; open: $is_open\n" if DEBUG;
+   warn "[CASE 'END'] state: $is_code; open: $is_open\n" if IS_DEBUG;
    croak "Unbalanced delimiter in template"              if $is_code;
    my $code_start;
    $code_start  = 'package '.$ATTR{N_DUMMY}.';';
-   $code_start .= 'use strict;' if $self->{strict};
+   $code_start .= 'use strict;' if $self->[STRICT];
    $code_start .= 'sub { ';
-   $code_start .= $self->{header}.';' if $self->{header};
-   $code_start .= "my $ATTR{FAKER};";
+   $code_start .= $self->[HEADER].';' if $self->[HEADER];
+   $code_start .= "my ".$self->[FAKER].";";
    $code_start .= qq~my $ATTR{FAKER_HASH} = {\@_};~ if $map_keys;
-   $fragment    = $code_start.$fragment.";return $ATTR{FAKER};}";
-   warn "\n\n#FRAGMENT\n$fragment\n#/FRAGMENT\n" if DEBUG > 1;
+   $code_start .= "\n#line 1 " .  $self->[FILENAME] . "\n";
+   $fragment    = $code_start.$fragment.";return ".$self->[FAKER].";}";
+   warn "\n\n#FRAGMENT\n$fragment\n#/FRAGMENT\n" if IS_DEBUG > 1;
    return $fragment;
+}
+
+sub _set_resume_re {
+   $RESUME{MY} = qr{
+      # exclude my() declarations.
+      (?:
+         my (?:\s+|) \(       # my($foo)
+         |
+         my (?:\s+|) [\$\@\%] # my $foo
+      )
+      |
+      (?:
+         (?: unless|if|while|until|for|foreach )
+         (?:\s+|)
+         \(
+      )
+   }xms;
+   $RESUME{CURLIES} = qr{\A (?:\s+|) (?:[\{\}]) (?:\s+|)                      \z }xms;
+   $RESUME{ELSIF}   = qr{\A (?:\s+|) (?:\})     (?:\s+|) (?:else|elsif)          }xms;
+   $RESUME{ELSE}    = qr{\A (?:\s+|) \}         (?:\s+|) else (?:\s+|) (?:\{) (?:\s+|) \z }xms;
+   $RESUME{LOOP}    = qr{   (?:next|last|continue) }xms;
+   return;
+}
+
+sub _resume {
+   my $self    = shift;
+   my $token   = shift           || return;
+   my $nostart = shift           || 0;
+   my $resume  = $self->[RESUME] || '';
+   my $start   = $nostart ? '' : $self->[FAKER];
+   my $void    = $nostart ? 0  : 1; # not a self-printing block
+
+   $self->_set_resume_re() unless %RESUME;
+
+   if($token && $resume && $token !~ $RESUME{MY}) {
+      #warn "[RESUME OK ] $token\n" if DEBUG > 1;
+      if (
+          $token !~ $RESUME{CURLIES} &&
+          $token !~ $RESUME{ELSIF}   &&
+          $token !~ $RESUME{ELSE}    &&
+          $token !~ $RESUME{LOOP}
+      ) {
+         return $start
+               ." .= sub {"
+               ."local \$SIG{__DIE__};"
+               ."my \@rrrrrrrrrrrv = eval { $token };"
+               ."return qq([$PID Fatal Error] \$@) if \$@;"
+               ."return '' if($void);"
+               ."return \$rrrrrrrrrrrv[0] if \@rrrrrrrrrrrv == 1;"
+               ."return +(\@rrrrrrrrrrrv);"
+               ."}->();";
+      }
+   } 
+   #else {
+   #   warn "[RESUME NOT] $token\n" if DEBUG > 1;
+   #}
+
+   return $token;
 }
 
 sub _inc {
@@ -714,7 +865,7 @@ sub _inc {
    -e $file  or return "q~$err '$file' does not exist~";
    -d $file and return "q~$err '$file' is a directory~";
    my $text;
-   warn "[INCLUDE   ] $type => '$file'\n" if DEBUG;
+   warn "[INCLUDE   ] $type => '$file'\n" if IS_DEBUG;
    eval { $text = $self->_slurp($file) };
    return "q~$err $@~" if $@;
    if($is_normal) {
@@ -733,17 +884,18 @@ sub _inc {
 
 sub _set_faker {
    my $self = shift;
-   my $fake = shift || return;
+   my $fake = shift || $self->[FAKER] || return;
 
    if($fake =~ m{[^\$a-zA-Z_0-9]}o || # can not be non-alphanumeric
       $fake =~ m{^[0-9]}o          || # can not start with number
       $fake !~ m{^\$}o                # must start with a dollar
       ) {
-      warn "Bogus fake scalar '$fake'! Falling back to default value!" if DEBUG; # warn or die?
+      warn "Bogus fake scalar '$fake'! Falling back to default value!" if IS_DEBUG; # warn or die?
+      $self->[FAKER] = $ATTR{FAKER_NAME};
       return;
    }
 
-   $ATTR{FAKER} = $fake;
+   return; # is-ok
 }
 
 #sub _hasta_la_vista_baby {
@@ -885,6 +1037,19 @@ parameter.
 
 If you want disk-based cache, set this parameter to a valid
 directory path. You must also set L</cache> to a true value.
+
+=head3 resume
+
+If has a true value, the C<die()>able code fragments will not terminate
+the compilation of remaining parts, the compiler will simply resume 
+it's job. However, enabling this may result with a performance penalty
+if cache is not enabled. If cache is enabled, the performance penalty
+will show itself after every compilation process (upto C<2x> slower).
+
+This option is currently experimental and uses more resources.
+Only enable it for debugging.
+
+CAVEAT: C<< <% use MODULE %> >> directives won't resume.
 
 =head3 safe
 
@@ -1262,21 +1427,11 @@ overall speed really depends on your environment.
 Internal cache manager generates ids for all templates. If you supply 
 your own id parameter, this will improve performance.
 
-=head2 Interface Change
-
-This module was initially a C<Text::Template> sub-class.
-But beginning with version C<0.3> it no longer has any 
-relations with C<Text::Template> and the interface is 
-slightly changed. So, if you've liked and used an earlier 
-version, I'm sorry about this change. I figured out that 
-C<Text::Template> is not suitable for my needs and instead 
-choosed a new path for my code.
-
 =head1 SEE ALSO
 
-This module's parser is based on L<Apache::SimpleTemplate>. 
-Also see L<Text::Template> for a similar functionality.
-L<HTML::Template::Compiled> has a similar approach
+This module's parser is based on L<Apache::SimpleTemplate> and
+evolved from that. Also see L<Text::Template> for a similar 
+functionality. L<HTML::Template::Compiled> has a similar approach
 for compiled templates. There is another similar module
 named L<Text::ScriptTemplate>. Also see L<Safe> and
 L<Opcode>.

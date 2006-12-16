@@ -7,5 +7,5 @@ if($@) {
    plan skip_all => "Test::Pod::Coverage required for testing pod coverage";
 } else {
    plan tests => 1;
-   pod_coverage_ok('Text::Template::Simple');
+   pod_coverage_ok('Text::Template::Simple', {trustme => [qw/IS_DEBUG/]});
 }

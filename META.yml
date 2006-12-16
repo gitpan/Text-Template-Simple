@@ -1,6 +1,6 @@
 ---
 name: Text-Template-Simple
-version: 0.44
+version: 0.45
 author:
   - 'Burak Gursoy <burak@cpan.org>'
 abstract: Simple text template engine
@@ -20,7 +20,7 @@ recommends:
 provides:
   Text::Template::Simple:
     file: lib/Text/Template/Simple.pm
-    version: 0.44
+    version: 0.45
   Text::Template::Simple::Compiler:
     file: lib/Text/Template/Simple.pm
   Text::Template::Simple::Compiler::Safe:

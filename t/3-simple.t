@@ -14,12 +14,7 @@ sub simple {
       header   => q~my $foo = shift; my $bar = shift;~,
       add_args => ['bar',['baz']],
    );
-
-   my $result = $template->compile(
-                  '<%my $name = shift%>Hello <%=$name%>. Foo is: <%=$foo%> and bar is <%=$bar->[0]%>.',
-                  [
-                     'Burak',
-                  ]);
+   my $result = $template->compile('t/test.tmpl', ['Burak']);
    #warn "[COMPILED] $result\n";
    return $result;
 }
