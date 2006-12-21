@@ -2,6 +2,18 @@ Revision history for Perl extension Text::Template::Simple.
 
 Time zone is GMT+2.
 
+0.46 Thu Dec 21 20:16:33 2006
+	=> Bugfix in _resume().
+	=> Internal changes:
+	      Replaced remaining die()s with croak()s.
+	      s[} else {][}\n else {]sg;
+	=> Added a new test to demonstrate extending 
+	   Text::Template::Simple.
+	=> Safe templates were not working. Fixed by 
+	   adding a require opcode (disable strict to
+	   disable require).
+	=> Added a safe test.
+
 0.45 Sat Dec 16 22:15:18 2006
 	=> Internal optimization.
 	=> Added line number and file name emulation to parser.

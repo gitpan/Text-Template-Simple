@@ -30,7 +30,8 @@ sub _object {
          my $ok;
          eval {$ok = $safe->isa('Safe')};
          return $safe if $ok;
-      } else {
+      }
+      else {
          warn "Safe object failed, falling back to default".($@ ? ': '.$@ : '.');
       }
    }
@@ -41,7 +42,7 @@ sub _object {
    return $safe;
 }
 
-my @permit = qw(:default);
+my @permit = qw(:default require);
 sub _permit {
    my $class = shift;
    my @list;
@@ -55,55 +56,61 @@ package Text::Template::Simple;
 use strict;
 use vars qw($VERSION $AUTOLOAD @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS $OID);
 
-use constant IS_ARRAY      => sub {$_[0] && ref($_[0]) && ref($_[0]) eq 'ARRAY'};
+use constant IS_ARRAY       => sub {$_[0] && ref($_[0]) && ref($_[0]) eq 'ARRAY'};
+use constant IS_WINDOWS     => $^O eq 'MSWin32';
 
-use constant DELIM_START   => 0;
-use constant DELIM_END     => 1;
-use constant IS_WINDOWS    => $^O eq 'MSWin32';
-use constant RE_NONFILE    => qr{ [ \n \r < > \* ] }xmso;
-use constant RE_COMMAND    => qr{\A (?:\s+|)([=+\*])(.+?)(?:;+|) \z}xmso;
+use constant DELIM_START    => 0;
+use constant DELIM_END      => 1;
+use constant RE_NONFILE     => qr{ [ \n \r < > \* ] }xmso;
+use constant RE_COMMAND     => qr{\A (?:\s+|)([=+\*])(.+?)(?:;+|) \z}xmso;
+use constant RESUME_NOSTART => 1; # bool
 
 # object fields
 BEGIN { $OID = -1 } # init object field id counter
-use constant DELIMITERS    => ++$OID;
-use constant AS_STRING     => ++$OID;
-use constant DELETE_WS     => ++$OID;
-use constant FAKER         => ++$OID;
-use constant CACHE         => ++$OID;
-use constant CACHE_DIR     => ++$OID;
-use constant STRICT        => ++$OID;
-use constant SAFE          => ++$OID;
-use constant HEADER        => ++$OID;
-use constant ADD_ARGS      => ++$OID;
-use constant WARN_IDS      => ++$OID;
-use constant FIX_UNCUDDLED => ++$OID;
-use constant TYPE          => ++$OID;
-use constant COUNTER       => ++$OID;
-use constant CID           => ++$OID;
-use constant FILENAME      => ++$OID;
-use constant RESUME        => ++$OID;
+use constant DELIMITERS     => ++$OID;
+use constant AS_STRING      => ++$OID;
+use constant DELETE_WS      => ++$OID;
+use constant FAKER          => ++$OID;
+use constant CACHE          => ++$OID;
+use constant CACHE_DIR      => ++$OID;
+use constant STRICT         => ++$OID;
+use constant SAFE           => ++$OID;
+use constant HEADER         => ++$OID;
+use constant ADD_ARGS       => ++$OID;
+use constant WARN_IDS       => ++$OID;
+use constant FIX_UNCUDDLED  => ++$OID;
+use constant TYPE           => ++$OID;
+use constant COUNTER        => ++$OID;
+use constant CID            => ++$OID;
+use constant FILENAME       => ++$OID;
+use constant RESUME         => ++$OID;
 # number of the last object field
-use constant MAXOBJFIELD   =>   $OID;
+use constant MAXOBJFIELD    =>   $OID;
 
 use Carp qw(croak);
 require Exporter;
 
-$VERSION     = '0.45';
+$VERSION     = '0.46';
 @ISA         = qw(Exporter);
 
 %EXPORT_TAGS = (
    object => [
                 qw/
-                   DELIMITERS AS_STRING   DELETE_WS FAKER
-                   CACHE      CACHE_DIR   STRICT    SAFE
-                   HEADER     ADD_ARGS    WARN_IDS  FIX_UNCUDDLED
-                   TYPE       COUNTER     CID       FILENAME
-                   RESUME     MAXOBJFIELD
+                   DELIMITERS  AS_STRING   DELETE_WS FAKER
+                   CACHE       CACHE_DIR   STRICT    SAFE
+                   HEADER      ADD_ARGS    WARN_IDS  FIX_UNCUDDLED
+                   TYPE        COUNTER     CID       FILENAME
+                   RESUME      MAXOBJFIELD
                   /
              ],
    delim  => [
                 qw/
                    DELIM_START DELIM_END
+                  /
+             ],
+   macro  => [
+                qw/
+                   IS_ARRAY    IS_WINDOWS
                   /
              ],
 );
@@ -178,7 +185,8 @@ sub __CHECK_FLOCK () {
       require Win32;
       # are we running under dumb OS?
       $ATTR{CAN_FLOCK} = Win32::IsWin95() ? 0 : 1;
-   } else {
+   }
+   else {
       $ATTR{CAN_FLOCK} = 1; # TODO: test flock() directly
    }
    $__CHECK_FLOCK = 1;
@@ -332,11 +340,12 @@ sub dump_cache {
    }
    $d = Data::Dumper->new([$disk_cache ? $disk_cache : $CACHE], ['$CACHE']);
    unless($disk_cache) {
-      if($d->can('Deparse')) {
-         $d->Deparse(1);
-      } else {
-         croak "Can not dump in-memory cache! Your version of Data::Dumper ($Data::Dumper::VERSION) does not implement the Deparse() method. Please upgrade this module!";
+      if(not $d->can('Deparse')) {
+         croak "Can not dump in-memory cache! Your version of Data::Dumper "
+              ."($Data::Dumper::VERSION) does not implement the Deparse() method. "
+              ."Please upgrade this module!";
       }
+      $d->Deparse(1);
    }
    return $d->Dump;
 }
@@ -360,7 +369,8 @@ sub cache_size {
       if(eval {require Devel::Size; 1;}) {
          warn "[DEBUG     ] Devel::Size v$Devel::Size::VERSION is loaded.\n" if IS_DEBUG;
          return Devel::Size::total_size($CACHE);
-      } else {
+      }
+      else {
          warn "Failed to load Devel::Size: $@" if IS_DEBUG;
          return 0;
       }
@@ -381,7 +391,8 @@ sub in_cache {
    if($self->[CACHE_DIR]) {
       require File::Spec;
       return -e File::Spec->catfile($self->[CACHE_DIR], $id . $ATTR{CACHE_EXT}) ? 1 : 0;
-   } else {
+   }
+   else {
       return exists $CACHE->{$id} ? 1 : 0;
    }
 }
@@ -411,7 +422,8 @@ sub compile {
    if($opt->{chkmt}) {
       if($self->[TYPE] eq 'FILE') { 
          $opt->{chkmt} = (stat $tmpx)[9];
-      } else {
+      }
+      else {
          warn "[DISABLE MT] Disabling chkmt. Template is not a file\n" if IS_DEBUG;
          $opt->{chkmt} = 0;
       }
@@ -423,7 +435,7 @@ sub compile {
    my $cache_id = '';
    if($self->[CACHE]) {
       my $method = $opt->{id};
-      $cache_id  = (not $method or $method eq 'AUTO') ? $self->idgen($tmp) : $self->idgen($method, 'custom');
+      $cache_id  = $self->idgen( (not $method or $method eq 'AUTO') ? ($tmp) : ($method, 'custom') );
       if($CODE = $self->_cache_hit($cache_id, $opt->{chkmt})) {
          warn "[CACHE HIT ] $cache_id\n" if IS_DEBUG;
          $ok = 1;
@@ -448,7 +460,7 @@ sub compile {
 
 sub get_id { shift->[CID] }
 
-# -------------------[ PRIVATE METHODS ]------------------- #
+# -------------------[ P R I V A T E   M E T H O D S ]------------------- #
 
 sub _fatal {
    my $ID = shift;
@@ -460,7 +472,7 @@ sub _fatal {
 sub _fake_idgen {
    my $self = shift;
    my $data = shift or croak "Can't generate id without data!";
-   $data =~ s{[^A-Za-z_0-9]}{_}xmsg;
+      $data =~ s{[^A-Za-z_0-9]}{_}xmsg;
    my $len = length($data);
    if($len > $ATTR{MAX_FL}) { # limit file name length
       $data = substr $data, $len - $ATTR{MAX_FL}, $ATTR{MAX_FL};
@@ -518,14 +530,15 @@ sub _compiler { $_[0]->[SAFE] ? $ATTR{N_COMPILER_S} : $ATTR{N_COMPILER} }
 
 sub _wrap_compile {
    my $self   = shift;
-   my $parsed = shift or die "nothing to compile";
+   my $parsed = shift or croak "nothing to compile";
    warn "CID: ".$self->[CID]."\n" if $self->[WARN_IDS] && $self->[CID];
+   warn "[ COMPILER ] ".($self->[SAFE] ? 'Safe' : 'Normal')."\n" if IS_DEBUG;
    my $CODE;
    $CODE = $self->_compiler->_compile($parsed);
    if(my $error = $@) {
-      die $@ if not $self->[RESUME];
+      croak $@ if not $self->[RESUME];
       $CODE = eval "sub { return qq([$PID Fatal Error] $error) }";
-      die $@ if $@;
+      croak $@ if $@;
    }
    return $CODE;  
 }
@@ -690,7 +703,7 @@ sub _parse {
    my $self      = shift;
    my $tmp       = shift;
    my $map_keys  = shift; # code sections are hash keys
-   my $finit     = ''; # map_keys init code
+   my $finit     = '';    # map_keys init code
       $finit     = q~ || ''~ if $map_keys && $map_keys eq 'init';
    my $is_code   = 0; # we are inside a code section
    my $is_open   = 0; # if true: quote was not closed inside the parser
@@ -747,8 +760,9 @@ sub _parse {
             if ($cmd eq '=') { # perl code
                if($is_code) {
                   $fragment .= $self->[FAKER];
-                  $fragment .= $resume ? $self->_resume($what, 1) : " .= sub {" . $what . "}->();";
-               } else {
+                  $fragment .= $resume ? $self->_resume($what, RESUME_NOSTART) : " .= sub {" . $what . "}->();";
+               }
+               else {
                   warn "[NOT A CODE] $what\n" if IS_DEBUG > 2;
                   $bugfix = 1;
                }
@@ -769,10 +783,12 @@ sub _parse {
       if($is_code) {
          if($map_keys) {
             $token =~ s{"}{\\"}sog;
-         } else {
+         }
+         else {
             $token = $self->_resume($token);
          }
-      } else {
+      }
+      else {
          $token =~ s{\~}{\\\~}sog;
       }
       $fragment .= $token;
@@ -798,9 +814,11 @@ sub _set_resume_re {
    $RESUME{MY} = qr{
       # exclude my() declarations.
       (?:
-         my (?:\s+|) \(       # my($foo)
+         (?:my|local) (?:\s+|) \(       # my($foo)
          |
-         my (?:\s+|) [\$\@\%] # my $foo
+         (?:my|local) (?:\s+|) [\$\@\%] # my $foo
+         |
+         (?:my|local)[\$\@\%]           # my$foo
       )
       |
       (?:
@@ -812,7 +830,7 @@ sub _set_resume_re {
    $RESUME{CURLIES} = qr{\A (?:\s+|) (?:[\{\}]) (?:\s+|)                      \z }xms;
    $RESUME{ELSIF}   = qr{\A (?:\s+|) (?:\})     (?:\s+|) (?:else|elsif)          }xms;
    $RESUME{ELSE}    = qr{\A (?:\s+|) \}         (?:\s+|) else (?:\s+|) (?:\{) (?:\s+|) \z }xms;
-   $RESUME{LOOP}    = qr{   (?:next|last|continue) }xms;
+   $RESUME{LOOP}    = qr{   (?:next|last|continue|redo) }xms;
    return;
 }
 
@@ -943,7 +961,7 @@ manager.
 
 =head1 SYNTAX
 
-Template syntax is very simple. There are three kinds of delimiters;
+Template syntax is very simple. There are three kinds of delimiters:
 code blocks (C<< <% %> >>), self-printing blocks (C<< <%= %> >>)
 and static include directive (C<< <%+ %> >>):
 
@@ -1051,6 +1069,11 @@ Only enable it for debugging.
 
 CAVEAT: C<< <% use MODULE %> >> directives won't resume.
 
+=head3 strict
+
+If has a true value, the template will be compiled under strict.
+Enabled by default.
+
 =head3 safe
 
 Set this to a true value if you want to execute the template
@@ -1079,7 +1102,12 @@ C<Text::Template::Simple::Compiler::Safe::object>:
       return $safe;
    }
 
-See L<Safe> and especially L<Opcode> for opcode lists and other details.
+C<:default> and C<require> are enabled opcodes, unless you 
+define your own. You have to disable C<strict> option
+to disable C<require> opcode.
+
+See L<Safe> and especially L<Opcode> for opcode lists and 
+other details.
 
 =head3 header
 
