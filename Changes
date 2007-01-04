@@ -2,6 +2,11 @@ Revision history for Perl extension Text::Template::Simple.
 
 Time zone is GMT+2.
 
+0.47 Thu Jan  4 18:16:21 2007
+	=> Implemented an I/O layer mechanism.
+	=> Fixed Win32 compatibility 
+	   (older perls don't have a Win32.pm)
+
 0.46 Thu Dec 21 20:16:33 2006
 	=> Bugfix in _resume().
 	=> Internal changes:

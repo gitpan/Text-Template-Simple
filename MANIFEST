@@ -4,6 +4,7 @@ t/02-pod-coverage.t
 t/03-simple.t
 t/04-extend.t
 t/05-safe.t
+t/06-iolayer.t
 t/skip.test
 t/test.tmpl
 t/lib/My.pm

@@ -84,13 +84,14 @@ use constant COUNTER        => ++$OID;
 use constant CID            => ++$OID;
 use constant FILENAME       => ++$OID;
 use constant RESUME         => ++$OID;
+use constant IOLAYER        => ++$OID;
 # number of the last object field
 use constant MAXOBJFIELD    =>   $OID;
 
 use Carp qw(croak);
 require Exporter;
 
-$VERSION     = '0.46';
+$VERSION     = '0.47';
 @ISA         = qw(Exporter);
 
 %EXPORT_TAGS = (
@@ -163,6 +164,7 @@ my %DEFAULT = (
       warn_ids      =>  0, # warn template ids?
       fix_uncuddled =>  0, # do some worst practice?
       resume        =>  0, # resume on error?
+      iolayer       => '', # I/O layer for filehandles
 );
 
 my %ERROR = (
@@ -182,7 +184,7 @@ my %RESUME; # Regexen for _resume
 my $__CHECK_FLOCK = 0;
 sub __CHECK_FLOCK () {
    if(IS_WINDOWS) {
-      require Win32;
+      require Win32 if not defined &Win32::IsWin95;
       # are we running under dumb OS?
       $ATTR{CAN_FLOCK} = Win32::IsWin95() ? 0 : 1;
    }
@@ -267,7 +269,9 @@ sub _init {
       $self->[CACHE_DIR] = File::Spec->canonpath($self->[CACHE_DIR]);
       my $wdir;
       if(IS_WINDOWS) {
-         require Win32;
+         if(!defined &Win32::GetFullPathName || !defined &Win32::GetLastError) {
+            require Win32;
+         }
          $wdir = Win32::GetFullPathName($self->[CACHE_DIR]);
          if( Win32::GetLastError() ) {
             warn "[   FAIL   ] Win32::GetFullPathName\n" if IS_DEBUG;
@@ -510,6 +514,15 @@ sub _examine {
    return $rv;
 }
 
+sub _iolayer {
+   my $self  = shift;
+   my $fh    = shift || croak "_iolayer: Filehandle is absent";
+   my $layer = $self->[IOLAYER] || return;
+   return if not $] >= 5.008;
+   eval q{ binmode $fh, ':'.$layer };
+   warn "Error setting I/O layer $layer: $@\n" if $@;
+}
+
 sub _slurp {
    my $self = shift;
    __CHECK_FLOCK unless $__CHECK_FLOCK;
@@ -519,6 +532,7 @@ sub _slurp {
    my $fh = IO::File->new;
    $fh->open($file, 'r') or croak "Error opening $file for reading: $!";
    flock $fh, Fcntl::LOCK_SH() if $ATTR{CAN_FLOCK};
+   $self->_iolayer($fh);
    local $/;
    my $tmp = <$fh>;
    flock $fh, Fcntl::LOCK_UN() if $ATTR{CAN_FLOCK};
@@ -598,6 +612,7 @@ sub _populate_cache {
          my $fh    = IO::File->new;
          $fh->open($cache, '>') or croak "Error writing disk-cache $cache : $!";
          flock $fh, Fcntl::LOCK_EX() if $ATTR{CAN_FLOCK};
+         $self->_iolayer($fh);
          print $fh $chkmt ? "#$chkmt#\n" : "##\n", $self->_cache_comment, $parsed; 
          flock $fh, Fcntl::LOCK_UN() if $ATTR{CAN_FLOCK};
          close $fh;
@@ -1178,6 +1193,12 @@ If you are using uncuddled elses/elsifs (which became popular after
 Damian Conway' s PBP Book) in your templates, this will break the parser.
 If you supply this parameter with a true value, the parser will
 reformat the data with cuddled versions before parsing it.
+
+=head3 iolayer
+
+This option does not have any effect under perls older than C<5.8.0>.
+Set this to C<utf8> (no initial colon) if your I/O is C<UTF-8>. 
+Not tested with other encodings.
 
 =head2 compile DATA [, FILL_IN_PARAM, OPTIONS]
 

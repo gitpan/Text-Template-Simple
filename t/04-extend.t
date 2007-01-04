@@ -19,8 +19,6 @@ my $t = Text::Template::Simple->new;
 
 my $tmpl = <<'THE_TEMPLATE';
 <% my $url = shift %>
-Escaped        : <%=      escape $url             %>
-(Un)Escaped    : <%=      unescape escape $url    %>
 Function call  : <%=      hello  "Burak"          %>
 Global variable: X is <%= $GLOBAL{X}              %>
 THE_TEMPLATE
