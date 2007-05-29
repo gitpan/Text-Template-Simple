@@ -3,7 +3,7 @@
 # functions and globals
 # SEE ALSO: t/lib/My.pm
 use strict;
-use lib qw(t/lib);
+use lib qw(t/lib lib);
 use Test;
 BEGIN { plan tests => 2 }
 

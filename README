@@ -27,11 +27,15 @@ This module requires these other modules:
 
       Data::Dumper 2.101
       File::Spec   0.6
-      File::Find
+      File::Find   0.0
       IO::Handle   1.1505
       IO::File     1.06021
       Fcntl        1.03
       Safe         2.06
+
+this module is only required for testing:
+
+      Test::More   0.40
 
 and this module is recommended:
 
@@ -41,7 +45,7 @@ All are available on CPAN.
 
 COPYRIGHT AND LICENCE
 
-Copyright (C) 2004-2006 Burak Gürsoy <burak@cpan.org>. All rights reserved.
+Copyright (C) 2004-2007 Burak Gürsoy <burak@cpan.org>. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify 
 it under the same terms as Perl itself, either Perl version 5.8.8 or, 

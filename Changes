@@ -2,63 +2,83 @@ Revision history for Perl extension Text::Template::Simple.
 
 Time zone is GMT+2.
 
+0.48 Tue May 29 21:40:16 2007
+   => Removed AUTOLOAD.
+   => When I issue a dump_cache() with Data::Dumper & 
+      Deparse() enabled, under mod_perl2 or PerlEx,
+      I got a strange error: 
+
+         Can't locate object method "first" via package "B::SVOP" at ...
+
+      This does not happen suddenly, but after I call dump_cache()
+      three times. 
+      
+      I couldn't duplicate the error with a simple example, so 
+      this may be related to some other part of my actual code 
+      (not related to Text::Template::Simple). I've created a 
+      workaround for now. If you get the same error somehow 
+      (it is now a warning) please report via RT and include
+      a sample code if possible.
+   => Internal cleanup.
+   => Test::More is now required.
+
 0.47 Thu Jan  4 18:16:21 2007
-	=> Implemented an I/O layer mechanism.
-	=> Fixed Win32 compatibility 
-	   (older perls don't have a Win32.pm)
+   => Implemented an I/O layer mechanism.
+   => Fixed Win32 compatibility 
+      (older perls don't have a Win32.pm)
 
 0.46 Thu Dec 21 20:16:33 2006
-	=> Bugfix in _resume().
-	=> Internal changes:
-	      Replaced remaining die()s with croak()s.
-	      s[} else {][}\n else {]sg;
-	=> Added a new test to demonstrate extending 
-	   Text::Template::Simple.
-	=> Safe templates were not working. Fixed by 
-	   adding a require opcode (disable strict to
-	   disable require).
-	=> Added a safe test.
+   => Bugfix in _resume().
+   => Internal changes:
+         Replaced remaining die()s with croak()s.
+         s[} else {][}\n else {]sg;
+   => Added a new test to demonstrate extending 
+      Text::Template::Simple.
+   => Safe templates were not working. Fixed by 
+      adding a require opcode (disable strict to
+      disable require).
+   => Added a safe test.
 
 0.45 Sat Dec 16 22:15:18 2006
-	=> Internal optimization.
-	=> Added line number and file name emulation to parser.
-	   You have to use file templates or enable cache to 
-	   enable this feature.
-	=> Implemented a resume method. If enabled, the compiler 
-	   will resume on fatal errors. There are some buggy parts
-	   and it will slow down the compilation process.
+   => Internal optimization.
+   => Added line number and file name emulation to parser.
+      You have to use file templates or enable cache to 
+      enable this feature.
+   => Implemented a resume method. If enabled, the compiler 
+      will resume on fatal errors. There are some buggy parts
+      and it will slow down the compilation process.
 
 0.44 Sat Sep  9 10:44:43 2006
-	=> Forgot to remove development code.
-	   Fixed versions in this file.
+   => Forgot to remove development code.
+      Fixed versions in this file.
 
 0.43 Fri Sep  8 20:52:41 2006
-	=> Internal cleanup & optimization.
+   => Internal cleanup & optimization.
 
 0.42 Fri Sep  8 14:23:34 2006
-	=> Added fix_uncuddled option (bool) to new & 
-	   implemented it. If you are a uncuddled else/elsif
-	   fan, enable this or your template will die a horrible
-	   death.
+   => Added fix_uncuddled option (bool) to new & 
+      implemented it. If you are a uncuddled else/elsif
+      fan, enable this or your template will die a horrible
+      death.
 
 0.41 Tue Aug  8 04:01:44 2006
-	=> Fixed flock() check.
-	=> New option to new(): warn_ids.
-	=> Fixed a nasty bug in self printing blocks.
+   => Fixed flock() check.
+   => New option to new(): warn_ids.
+   => Fixed a nasty bug in self printing blocks.
 
 0.40 Thu Jun 15 21:03:27 2006
-	=> Several optimizations.
-	=> Fixed README & Makefile.PL ABSTRACT.
-	=> Added compat code to Build.PL
-	=> Changed get_id().
-	=> Added 'static' includes.
-	=> Changed FH detection in _examine().
+   => Several optimizations.
+   => Fixed README & Makefile.PL ABSTRACT.
+   => Added compat code to Build.PL
+   => Changed get_id().
+   => Added 'static' includes.
+   => Changed FH detection in _examine().
 
 0.3 Wed Feb 22 21:15:59 2006
-	=> Completely new API and new design.
+   => Completely new API and new design.
 
 0.2 Thu Dec  1 22:24:35 2005
-	=> New extended interface.
+   => New extended interface.
 
 0.1 Sat Dec 11 20:18:26 2004
-	=> First release.
+   => First release.

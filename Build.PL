@@ -20,6 +20,7 @@ if($@) {
          'IO::File'     => '1.06021',
          'Fcntl'        => '1.03',
          'Safe'         => '2.06',
+         'Test::More'   => '0.40',
       },
       recommends  => {
          'Devel::Size'  => '0.64',

@@ -11,6 +11,7 @@ WriteMakefile(
       'IO::File'     => '1.06021',
       'Fcntl'        => '1.03',
       'Safe'         => '2.06',
+      'Test::More'   => '0.40',
       #'Devel::Size'  => 0,
    },
    ($] >= 5.005 ? (
