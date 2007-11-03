@@ -2,6 +2,10 @@ Revision history for Perl extension Text::Template::Simple.
 
 Time zone is GMT+2.
 
+0.49_01 Sun Nov  4 00:09:53 2007
+   => Added a caller stack dumper.
+   => Fixed Win32 compatibility (again).
+
 0.48 Tue May 29 21:40:16 2007
    => Removed AUTOLOAD.
    => When I issue a dump_cache() with Data::Dumper & 

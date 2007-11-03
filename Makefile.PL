@@ -1,5 +1,14 @@
 use ExtUtils::MakeMaker;
 
+print <<'RECOMMEND';
+
+Recommended Modules:
+
+   Devel::Size v0.64
+   Text::Table v1.107
+
+RECOMMEND
+
 WriteMakefile(
    'NAME'         => 'Text::Template::Simple',
    'VERSION_FROM' => 'lib/Text/Template/Simple.pm',
