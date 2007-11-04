@@ -53,7 +53,7 @@ sub _object {
    return $safe;
 }
 
-my @permit = qw(:default require);
+my @permit = qw( :default require caller );
 sub _permit {
    my $class = shift;
    my @list;
@@ -160,7 +160,7 @@ sub _text_table {
    my $opt     = shift;
    my $callers = shift;
    eval { require Text::Table; };
-   croak "Caller stack type 'text_table' requires Text::Template" if $@;
+   croak "Caller stack type 'text_table' requires Text::Table" if $@;
 
    my $table = Text::Table->new( qw(
                   | CONTEXT    | SUB      | LINE  | FILE    | HASARGS
@@ -239,12 +239,13 @@ use Exporter qw();
 
 BEGIN {
    if ( IS_WINDOWS ) {
+      # perl 5.5.4 does not seem to have a Win32.pm
       local $@;
       eval { require Win32; Win32->import };
    }
 }
 
-$VERSION     = '0.49_01';
+$VERSION     = '0.49_02';
 @ISA         = qw( Exporter );
 
 %EXPORT_TAGS = (
@@ -1463,9 +1464,10 @@ C<Text::Template::Simple::Compiler::Safe::object>:
       return $safe;
    }
 
-C<:default> and C<require> are enabled opcodes, unless you 
+C<:default>, C<require> and C<caller> are enabled opcodes, unless you 
 define your own. You have to disable C<strict> option
-to disable C<require> opcode.
+to disable C<require> opcode. Disabling C<caller> will also make
+your C<require>/C<use> calls die in perl 5.9.5 and later.
 
 See L<Safe> and especially L<Opcode> for opcode lists and 
 other details.

@@ -2,6 +2,11 @@ Revision history for Perl extension Text::Template::Simple.
 
 Time zone is GMT+2.
 
+0.49_02 Sun Nov  4 00:09:53 2007
+   => Fixed a typo in Text::Template::Simple::Caller::_text_table();
+   => All distro files now has LF line ending.
+   => Added 'caller' to permit list of safe mode.
+
 0.49_01 Sun Nov  4 00:09:53 2007
    => Added a caller stack dumper.
    => Fixed Win32 compatibility (again).
