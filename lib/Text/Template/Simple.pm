@@ -88,10 +88,10 @@ sub stack {
       $frame ||= 0;
    my(@callers, $context);
 
-   while ( my @c = caller ++$frame ) {
+   TRACE: while ( my @c = caller ++$frame ) {
 
-      foreach my $id ( 0 .. $#c ) {
-         next if $id == WANTARRAY;
+      INITIALIZE: foreach my $id ( 0 .. $#c ) {
+         next INITIALIZE if $id == WANTARRAY; # can be undef
          $c[$id] ||= '';
       }
 
@@ -101,16 +101,16 @@ sub stack {
 
       push  @callers,
             {
-               class    => $c[PACKAGE],
-               file     => $c[FILENAME],
-               line     => $c[LINE],
+               class    => $c[PACKAGE   ],
+               file     => $c[FILENAME  ],
+               line     => $c[LINE      ],
                sub      => $c[SUBROUTINE],
                context  => $context,
                isreq    => $c[IS_REQUIRE],
-               hasargs  => $c[HASARGS] ? 'YES' : 'NO',
-               evaltext => $c[EVALTEXT],
-               hints    => $c[HINTS],
-               bitmask  => $c[BITMASK],
+               hasargs  => $c[HASARGS   ] ? 'YES' : 'NO',
+               evaltext => $c[EVALTEXT  ],
+               hints    => $c[HINTS     ],
+               bitmask  => $c[BITMASK   ],
             };
 
    }
@@ -198,6 +198,126 @@ sub _text_table {
    return $rv;
 }
 
+package Text::Template::Simple::Tokenizer;
+use strict;
+use constant CMD_CHAR   =>  0;
+use constant CMD_ID     =>  1;
+use constant CMD_CB     =>  2; # callback
+
+use constant TOKEN_ID   =>  0;
+use constant TOKEN_STR  =>  1;
+use constant LAST_TOKEN => -1;
+
+use constant ID_DS      =>  0;
+use constant ID_DE      =>  1;
+
+use Carp qw( croak );
+
+my @COMMANDS = (
+   [ qw/ = CAPTURE        / ],
+   [ qw/ * DYNAMIC   trim / ],
+   [ qw/ + STATIC    trim / ],
+   [ qw/ ! NOTADELIM      / ],
+);
+
+sub new {
+   my $class = shift;
+   my $self  = [];
+   bless $self, $class;
+   $self->[ID_DS] = shift || croak "tokenize(): Start delimiter is missing";
+   $self->[ID_DE] = shift || croak "tokenize(): End delimiter is missing";
+   $self;
+}
+
+sub tokenize {
+   # compile the template into a tree and optimize
+   my $self       = shift;
+   my $tmp        = shift || croak "tokenize(): Template string is missing";
+   my $map_keys   = shift;
+   my($ds, $de)   = @{ $self };
+   my($qds, $qde) = map { quotemeta $_ } $ds, $de;
+   
+   my @tokens;
+   my $inside = 0;
+   my $last;
+
+   OUT_TOKEN: foreach my $i (split /($qds)/, $tmp) {
+
+      if ( $i eq $ds ) {
+         push @tokens, [ DELIMSTART => $i ];
+         $inside = 1;
+         next OUT_TOKEN;
+      }
+
+      IN_TOKEN: foreach my $j ( split /($qde)/, $i ) {
+         if ( $j eq $de ) {
+            $last = $tokens[LAST_TOKEN];
+            if ( $last->[TOKEN_ID] eq 'NOTADELIM' ) {
+               $last->[TOKEN_STR] = $self->tilde( $last->[TOKEN_STR] . $de );
+            }
+            else {
+               push @tokens, [ DELIMEND => $j ];
+            }
+            $inside = 0;
+            next IN_TOKEN;
+         }
+         push @tokens, $self->token_code( $j, $inside, $map_keys, \@tokens );
+      }
+   }
+
+   return \@tokens;
+}
+
+sub token_code {
+   my $self   = shift;
+   my $str    = shift;
+   my $inside = shift;
+   my $map_keys = shift;
+   my $tree   = shift;
+
+   foreach my $cmd ( @COMMANDS ) {
+      if ( ! index( $str, $cmd->[CMD_CHAR], 0 ) ) {
+         my $len = length($str);
+         my $cb  = $cmd->[CMD_CB];
+         my $buf = substr $str, 1, $len - 1;
+         if ( $cmd->[CMD_ID] eq 'NOTADELIM' && $inside ) {
+            $buf = $self->[ID_DS] . $buf;
+            $tree->[LAST_TOKEN][TOKEN_ID] = 'DISCARD';
+         }
+         $cb = 'quote' if $map_keys;
+         return [
+                  $map_keys ? 'RAW'              : $cmd->[CMD_ID],
+                  $cb       ? $self->$cb( $buf ) : $buf
+                ];
+      }
+   }
+
+   return [ $map_keys ? 'MAPKEY' : 'CODE', $str                 ] if $inside;
+   return [                         'RAW', $self->tilde( $str ) ];
+}
+
+sub tilde {
+   my $self = shift;
+   my $s    = shift;
+      $s    =~ s{ \~ }{\\~}xmsg;
+      $s;
+}
+
+sub quote {
+   my $self = shift;
+   my $s    = shift;
+      $s    =~ s{ " }{\\"}xmsg;
+      $s;
+}
+
+sub trim {
+   my $self = shift;
+   my $s    = shift;
+      $s    =~ s{ \A \s+    }{}xms;
+      $s    =~ s{    \s+ \z }{}xms;
+      $s;
+}
+
 package Text::Template::Simple;
 use strict;
 use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS $OID);
@@ -206,7 +326,7 @@ use constant IS_WINDOWS     => $^O eq 'MSWin32' || $^O eq 'MSWin64';
 use constant DELIM_START    => 0;
 use constant DELIM_END      => 1;
 use constant RE_NONFILE     => qr{ [ \n \r < > \* \? ] }xmso;
-use constant RE_COMMAND     => qr{\A (?:\s+|)([=+\*])(.+?)(?:;+|) \z}xmso;
+use constant RE_COMMAND     => qr{\A (?:\s+|)([=+\*\!])(.+?)(?:;+|) \z}xmso;
 use constant RE_DUMP_ERROR  => qr{Can\'t locate object method "first" via package "B::SVOP"};
 use constant RESUME_NOSTART => 1; # bool
 
@@ -245,7 +365,7 @@ BEGIN {
    }
 }
 
-$VERSION     = '0.49_02';
+$VERSION     = '0.49_03';
 @ISA         = qw( Exporter );
 
 %EXPORT_TAGS = (
@@ -999,145 +1119,83 @@ sub _fix_uncuddled {
 }
 
 sub _parse {
-   my $self      = shift;
-   my $tmp       = shift;
-   my $map_keys  = shift; # code sections are hash keys
-   my $cache_id  = shift;
-   my $finit     = '';    # map_keys init code
-      $finit     = q~ || ''~ if $map_keys && $map_keys eq 'init';
-   my $is_code   = 0; # we are inside a code section
-   my $is_open   = 0; # if true: quote was not closed inside the parser
-   my $is_fake   = 0; # fake hash is open
-   my $faker     = $self->[FAKER];
-   my $q         = ";$faker .= q~"; # single quote open tag
-   my $qc        = '~;';            # quote close tag
-   my $fo        = '';              # fake hash open
-   my $fc        = qq|\"}$finit;|;  # fake hash close
-   my $fragment  = '';              # will be the code to compile
-      $fo        = "$faker .= $ATTR{FAKER_HASH}".'->{"' if $map_keys;
+   my $self     = shift;
+   my $raw      = shift;
+   my $map_keys = shift; # code sections are hash keys
+   my $cache_id = shift;
 
-   my $ds = $self->[DELIMITERS][DELIM_START];
-   my $de = $self->[DELIMITERS][DELIM_END  ];
+   my $resume   = $self->[RESUME] || '';
+   my $ds       = $self->[DELIMITERS][DELIM_START];
+   my $de       = $self->[DELIMITERS][DELIM_END  ];
+   my $faker    = $self->[FAKER];
+   my $toke     = Text::Template::Simple::Tokenizer->new( $ds, $de );
+   my $code     = '';
+   my $inside   = 0;
 
-   $self->_fix_uncuddled(\$tmp, $ds, $de) if $self->[FIX_UNCUDDLED];
+   my($mko, $mkc, $mki);
 
-   my @tokens;
-   foreach my $chunk (split /($ds)/, $tmp) {
-      push @tokens, split /($de)/, $chunk;
-   }
-   my $resume = $self->[RESUME] || '';
-
-   warn "[PARSING   ]\n" if IS_DEBUG;
-   my($cmd, $what);
-   my $bugfix = 0;
-
-   PARSER: foreach my $token (@tokens) {
-
-      $bugfix = 0;
-      if ( $token eq $ds ) {
-         ++$is_code;
-         next PARSER;
-      }
-
-      if ( $token eq $de ) {
-         --$is_code;
-         $fragment .= ';' if not $is_fake;
-         next PARSER;
-      }
-
-      if ( $is_code ) {
-         if ( $is_open  ) { $fragment .= $qc; --$is_open; }
-         if ( $map_keys ) { $fragment .= $fo; ++$is_fake; }
-      }
-      else {
-         if ( not $is_open ) {
-            if ( $is_fake ) {
-               $fragment .= $fc;
-               --$is_fake;
-            }
-            $fragment .= $q;
-            ++$is_open;
-         }
-      }
-
-      if ( not $map_keys ) { # useless if map_keys is in effect
-         # check if this is a <%=$foo%>
-         if ( $token =~ RE_COMMAND ) {
-            $cmd  = $1;
-            $what = $2;
-
-            if ( IS_DEBUG ) {
-               warn "[CASE '='  ] state: $is_code; open $is_open; "
-                   ."type $cmd; match $what\n";
-            }
-
-            # A statement can not have a comment at the end.
-            # This is do-able with a "\n", but it'll also break
-            # line numbers in templates
-            if ( $cmd eq '=' ) { # Perl code
-               if ( $is_code ) {
-                  $fragment .= $faker;
-                  $fragment .= $resume ? $self->_resume($what, RESUME_NOSTART)
-                             :           " .= sub { $what }->();";
-               }
-               else {
-                  warn "[NOT A CODE] $what\n" if IS_DEBUG > 2;
-                  $bugfix = 1;
-               }
-            }
-            elsif ( $cmd eq '+' ) { # static include
-               $fragment .= "$faker .= sub {"
-                          . $self->_inc(static => $what)
-                          . "}->();";
-            }
-            elsif ( $cmd eq '*' ) { # normal include
-               $fragment .= "$faker .= sub {"
-                          . $self->_inc(normal => $what)
-                          . "}->();";
-            }
-            else {
-               # do nothing
-            }
-
-            next PARSER if not $bugfix;
-         }
-      }
-
-      # tilde and quote may be special
-      if ( $is_code ) {
-         if ( $map_keys ) {
-            $token =~ s{"}{\\"}sog;
-         }
-         else {
-            $token = $self->_resume($token);
-         }
-      }
-      else {
-         $token =~ s{\~}{\\\~}sog;
-      }
-
-      $fragment .= $token;
+   if ( $map_keys ) {
+      $mki = ($map_keys && $map_keys eq 'init') ? q( || '') : q();
+      $mko = sprintf "%s .= $ATTR{FAKER_HASH}".'->{"',$faker;
+      $mkc = qq|\"}$mki;|;
    }
 
-   $fragment .= $qc if $is_open;
-   $fragment .= $fc if $is_fake;
-   warn "[CASE 'END'] state: $is_code; open: $is_open\n" if IS_DEBUG;
-   croak "Unbalanced delimiter in template"              if $is_code;
+   $self->_fix_uncuddled(\$raw, $ds, $de) if $self->[FIX_UNCUDDLED];
 
-   my $code_start;
-   $code_start  = "package $ATTR{N_DUMMY};";
-   $code_start .= 'use strict;' if $self->[STRICT];
-   $code_start .= 'sub { ';
+   # fetch and walk the tree
+   my($id, $str);
+   PARSER: foreach my $token ( @{ $toke->tokenize( $raw, $map_keys ) } ) {
+      ($id, $str) = @{ $token };
+      next PARSER if $id eq 'DISCARD';
 
-   $code_start .= $self->_add_stack( $cache_id )  if $self->[STACK];
-   $code_start .= $self->[HEADER].';'             if $self->[HEADER];
-   $code_start .= "my $faker;";
-   $code_start .= "my $ATTR{FAKER_HASH} = {\@_};" if $map_keys;
-   $code_start .= "\n#line 1 " .  $self->[FILENAME] . "\n";
-   $fragment    = $code_start . $fragment . ";return $faker;}";
-   warn "\n\n#FRAGMENT\n$fragment\n#/FRAGMENT\n"  if IS_DEBUG > 1;
+      if ( $id eq 'DELIMSTART' ) { $inside++; next PARSER; }
+      if ( $id eq 'DELIMEND'   ) { $inside--; next PARSER; }
 
-   return $fragment;
+      if ( $id eq 'RAW' || $id eq 'NOTADELIM' ) {
+         $code .= ";$faker .= q~$str~;";
+      }
+      elsif ( $id eq 'CODE' ) {
+         $code .= $resume ? $self->_resume($str) : $str;
+      }
+      elsif ( $id eq 'CAPTURE' ) {
+         $code .= $faker;
+         $code .= $resume ? $self->_resume($str, RESUME_NOSTART)
+                :           " .= sub { $str }->();";
+      }
+      elsif ( $id eq 'DYNAMIC' || $id eq 'STATIC' ) {
+         $code .= "$faker .= sub {" . $self->_inc($id, $str) . "}->();";
+      }
+      elsif ( $id eq 'MAPKEY' ) {
+         $code .= $mko . $str . $mkc;
+      }
+      else {
+         die "Unknown token: $id($str)";
+      }
+   }
+
+   $self->[FILENAME] ||= '<ANON>';
+
+   #warn "[CASE 'END'] state: $is_code; open: $is_open\n" if IS_DEBUG;
+
+   if ( $inside ) {
+      my $type = $inside > 0 ? 'opening' : 'closing';
+      croak "Unbalanced $type delimiter in template " . $self->[FILENAME];
+   }
+
+   my $wrapper;
+   $wrapper  = "package $ATTR{N_DUMMY};";
+   $wrapper .= 'use strict;' if $self->[STRICT];
+   $wrapper .= 'sub { ';
+   $wrapper .= $self->_add_stack( $cache_id )  if $self->[STACK];
+   $wrapper .= $self->[HEADER].';'             if $self->[HEADER];
+   $wrapper .= "my $faker = '';";
+   $wrapper .= "my $ATTR{FAKER_HASH} = {\@_};" if $map_keys;
+   $wrapper .= "\n#line 1 " .  $self->[FILENAME] . "\n";
+   $code     = $wrapper . $code . ";return $faker;}";
+
+   warn "\n\n#FRAGMENT\n$code\n#/FRAGMENT\n"  if IS_DEBUG > 1;
+
+   return $code;
 }
 
 sub _add_stack {
@@ -1215,14 +1273,15 @@ sub _resume {
    #   warn "[RESUME NOT] $token\n" if DEBUG > 1;
    #}
 
-   return $token;
+   return "$start .= $token;"
 }
 
 sub _inc {
-   my $self = shift;
-   my $type = shift;
+   my $self      = shift;
+   my $type      = shift || '';
+      $type      = lc $type;
    my $is_static = $type eq 'static';
-   my $is_normal = $type eq 'normal';
+   my $is_normal = $type eq 'normal' || $type eq 'dynamic';
    my $known     = $is_static || $is_normal;
 
    croak "Unknown include type: $type" if not $known;
@@ -1323,8 +1382,9 @@ manager.
 
 =head1 SYNTAX
 
-Template syntax is very simple. There are three kinds of delimiters:
-code blocks (C<< <% %> >>), self-printing blocks (C<< <%= %> >>)
+Template syntax is very simple. There are few kinds of delimiters:
+code blocks (C<< <% %> >>), self-printing blocks (C<< <%= %> >>),
+escaped delimiters (C<< <%! %> >>)
 and static include directive (C<< <%+ %> >>):
 
    <%
@@ -1357,6 +1417,31 @@ static include directive:
    <%+ my_other.txt  %>
 
 Included files won't be parsed and included statically.
+
+=head2 Escaping Delimiters
+
+If you have to build templates like this:
+
+   Test: <%abc>
+
+or this:
+
+   Test: <%abc%>
+
+This will result with a template compilation error. You have to use the
+delimiter escape command C<!>:
+
+   Test: <%!abc>
+   Test: <%!abc%>
+
+Those will be compiled as:
+
+   Test: <%abc>
+   Test: <%abc%>
+
+Alternatively, you can change the default delimiters to solve this issue.
+See the L</delimiters> option for L</new> for more information on how to
+do this.
 
 =head2 Template parameters
 
@@ -1890,3 +1975,194 @@ it under the same terms as Perl itself, either Perl version 5.8.8 or,
 at your option, any later version of Perl 5 you may have available.
 
 =cut
+
+# back-up the old code for now. will be completely removed soon
+
+use constant PARSER_ND_FALSE     => 0;
+use constant PARSER_ND_REDO      => 1;
+use constant PARSER_ND_TERMINATE => 2;
+
+use constant PARSER_BUGFIX_FALSE => 0;
+use constant PARSER_BUGFIX_TRUE  => 1;
+
+use constant PARSER_COMMAND_PERLCODE          => '=';
+use constant PARSER_COMMAND_STATIC_INCLUDE    => '+';
+use constant PARSER_COMMAND_NORMAL_INCLUDE    => '*';
+use constant PARSER_COMMAND_ESCAPED_DELIMITER => '!';
+
+sub _parse {
+   return shift->_parser2(@_);
+   my $self      = shift;
+   my $tmp       = shift;
+   my $map_keys  = shift; # code sections are hash keys
+   my $cache_id  = shift;
+   my $finit     = '';    # map_keys init code
+      $finit     = q~ || ''~ if $map_keys && $map_keys eq 'init';
+   my $is_code   = 0; # we are inside a code section
+   my $is_open   = 0; # if true: quote was not closed inside the parser
+   my $is_fake   = 0; # fake hash is open
+   my $faker     = $self->[FAKER];
+   my $q         = ";$faker .= q~"; # single quote open tag
+   my $qc        = '~;';            # quote close tag
+   my $fo        = '';              # fake hash open
+   my $fc        = qq|\"}$finit;|;  # fake hash close
+   my $fragment  = '';              # will be the code to compile
+      $fo        = "$faker .= $ATTR{FAKER_HASH}".'->{"' if $map_keys;
+
+   my $ds = $self->[DELIMITERS][DELIM_START];
+   my $de = $self->[DELIMITERS][DELIM_END  ];
+
+   $self->_fix_uncuddled(\$tmp, $ds, $de) if $self->[FIX_UNCUDDLED];
+
+   my @tokens;
+   foreach my $chunk (split /($ds)/, $tmp) {
+      push @tokens, split /($de)/, $chunk;
+   }
+   my $resume = $self->[RESUME] || '';
+
+   my($cmd, $what);
+   my $bugfix      = PARSER_BUGFIX_FALSE;
+   my $not_a_delim = PARSER_ND_FALSE;
+   my $nd_de       = PARSER_ND_FALSE;
+
+   warn "[PARSING   ]\n" if IS_DEBUG;
+
+   PARSER: foreach my $token ( @tokens ) {
+
+      $bugfix = PARSER_BUGFIX_FALSE;
+      $nd_de  = $not_a_delim == PARSER_ND_FALSE
+                ||
+                $not_a_delim == PARSER_ND_TERMINATE;
+
+      if ( ($token eq $ds) && ! $not_a_delim ) {
+         ++$is_code;
+         next PARSER;
+      }
+
+      if ( ($token eq $de) && $nd_de ) {
+         if ( $not_a_delim == PARSER_ND_TERMINATE ) {
+            $not_a_delim = PARSER_ND_FALSE;
+            $fragment .= $de;
+         }
+         else {
+            --$is_code;
+            $fragment .= ';' if not $is_fake;
+         }
+         next PARSER;
+      }
+
+      if ( $not_a_delim == PARSER_ND_TERMINATE ) {
+         $not_a_delim = PARSER_ND_FALSE;
+         $is_code = 1;
+         next PARSER if $token eq $ds;
+      }
+
+      if ( $is_code ) {
+         if ( $is_open  ) { $fragment .= $qc; --$is_open; }
+         if ( $map_keys ) { $fragment .= $fo; ++$is_fake; }
+      }
+      else {
+         if ( not $is_open ) {
+            if ( $is_fake ) {
+               $fragment .= $fc;
+               --$is_fake;
+            }
+            $fragment .= $q;
+            ++$is_open;
+         }
+      }
+
+      if ( not $map_keys ) { # useless if map_keys is in effect
+         # check if this is a <%=$foo%>
+         if ( $token =~ RE_COMMAND ) {
+            $cmd  = $1;
+            $what = $2;
+
+            if ( IS_DEBUG ) {
+               warn "[CASE '$cmd'  ] state: $is_code; open $is_open; "
+                   ."type $cmd; match $what\n";
+            }
+
+            # A statement can not have a comment at the end.
+            # This is do-able with a "\n", but it'll also break
+            # line numbers in templates
+            if ( $cmd eq PARSER_COMMAND_PERLCODE ) {
+               if ( $is_code ) {
+                  $fragment .= $faker;
+                  $fragment .= $resume ? $self->_resume($what, RESUME_NOSTART)
+                             :           " .= sub { $what }->();";
+               }
+               else {
+                  warn "[NOT A CODE] $what\n" if IS_DEBUG > 2;
+                  $bugfix = PARSER_BUGFIX_TRUE;
+               }
+            }
+            elsif ( $cmd eq PARSER_COMMAND_STATIC_INCLUDE ) {
+               $fragment .= "$faker .= sub {"
+                          . $self->_inc(static => $what)
+                          . "}->();";
+            }
+            elsif ( $cmd eq PARSER_COMMAND_NORMAL_INCLUDE ) {
+               $fragment .= "$faker .= sub {"
+                          . $self->_inc(normal => $what)
+                          . "}->();";
+            }
+            elsif ( $cmd eq PARSER_COMMAND_ESCAPED_DELIMITER ) {
+               if ( $not_a_delim == PARSER_ND_FALSE ) {
+                  $not_a_delim = PARSER_ND_REDO;
+                  $is_code     = 0;
+                  redo PARSER;
+               }
+               elsif ( $not_a_delim == PARSER_ND_REDO ) {
+                  $token       = $ds . $what;
+                  $not_a_delim = PARSER_ND_TERMINATE;
+                  $bugfix      = PARSER_BUGFIX_TRUE;
+               }
+               else {
+                  $not_a_delim = PARSER_ND_FALSE;
+               }
+            }
+            else {
+               # do nothing
+            }
+
+            next PARSER if not $bugfix;
+         }
+      }
+
+      # tilde and quote may be special
+      if ( $is_code ) {
+         if ( $map_keys ) {
+            $token =~ s{"}{\\"}sog;
+         }
+         else {
+            $token = $self->_resume($token);
+         }
+      }
+      else {
+         $token =~ s{\~}{\\\~}sog;
+      }
+
+      $fragment .= $token;
+   }
+
+   $fragment .= $qc if $is_open;
+   $fragment .= $fc if $is_fake;
+   warn "[CASE 'END'] state: $is_code; open: $is_open\n" if IS_DEBUG;
+   croak "Unbalanced delimiter in template"              if $is_code;
+
+   my $code_start;
+   $code_start  = "package $ATTR{N_DUMMY};";
+   $code_start .= 'use strict;' if $self->[STRICT];
+   $code_start .= 'sub { ';
+
+   $code_start .= $self->_add_stack( $cache_id )  if $self->[STACK];
+   $code_start .= $self->[HEADER].';'             if $self->[HEADER];
+   $code_start .= "my $faker;";
+   $code_start .= "my $ATTR{FAKER_HASH} = {\@_};" if $map_keys;
+   $code_start .= "\n#line 1 " .  $self->[FILENAME] . "\n";
+   $fragment    = $code_start . $fragment . ";return $faker;}";
+   warn "\n\n#FRAGMENT\n$fragment\n#/FRAGMENT\n"  if IS_DEBUG > 1;
+
+   return $fragment;
+}

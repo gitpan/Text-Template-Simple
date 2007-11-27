@@ -6,6 +6,7 @@ t/04-extend.t
 t/05-safe.t
 t/06-iolayer.t
 t/07-stack.t
+t/08-escape-delim.t
 t/test.tmpl
 t/lib/My.pm
 Makefile.PL

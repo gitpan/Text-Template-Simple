@@ -2,6 +2,11 @@ Revision history for Perl extension Text::Template::Simple.
 
 Time zone is GMT+2.
 
+0.49_03 Wed Nov 28 01:05:26 2007
+   => Added delimiter escaping (request from Bastian Friedrich).
+   => Replaced the parser with a new sleek & sexy tokenizer.
+   => Unbalanced delimiter error now gives the type of missing one.
+
 0.49_02 Sun Nov  4 00:09:53 2007
    => Fixed a typo in Text::Template::Simple::Caller::_text_table();
    => All distro files now has LF line ending.

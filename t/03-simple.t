@@ -5,7 +5,7 @@ use Test;
 BEGIN { plan tests => 2 }
 
 use Text::Template::Simple; 
-
+Text::Template::Simple->DEBUG(0);
 ok(simple());
 ok(simple2());
 

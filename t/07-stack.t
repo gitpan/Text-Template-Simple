@@ -2,7 +2,13 @@
 # Simple test. Just try to use the module.
 use strict;
 use Test::More qw( no_plan );
-use Text::Template::Simple; 
+use Text::Template::Simple;
+
+local $SIG{__WARN__} = sub { # silence stack dumps
+   return if $_[0] =~ m{DUMPING CALLER STACK FOR}s;
+   return if $_[0] =~ m{Caller stack type}s;
+   warn $_[0];
+};
 
 ok(simple('string'), "String Dumper");
 ok(simple('html_comment'),"HTML Comment Dumper");
