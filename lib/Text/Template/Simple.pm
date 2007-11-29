@@ -237,11 +237,9 @@ sub tokenize {
    my($ds, $de)   = @{ $self };
    my($qds, $qde) = map { quotemeta $_ } $ds, $de;
    
-   my @tokens;
-   my $inside = 0;
-   my $last;
+   my(@tokens, $inside, $last, $i, $j);
 
-   OUT_TOKEN: foreach my $i (split /($qds)/, $tmp) {
+   OUT_TOKEN: foreach $i ( split /($qds)/, $tmp ) {
 
       if ( $i eq $ds ) {
          push @tokens, [ DELIMSTART => $i ];
@@ -249,7 +247,7 @@ sub tokenize {
          next OUT_TOKEN;
       }
 
-      IN_TOKEN: foreach my $j ( split /($qde)/, $i ) {
+      IN_TOKEN: foreach $j ( split /($qde)/, $i ) {
          if ( $j eq $de ) {
             $last = $tokens[LAST_TOKEN];
             if ( $last->[TOKEN_ID] eq 'NOTADELIM' ) {
@@ -269,17 +267,18 @@ sub tokenize {
 }
 
 sub token_code {
-   my $self   = shift;
-   my $str    = shift;
-   my $inside = shift;
+   my $self     = shift;
+   my $str      = shift;
+   my $inside   = shift;
    my $map_keys = shift;
-   my $tree   = shift;
+   my $tree     = shift;
 
-   foreach my $cmd ( @COMMANDS ) {
+   my($cmd, $len, $cb, $buf);
+   foreach $cmd ( @COMMANDS ) {
       if ( ! index( $str, $cmd->[CMD_CHAR], 0 ) ) {
-         my $len = length($str);
-         my $cb  = $cmd->[CMD_CB];
-         my $buf = substr $str, 1, $len - 1;
+         $len = length($str);
+         $cb  = $cmd->[CMD_CB];
+         $buf = substr $str, 1, $len - 1;
          if ( $cmd->[CMD_ID] eq 'NOTADELIM' && $inside ) {
             $buf = $self->[ID_DS] . $buf;
             $tree->[LAST_TOKEN][TOKEN_ID] = 'DISCARD';
@@ -326,7 +325,6 @@ use constant IS_WINDOWS     => $^O eq 'MSWin32' || $^O eq 'MSWin64';
 use constant DELIM_START    => 0;
 use constant DELIM_END      => 1;
 use constant RE_NONFILE     => qr{ [ \n \r < > \* \? ] }xmso;
-use constant RE_COMMAND     => qr{\A (?:\s+|)([=+\*\!])(.+?)(?:;+|) \z}xmso;
 use constant RE_DUMP_ERROR  => qr{Can\'t locate object method "first" via package "B::SVOP"};
 use constant RESUME_NOSTART => 1; # bool
 
@@ -365,7 +363,7 @@ BEGIN {
    }
 }
 
-$VERSION     = '0.49_03';
+$VERSION     = '0.49_04';
 @ISA         = qw( Exporter );
 
 %EXPORT_TAGS = (
@@ -457,6 +455,20 @@ my $CACHE = {}; # in-memory template cache
 #sub ____junkc { my $junk = $CACHE; return; }
 
 my %RESUME; # Regexen for _resume
+
+# see _parse();
+my $MAP_KEYS_CHECK = q(
+<%BUF%> .= exists <%HASH%>->{"<%KEY%>"}
+         ? (
+            defined <%HASH%>->{"<%KEY%>"}
+            ? <%HASH%>->{"<%KEY%>"}
+            : "[ERROR] Key not defined: <%KEY%>"
+            )
+         : "[ERROR] Invalid key: <%KEY%>"
+         ;
+);
+$MAP_KEYS_CHECK =~ s/\n//xmsg;
+$MAP_KEYS_CHECK =~ s/\s{2,}/ /xmsg;
 
 # making this conditional gains us some milisecs
 my $__CHECK_FLOCK = 0;
@@ -614,13 +626,7 @@ sub dump_cache_ids {
          push @list, $id;
       };
 
-      File::Find::find(
-         {
-            wanted   => $wanted,
-            no_chdir => 1,
-         },
-         $self->[CACHE_DIR]
-      );
+      File::Find::find({wanted => $wanted, no_chdir => 1}, $self->[CACHE_DIR]);
 
       @rv = sort @list;
 
@@ -1135,9 +1141,15 @@ sub _parse {
    my($mko, $mkc, $mki);
 
    if ( $map_keys ) {
-      $mki = ($map_keys && $map_keys eq 'init') ? q( || '') : q();
-      $mko = sprintf "%s .= $ATTR{FAKER_HASH}".'->{"',$faker;
-      $mkc = qq|\"}$mki;|;
+      $mki = $map_keys eq 'init';
+      $mkc = $map_keys eq 'check';
+      $mko = $mki ? q(<%BUF%> .= <%HASH%>->{"<%KEY%>"} || '';)
+           : $mkc ? $MAP_KEYS_CHECK
+           :        q(<%BUF%> .= <%HASH%>->{"<%KEY%>"};);
+
+      $mko =~ s/<%BUF%>/$faker/xmsg;
+      $mko =~ s/<%HASH%>/$ATTR{FAKER_HASH}/xmsg;
+      $mko =~ s/<%KEY%>/%s/xmsg;
    }
 
    $self->_fix_uncuddled(\$raw, $ds, $de) if $self->[FIX_UNCUDDLED];
@@ -1166,7 +1178,7 @@ sub _parse {
          $code .= "$faker .= sub {" . $self->_inc($id, $str) . "}->();";
       }
       elsif ( $id eq 'MAPKEY' ) {
-         $code .= $mko . $str . $mkc;
+         $code .= sprintf $mko, $mkc ? ( ($str) x 5 ) : $str;
       }
       else {
          die "Unknown token: $id($str)";
@@ -1772,6 +1784,9 @@ will be initialized to an empty string. But beware; C<init> may cloak
 template errors. It'll silence I<uninitialized> warnings, but
 can also make it harder to detect template errors.
 
+If C<map_keys> is set to 'init', then the compiler will check for
+the key's existence and check if it is defined or not.
+
 =head4 chkmt
 
 If you are using file templates (i.e.: not FH or not string) and you 
@@ -1977,6 +1992,8 @@ at your option, any later version of Perl 5 you may have available.
 =cut
 
 # back-up the old code for now. will be completely removed soon
+
+use constant RE_COMMAND          => qr{\A (?:\s+|)([=+\*\!])(.+?)(?:;+|) \z}xmso;
 
 use constant PARSER_ND_FALSE     => 0;
 use constant PARSER_ND_REDO      => 1;

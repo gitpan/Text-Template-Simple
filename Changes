@@ -2,6 +2,10 @@ Revision history for Perl extension Text::Template::Simple.
 
 Time zone is GMT+2.
 
+0.49_04 Fri Nov 30 00:12:23 2007
+   => Added a "check" option to map_keys.
+   => Code cleanup.
+
 0.49_03 Wed Nov 28 01:05:26 2007
    => Added delimiter escaping (request from Bastian Friedrich).
    => Replaced the parser with a new sleek & sexy tokenizer.

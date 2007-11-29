@@ -10,9 +10,9 @@ local $SIG{__WARN__} = sub { # silence stack dumps
    warn $_[0];
 };
 
-ok(simple('string'), "String Dumper");
-ok(simple('html_comment'),"HTML Comment Dumper");
-ok(simple('html_table'), "HTML Table Dumper");
+ok( simple('string'      ), "String Dumper");
+ok( simple('html_comment'), "HTML Comment Dumper");
+ok( simple('html_table'  ), "HTML Table Dumper");
 
 eval { require Text::Table; };
 
