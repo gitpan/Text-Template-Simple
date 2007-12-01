@@ -2,6 +2,13 @@ Revision history for Perl extension Text::Template::Simple.
 
 Time zone is GMT+2.
 
+0.49_05 Sat Dec  1 23:54:15 2007
+   => Code cleanup.
+   => Removed IS_DEBUG().
+   => Removed Exporter.
+   => Removed old code.
+   => Restored verbose error message when there is a compilation error.
+
 0.49_04 Fri Nov 30 00:12:23 2007
    => Added a "check" option to map_keys.
    => Code cleanup.
