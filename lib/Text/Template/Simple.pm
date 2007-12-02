@@ -121,7 +121,7 @@ sub stack {
       return $self->$method( $opt, \@callers );
    }
 
-   die "Unknown caller stack type: $type";
+   croak "Unknown caller stack type: $type";
 }
 
 sub _string {
@@ -339,6 +339,7 @@ use constant CACHE_EXT      => '.tmpl.cache';                  # disk cache exte
 use constant STAT_SIZE      => 7;
 use constant STAT_MTIME     => 9;
 use constant DELIMS         => qw( <% %> );                    # default delimiter pair
+use constant NEW_PERL       => $] >= 5.008;
 
 use constant IS_FLOCK       => sub {
    # are we running under dumb OS?
@@ -382,6 +383,7 @@ use constant MAP_KEYS_CHECK => sub {
 
 use constant MAP_KEYS_INIT     => q(<%BUF%> .= <%HASH%>->{"<%KEY%>"} || '';);
 use constant MAP_KEYS_DEFAULT  => q(<%BUF%> .= <%HASH%>->{"<%KEY%>"};);
+
 use constant COMPILE_ERROR_TMP => <<'TEMPLATE_CONSTANT';
 Error compiling code fragment (cache id: %s):
 
@@ -435,17 +437,29 @@ use constant STACK          => ++$OID;
 # number of the last object field
 use constant MAXOBJFIELD    =>   $OID;
 
-use Carp qw(croak);
+use Carp qw( croak );
 
 BEGIN {
    if ( IS_WINDOWS ) {
-      # perl 5.5.4 does not seem to have a Win32.pm
-      local $@;
-      eval { require Win32; Win32->import };
+      local $@; # perl 5.5.4 does not seem to have a Win32.pm
+      eval { require Win32; Win32->import; };
+   }
+
+   if ( NEW_PERL ) {
+      eval q/
+         sub _binmode { 
+            my($fh, $layer) = @_;
+            binmode $fh, ':'.$layer
+         }
+      /;
+      die "Error compiling _binmode(): $@" if $@;
+   }
+   else {
+      *_binmode = sub { binmode $_[0] };
    }
 }
 
-$VERSION = '0.49_05';
+$VERSION = '0.49_06';
 
 my $PID  = __PACKAGE__ . " v$VERSION";
 
@@ -909,12 +923,12 @@ sub _examine {
 }
 
 sub _iolayer {
-   return if $] < 5.008;
+   return if ! NEW_PERL;
    my $self  = shift;
    my $fh    = shift || croak "_iolayer(): Filehandle is absent";
-   my $layer = $self->[IOLAYER] || return;
-   eval q{ binmode $fh, ':'.$layer };
-   warn "Error setting I/O layer $layer: $@\n" if $@;
+   my $layer = $self->[IOLAYER]; # || croak "_iolayer(): I/O Layer is absent";
+   _binmode( $fh, $layer ) if $self->[IOLAYER];
+   return;
 }
 
 sub _slurp {
@@ -947,7 +961,7 @@ sub _wrap_compile {
    if( $error = $@ ) {
       my $error2;
       if ( $self->[RESUME] ) {
-         $CODE = eval "sub { return qq~[$PID Fatal Error] $error~ }";
+         $CODE = sub { return qq~[$PID Fatal Error] $error~ };
          $error2 = $@;
       }
       $error .= $error2 if $error2;
@@ -1760,7 +1774,7 @@ will be initialized to an empty string. But beware; C<init> may cloak
 template errors. It'll silence I<uninitialized> warnings, but
 can also make it harder to detect template errors.
 
-If C<map_keys> is set to 'init', then the compiler will check for
+If C<map_keys> is set to 'check', then the compiler will check for
 the key's existence and check if it is defined or not.
 
 =head4 chkmt
@@ -1941,6 +1955,13 @@ overall speed really depends on your environment.
 
 Internal cache manager generates ids for all templates. If you supply 
 your own id parameter, this will improve performance.
+
+=head2 Optional Dependencies
+
+Some methods/functionality of the module needs these optional modules:
+
+   Devel::Size
+   Text::Table
 
 =head1 SEE ALSO
 

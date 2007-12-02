@@ -2,6 +2,10 @@ Revision history for Perl extension Text::Template::Simple.
 
 Time zone is GMT+2.
 
+0.49_06 Sun Dec  2 21:49:38 2007
+   => Improved I/O Layer handling.
+   => Pod fix.
+
 0.49_05 Sat Dec  1 23:54:15 2007
    => Code cleanup.
    => Removed IS_DEBUG().
