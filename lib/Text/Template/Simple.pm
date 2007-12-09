@@ -34,33 +34,25 @@ use strict;
 sub _compile { shift; return __PACKAGE__->_object->reval(shift) }
 
 sub _object {
-   if (__PACKAGE__->can('object')) {
-      my $safe = __PACKAGE__->object;
-      if ($safe && ref($safe)) {
-         my $ok;
-         eval {$ok = $safe->isa('Safe')};
-         return $safe if $ok;
+   my $class = shift;
+   if ( $class->can('object') ) {
+      my $safe = $class->object;
+      if ( $safe && ref($safe) ) {
+         return $safe if eval { $safe->isa('Safe'); 'Safe-is-OK' };
       }
-      else {
-         my $end = $@ ? ': '.$@ : '.';
-         warn "Safe object failed, falling back to default" . $end;
-      }
+      my $end = $@ ? ': '.$@ : '.';
+      warn "Safe object failed. Falling back to default" . $end;
    }
    require Safe;
    my $safe = Safe->new('Text::Template::Simple::Dummy');
-   my @ops  = __PACKAGE__->_permit;
-   $safe->permit(@ops);
+   $safe->permit( $class->_permit );
    return $safe;
 }
 
-my @permit = qw( :default require caller );
 sub _permit {
    my $class = shift;
-   my @list;
-   if($class->can('permit')) {
-      return $class->permit;
-   }
-   return @permit;
+   return $class->permit if $class->can('permit');
+   return qw( :default require caller );
 }
 
 package Text::Template::Simple::Caller;
@@ -216,6 +208,7 @@ use constant SUBSTR_LENGTH =>  1;
 use Carp qw( croak );
 
 my @COMMANDS = (
+   #   cmd id        callback
    [ qw/ = CAPTURE        / ],
    [ qw/ * DYNAMIC   trim / ],
    [ qw/ + STATIC    trim / ],
@@ -238,7 +231,7 @@ sub tokenize {
    my $map_keys   = shift;
    my($ds, $de)   = @{ $self };
    my($qds, $qde) = map { quotemeta $_ } $ds, $de;
-   
+
    my(@tokens, $inside, $last, $i, $j);
 
    OUT_TOKEN: foreach $i ( split /($qds)/, $tmp ) {
@@ -323,7 +316,9 @@ sub trim {
 
 package Text::Template::Simple;
 use strict;
-use vars qw($VERSION $OID);
+use vars qw($VERSION $OID @ISA @EXPORT_OK %EXPORT_TAGS);
+
+$VERSION = '0.49_07';
 
 use constant IS_WINDOWS     => $^O eq 'MSWin32' || $^O eq 'MSWin64';
 use constant DELIM_START    => 0;
@@ -419,6 +414,7 @@ use constant DELIMITERS     => ++$OID;
 use constant AS_STRING      => ++$OID;
 use constant DELETE_WS      => ++$OID;
 use constant FAKER          => ++$OID;
+use constant FAKER_HASH     => ++$OID;
 use constant CACHE          => ++$OID;
 use constant CACHE_DIR      => ++$OID;
 use constant STRICT         => ++$OID;
@@ -438,6 +434,7 @@ use constant STACK          => ++$OID;
 use constant MAXOBJFIELD    =>   $OID;
 
 use Carp qw( croak );
+use Exporter ();
 
 BEGIN {
    if ( IS_WINDOWS ) {
@@ -459,22 +456,67 @@ BEGIN {
    }
 }
 
-$VERSION = '0.49_06';
-
-my $PID  = __PACKAGE__ . " v$VERSION";
-
-my %ATTR = ( # class attribute / configuration table
-   FAKER_NAME   => '$OUT',                         # fake output buffer variable
-   FAKER_HASH   => '$___THIS_IS_A_LANG_HASH',      # fake lang hash (map_keys)
-   DEBUG        => 0,                              # disabled by default
-   DIGEST       => undef,                          # Digest class name.
+@ISA         = qw( Exporter );
+%EXPORT_TAGS = (
+   info      =>   [qw(
+                     IS_FLOCK
+                     NEW_PERL
+                     IS_WINDOWS
+                     COMPILER
+                     COMPILER_SAFE
+                     DUMMY_CLASS
+                     MAX_FL
+                     CACHE_EXT
+                  )],
+   templates =>   [qw(
+                     COMPILE_ERROR_TMP
+                     DISK_CACHE_COMMENT
+                     MAP_KEYS_CHECK
+                     MAP_KEYS_INIT
+                     MAP_KEYS_DEFAULT
+                  )],
+   delims    =>   [qw(
+                     DELIM_START
+                     DELIM_END
+                     DELIMS
+                  )],
+   fields    =>   [qw(
+                     DELIMITERS
+                     AS_STRING
+                     DELETE_WS
+                     FAKER
+                     FAKER_HASH
+                     CACHE
+                     CACHE_DIR
+                     STRICT
+                     SAFE
+                     HEADER
+                     ADD_ARGS
+                     WARN_IDS
+                     FIX_UNCUDDLED
+                     TYPE
+                     COUNTER
+                     CID
+                     FILENAME
+                     RESUME
+                     IOLAYER
+                     STACK
+                     MAXOBJFIELD
+                  )],
 );
+@EXPORT_OK        = map { @{ $EXPORT_TAGS{$_} } } keys %EXPORT_TAGS;
+$EXPORT_TAGS{all} = \@EXPORT_OK;
 
-my %DEFAULT = (
+my $PID   = __PACKAGE__ . " v$VERSION";
+my $DEBUG = 0;  # Disabled by default
+my $CACHE = {}; # in-memory template cache
+my $DIGEST;     # Will hold digester class name.
+my %RESUME;     # Regexen for _resume
+
+my %DEFAULT = ( # default object attributes
    delimiters    => [ DELIMS ], # default delimiters
    as_string     =>  0, # if true, resulting template will not be eval()ed
    delete_ws     =>  0, # delete whitespace-only fragments?
-   faker         => '', # optionally, you can set FAKER to whatever you want
    cache         =>  0, # use cache or not
    cache_dir     => '', # will use hdd intead of memory for caching...
    strict        =>  1, # set to false for toleration to un-declared vars
@@ -482,10 +524,11 @@ my %DEFAULT = (
    header        =>  0, # template header. i.e. global codes.
    add_args      => '', # will unshift template argument list. ARRAYref.
    warn_ids      =>  0, # warn template ids?
-   fix_uncuddled =>  0, # do some worst practice?
-   resume        =>  0, # resume on error?
    iolayer       => '', # I/O layer for filehandles
    stack         => '',
+
+   fix_uncuddled =>  0, # do some worst practice?
+   resume        =>  0, # resume on error?
 );
 
 my %ERROR = (
@@ -506,9 +549,6 @@ my %ERROR = (
    INCACHE  => "I need an 'id' or a 'data' parameter for cache check!",
 );
 
-my $CACHE = {}; # in-memory template cache
-my %RESUME;     # Regexen for _resume
-
 # -------------------[ CLASS  METHODS ]------------------- #
 
 sub DEBUG {
@@ -517,12 +557,12 @@ sub DEBUG {
       # so that one can use: $self->DEBUG or DEBUG
       $thing = shift;
    }
-   $ATTR{DEBUG} = $thing if defined $thing;
-   $ATTR{DEBUG};
+   $DEBUG = $thing if defined $thing;
+   $DEBUG;
 }
 
 sub DIGEST {
-   return $ATTR{DIGEST}->new if $ATTR{DIGEST};
+   return $DIGEST->new if $DIGEST;
 
    local $SIG{__DIE__};
    my $file;
@@ -534,18 +574,18 @@ sub DIGEST {
          warn "[FAILED    ] $mod - $file\n" if DEBUG();
          next;
       }
-      $ATTR{DIGEST} = $mod;
+      $DIGEST = $mod;
       last;
    }
 
-   if ( not $ATTR{DIGEST} ) {
+   if ( not $DIGEST ) {
       my @report = DIGEST_MODS;
       my $last   = pop @report;
       croak _fatal( DIGEST => join(', ', @report), $last, $@ );
    }
 
-   warn "[DIGESTER  ] $ATTR{DIGEST}\n" if DEBUG();
-   return $ATTR{DIGEST}->new;
+   warn "[DIGESTER  ] $DIGEST\n" if DEBUG();
+   return $DIGEST->new;
 }
 
 # -------------------[ OBJECT METHODS ]------------------- #
@@ -567,17 +607,13 @@ sub new {
                     ;
    }
 
-   $self->[TYPE]    = '';
-   $self->[COUNTER] = 0;
-   $self->[CID]     = '';
-   $self->[FAKER]   = $ATTR{FAKER_NAME} if not $self->[FAKER]; 
-
    $self->_init;
    return $self;
 }
 
 sub _init {
    my $self = shift;
+
    if ( $self->[CACHE_DIR] ) {
       require File::Spec;
       $self->[CACHE_DIR] = File::Spec->canonpath( $self->[CACHE_DIR] );
@@ -597,11 +633,20 @@ sub _init {
       my $ok = -e $self->[CACHE_DIR] && -d _;
       croak _fatal( CDIR => $self->[CACHE_DIR]) if not $ok;
    }
+
    my $d = $self->[DELIMITERS];
    my $bogus_args = $self->[ADD_ARGS] && ! _isaref($self->[ADD_ARGS]);
    my $ok_delim   = _isaref( $d )     && $#{ $d } == 1;
    croak _fatal('ARGS')   if     $bogus_args;
    croak _fatal('DELIMS') if not $ok_delim;
+
+   $self->[TYPE]       = '';
+   $self->[COUNTER]    = 0;
+   $self->[CID]        = '';
+   $self->[FAKER]      = $self->_output_buffer_var;
+   $self->[FAKER_HASH] = $self->_output_buffer_var('i want a hash');
+
+   return;
 }
 
 sub reset_cache {
@@ -856,7 +901,6 @@ sub compile {
    if ( not $ok ) {
       # we have a cache miss; parse and compile
       warn "[CACHE MISS] $cache_id\n" if DEBUG();
-      $self->_set_faker; # faker must be set before parsing begins
       my $parsed = $self->_parse( $tmp, $opt->{map_keys}, $cache_id );
       $CODE      = $self->_populate_cache( $cache_id, $parsed, $opt->{chkmt} );
    }
@@ -871,14 +915,25 @@ sub get_id { shift->[CID] }
 
 # -------------------[ P R I V A T E   M E T H O D S ]------------------- #
 
+# these three (and _binmode() ) are functions not methods.
+# TODO:
+#   1) Convert to method for sub classing?
+#   2) Add to the export list?
 sub _isaref { $_[0] && ref($_[0]) && ref($_[0]) eq 'ARRAY' };
-sub _ishref { $_[0] && ref($_[0]) && ref($_[0]) eq 'HASH' };
-
-sub _fatal {
+sub _ishref { $_[0] && ref($_[0]) && ref($_[0]) eq 'HASH'  };
+sub _fatal  {
    my $ID  = shift;
    my $str = $ERROR{$ID} || croak "$ID is not defined as an error";
    return $str if not @_;
    return sprintf $str, @_;
+}
+
+sub _output_buffer_var {
+   my $self    = shift;
+   my $is_hash = shift;
+   my $id      = ( $is_hash ? {} : \my $fake) . $$;# . rand() . time;
+      $id      =~ tr/a-zA-Z_0-9//cd;
+   return '$' . $id;
 }
 
 sub _fake_idgen {
@@ -947,7 +1002,7 @@ sub _slurp {
    return $tmp;
 }
 
-sub _compiler { $_[0]->[SAFE] ? COMPILER_SAFE : COMPILER }
+sub _compiler { shift->[SAFE] ? COMPILER_SAFE : COMPILER }
 
 sub _wrap_compile {
    my $self   = shift;
@@ -1077,6 +1132,7 @@ sub _parse {
    my $ds       = $self->[DELIMITERS][DELIM_START];
    my $de       = $self->[DELIMITERS][DELIM_END  ];
    my $faker    = $self->[FAKER];
+   my $buf_hash = $self->[FAKER_HASH];
    my $toke     = Text::Template::Simple::Tokenizer->new( $ds, $de );
    my $code     = '';
    my $inside   = 0;
@@ -1091,7 +1147,7 @@ sub _parse {
            :        MAP_KEYS_DEFAULT;
 
       $mko =~ s/<%BUF%>/$faker/xmsg;
-      $mko =~ s/<%HASH%>/$ATTR{FAKER_HASH}/xmsg;
+      $mko =~ s/<%HASH%>/$buf_hash/xmsg;
       $mko =~ s/<%KEY%>/%s/xmsg;
    }
 
@@ -1138,26 +1194,30 @@ sub _parse {
    }
 
    my $wrapper;
+   # build the anonymous sub
    $wrapper  = "package " . DUMMY_CLASS . ";";
-   $wrapper .= 'use strict;' if $self->[STRICT];
+   $wrapper .= 'use strict;'                   if $self->[STRICT];
    $wrapper .= 'sub { ';
    $wrapper .= $self->_add_stack( $cache_id )  if $self->[STACK];
    $wrapper .= $self->[HEADER].';'             if $self->[HEADER];
    $wrapper .= "my $faker = '';";
-   $wrapper .= "my $ATTR{FAKER_HASH} = {\@_};" if $map_keys;
+   $wrapper .= "my $buf_hash = {\@_};"         if $map_keys;
    $wrapper .= "\n#line 1 " .  $self->[FILENAME] . "\n";
-   $code     = $wrapper . $code . ";return $faker;}";
+   $wrapper .= $code . ";return $faker;";
+   $wrapper .= '}';
 
-   warn "\n\n#FRAGMENT\n$code\n#/FRAGMENT\n"  if DEBUG() > 1;
+   warn "\n\n#FRAGMENT\n$wrapper\n#/FRAGMENT\n"  if DEBUG() > 1;
 
-   return $code;
+   return $wrapper;
 }
 
 sub _add_stack {
    my $self    = shift;
    my $cs_name = shift || '<ANON TEMPLATE>';
    my $stack   = $self->[STACK] || '';
+
    return if lc($stack) eq 'off';
+
    my $type    = ($stack eq '1' || $stack eq 'yes' || $stack eq 'on')
                ? 'string'
                : $stack
@@ -1182,8 +1242,8 @@ sub _include {
 
    my $file = shift;
    my $err  = '['.($is_static ? ' static' : '').' include error ]';
-   $file =~ s{\A \s+}{}xms;
-   $file =~ s{ \s+ \z}{}xms;
+   $file =~ s{\A \s+   }{}xms;
+   $file =~ s{   \s+ \z}{}xms;
    -e $file  or return "q~$err '$file' does not exist~";
    -d $file and return "q~$err '$file' is a directory~";
 
@@ -1209,7 +1269,7 @@ sub _include {
 }
 
 sub _cache_comment {
-   sprintf DISK_CACHE_COMMENT, __PACKAGE__, $VERSION, scalar localtime time;
+   sprintf DISK_CACHE_COMMENT, ref(shift), $VERSION, scalar localtime time;
 }
 
 sub DESTROY {
@@ -1259,24 +1319,6 @@ sub _fix_uncuddled {
    }{$ds\} elsif ($1) \{$de}xmsgo;
    warn "#FIXED\n$$tmp\n#/FIXED\n" if DEBUG() > 2;
    return;
-}
-
-sub _set_faker {
-   my $self = shift;
-   my $fake = shift || $self->[FAKER] || return;
-
-   if (
-         $fake =~ m{[^\$a-zA-Z_0-9]}o || # can not be non-alphanumeric
-         $fake =~ m{^[0-9]}o          || # can not start with number
-         $fake !~ m{^\$}o                # must start with a dollar
-      ) {
-      warn "Bogus fake scalar '$fake'! Falling back to default value!"
-         if DEBUG(); # warn or die?
-      $self->[FAKER] = $ATTR{FAKER_NAME};
-      return;
-   }
-
-   return; # is-ok
 }
 
 sub _set_resume_re {
@@ -1461,12 +1503,6 @@ There is a special variable inside all templates. You must not
 define a variable with the same name inside templates or alter
 it's name before L</compile>.
 
-=head3 Output Buffer Variable
-
-Default name is C<$OUT>. Output will be collected inside this
-variable and then returned. Works transparent, and you don't 
-have to touch it manually.
-
 =head1 METHODS
 
 =head2 new
@@ -1483,16 +1519,6 @@ the opening delimiter and the closing delimiter:
    );
 
 Default values are C<< <% >> and C<< %> >>. 
-
-=head3 faker
-
-Compiled templates will have two special variables. The output
-is buffered inside a hidden variable named C<$OUT>. You can alter the 
-name of this variable if you pass a C<faker> parameter:
-
-   $template = Text::Template::Simple->new(
-      faker => '$___this_does_not_exist',
-   );
 
 =head3 cache
 
@@ -1965,8 +1991,8 @@ Some methods/functionality of the module needs these optional modules:
 
 =head1 SEE ALSO
 
-This module's parser is based on L<Apache::SimpleTemplate> and
-evolved from that. Also see L<Text::Template> for a similar 
+For similar functionality, see L<Apache::SimpleTemplate>.
+Also see L<Text::Template> for a similar 
 functionality. L<HTML::Template::Compiled> has a similar approach
 for compiled templates. There is another similar module
 named L<Text::ScriptTemplate>. Also see L<Safe> and
