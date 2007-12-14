@@ -4,7 +4,7 @@
 package MyTTS;
 use strict;
 use base qw(Text::Template::Simple);
-use Text::Template::Simple qw(:fields); # get the object fields 
+use Text::Template::Simple::Constants qw(:fields); # get the object fields 
 
 sub new {
    my $class = shift;
@@ -25,7 +25,7 @@ use strict;
 use Test::More qw( no_plan );
 
 my $t = MyTTS->new;
-$t->DEBUG(0);
+#$t->DEBUG(0);
 
 ok( $t->compile(q/Just a test/), "Define output buffer variables");
 

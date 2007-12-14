@@ -2,6 +2,10 @@ Revision history for Perl extension Text::Template::Simple.
 
 Time zone is GMT+2.
 
+0.49_08 Sat Dec 15 00:48:48 2007
+   => Each subclass is now in it's own file. Monolithic module is no more.
+   => Internal cleanup.
+
 0.49_07 Sun Dec  9 23:00:33 2007
    => Output buffer variable names are now randomly generated. All public
       interface (and Pod) related to this has now been removed.

@@ -18,9 +18,12 @@ Text::Template::Simple->DEBUG(0);
 # then you have to subclass the module to restore that behaviour.
 # (not a good idea though)
 sub _output_buffer_var {
-   my $self    = shift;
-   my $is_hash = shift;
-   return $is_hash ? '$OUT_HASH' : '$OUT';
+   my $self = shift;
+   my $type = shift || 'scalar';
+   return  $type eq 'hash'  ? '$OUT_HASH'  # map_keys buffer
+         : $type eq 'array' ? '$OUT_ARRAY' # resume   buffer
+         :                    '$OUT'       # output   buffer
+         ;
 }
 
 __END__

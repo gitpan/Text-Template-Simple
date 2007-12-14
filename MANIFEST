@@ -1,4 +1,11 @@
 lib/Text/Template/Simple.pm
+lib/Text/Template/Simple/Dummy.pm
+lib/Text/Template/Simple/Compiler.pm
+lib/Text/Template/Simple/Compiler/Safe.pm
+lib/Text/Template/Simple/Caller.pm
+lib/Text/Template/Simple/Constants.pm
+lib/Text/Template/Simple/Tokenizer.pm
+lib/Text/Template/Simple/Util.pm
 t/01-pod.t
 t/02-pod-coverage.t
 t/03-simple.t
