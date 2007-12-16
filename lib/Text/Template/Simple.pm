@@ -10,7 +10,7 @@ use Text::Template::Simple::Caller;
 use Text::Template::Simple::Tokenizer;
 use Text::Template::Simple::Util;
 
-$VERSION = '0.49_08';
+$VERSION = '0.49_09';
 
 my $CACHE = {}; # in-memory template cache
 
@@ -65,7 +65,7 @@ sub _init {
       if ( IS_WINDOWS ) {
          $wdir = Win32::GetFullPathName( $self->[CACHE_DIR] );
          if( Win32::GetLastError() ) {
-            LOG( FAIL => "Win32::GetFullPathName" ) if DEBUG();
+            LOG( FAIL => "Win32::GetFullPathName(): $^E" ) if DEBUG();
             $wdir = ''; # croak "Win32::GetFullPathName: $^E";
          }
          else {
@@ -75,14 +75,14 @@ sub _init {
       }
       $self->[CACHE_DIR] = $wdir if $wdir;
       my $ok = -e $self->[CACHE_DIR] && -d _;
-      croak _fatal( CDIR => $self->[CACHE_DIR]) if not $ok;
+      croak fatal( CDIR => $self->[CACHE_DIR]) if not $ok;
    }
 
-   my $d = $self->[DELIMITERS];
+   my $d          = $self->[DELIMITERS];
    my $bogus_args = $self->[ADD_ARGS] && ! isaref($self->[ADD_ARGS]);
-   my $ok_delim   = isaref( $d )     && $#{ $d } == 1;
-   croak _fatal('ARGS')   if     $bogus_args;
-   croak _fatal('DELIMS') if not $ok_delim;
+   my $ok_delim   = isaref( $d )      && $#{ $d } == 1;
+   croak fatal('ARGS')   if     $bogus_args;
+   croak fatal('DELIMS') if not $ok_delim;
 
    $self->[TYPE]       = '';
    $self->[COUNTER]    = 0;
@@ -101,7 +101,7 @@ sub reset_cache {
 
       my $cdir = $self->[CACHE_DIR];
       local  *CDIRH;
-      opendir CDIRH, $cdir or croak _fatal( CDIROPEN => $cdir, $! );
+      opendir CDIRH, $cdir or croak fatal( CDIROPEN => $cdir, $! );
       require File::Spec;
       my $ext = quotemeta CACHE_EXT;
       my $file;
@@ -155,12 +155,10 @@ sub dump_cache_ids {
 sub _get_disk_cache {
    require File::Find;
    require File::Spec;
-   my $self = shift;
-   my %disk_cache;
-   my $ext = quotemeta CACHE_EXT;
-   my $id;
-   my($content, $ok, $_temp, $line);
+   my $self    = shift;
+   my $ext     = quotemeta CACHE_EXT;
    my $pattern = quotemeta '# [line 10]';
+   my(%disk_cache, $id, $content, $ok, $_temp, $line);
 
    my $wanted = sub {
       return if $_ !~ m{(.+?) $ext \z}xms;
@@ -203,7 +201,7 @@ sub dump_cache {
    else {
       $d = Data::Dumper->new( [ $CACHE ], [ $VAR ]);
       if ( $deparse ) {
-         croak _fatal(DUMPER => $Data::Dumper::VERSION) if !$d->can('Deparse');
+         croak fatal(DUMPER => $Data::Dumper::VERSION) if !$d->can('Deparse');
          $d->Deparse(1);
       }
    }
@@ -272,12 +270,12 @@ sub in_cache {
       return;
    }
 
-   croak _fatal('PFORMAT') if @_ % 2;
+   croak fatal('PFORMAT') if @_ % 2;
 
    my %opt = @_;
    my $id  = $opt{id}   ? $self->idgen($opt{id}  , 'custom')
            : $opt{data} ? $self->idgen($opt{data}          )
-           :              croak _fatal('INCACHE');
+           :              croak fatal('INCACHE');
 
    if ( my $cdir = $self->[CACHE_DIR] ) {
       require File::Spec;
@@ -390,8 +388,8 @@ sub _examine {
    my $length = 0;
    my $rv;
    if ( my $ref = ref($tmp) ) {
-      croak _fatal(  NOTGLOB => $ref ) if $ref ne 'GLOB';
-      croak _fatal( 'NOTFH'          ) if not  fileno $tmp;
+      croak fatal(  NOTGLOB => $ref ) if $ref ne 'GLOB';
+      croak fatal( 'NOTFH'          ) if not  fileno $tmp;
       # hmmm... require Fcntl; flock $tmp, Fcntl::LOCK_SH() if IS_FLOCK;
       local $/;
       $rv = <$tmp>;
@@ -400,10 +398,12 @@ sub _examine {
       $self->[TYPE] = 'GLOB';
    }
    else {
-      my $length = length $tmp;
+      $length = length $tmp;
       if ( $length  <=  255 and $tmp !~ RE_NONFILE and -e $tmp and not -d _ ) {
          $self->[TYPE] = 'FILE';
          $rv = $self->_slurp($tmp);
+         # we don't really need to set this after getting data
+         $length = length $rv if DEBUG();
       }
       else {
          $self->[TYPE] = 'STRING';
@@ -557,13 +557,41 @@ sub _populate_cache {
    }
 
    if ( $error ) {
-      my $cid = $cache_id ? $cache_id : 'N/A';
-      my $p   = $parsed;
-         $p   =~ s{;}{;\n}xmsgo; # new lines makes it easy to debug
-      croak sprintf COMPILE_ERROR_TMP, $cid, $error, $parsed, $p;
+      my $cid    = $cache_id ? $cache_id : 'N/A';
+      my $tidied = $self->_tidy( $parsed );
+      croak sprintf COMPILE_ERROR_TMP, $cid, $error, $parsed, $tidied;
    }
+
    $self->[COUNTER]++;
    return $CODE;
+}
+
+sub _tidy {
+   my $self = shift;
+   my $code = shift;
+
+   TEST_TIDY: {
+      local($@, $SIG{__DIE__});
+      eval { require Perl::Tidy; };
+      if ( $@ ) { # :(
+         $code =~ s{;}{;\n}xmsgo; # new lines makes it easy to debug
+         return $code;
+      }
+   }
+
+   # We have Perl::Tidy, yay!
+   my($buf, $stderr);
+   my @argv; # extra arguments
+
+   Perl::Tidy::perltidy(
+      source      => \$code,
+      destination => \$buf,
+      stderr      => \$stderr,
+      argv        => \@argv,
+   );
+
+   LOG( TIDY_WARNING => $stderr ) if $stderr;
+   return $buf;
 }
 
 sub _parse {
@@ -595,12 +623,17 @@ sub _parse {
       $mko =~ s/<%KEY%>/%s/xmsg;
    }
 
+   LOG( RAW => $raw ) if ( DEBUG() > 3 );
+
    $self->_fix_uncuddled(\$raw, $ds, $de) if $self->[FIX_UNCUDDLED];
 
    # fetch and walk the tree
    my($id, $str);
    PARSER: foreach my $token ( @{ $toke->tokenize( $raw, $map_keys ) } ) {
       ($id, $str) = @{ $token };
+      if ( DEBUG() > 3 ) {
+         LOG( TOKEN => "$id => $str" );
+      }
       next PARSER if $id eq 'DISCARD';
 
       if ( $id eq 'DELIMSTART' ) { $inside++; next PARSER; }
@@ -610,7 +643,7 @@ sub _parse {
          $code .= ";$faker .= q~$str~;";
       }
       elsif ( $id eq 'CODE' ) {
-         $code .= $resume ? $self->_resume($str) : $str;
+         $code .= $resume ? $self->_resume($str, 0, 1) : $str;
       }
       elsif ( $id eq 'CAPTURE' ) {
          $code .= $faker;
@@ -650,7 +683,8 @@ sub _parse {
    $wrapper .= $code . ";return $faker;";
    $wrapper .= '}';
 
-   LOG( COMPILED => "\n\n#FRAGMENT\n$wrapper\n#/FRAGMENT\n" ) if DEBUG() > 1;
+   LOG( COMPILED => sprintf FRAGMENT_TMP, $self->_tidy($wrapper) )
+      if DEBUG() > 1;
 
    return $wrapper;
 }
@@ -720,18 +754,19 @@ sub _resume {
    my $self    = shift;
    my $token   = shift           || return;
    my $nostart = shift           || 0;
+   my $is_code = shift           || 0;
    my $resume  = $self->[RESUME] || '';
    my $start   = $nostart ? '' : $self->[FAKER];
    my $void    = $nostart ? 0  : 1; # not a self-printing block
 
    if ( $token && $resume && $token !~ RESUME_MY ) {
-      LOG( RESUME_OK => $token ) if DEBUG() > 2;
       if (
-          $token !~ RESUME_CURLIES &&
-          $token !~ RESUME_ELSIF   &&
-          $token !~ RESUME_ELSE    &&
-          $token !~ RESUME_LOOP
+            $token !~ RESUME_CURLIES &&
+            $token !~ RESUME_ELSIF   &&
+            $token !~ RESUME_ELSE    &&
+            $token !~ RESUME_LOOP
       ) {
+         LOG( RESUME_OK => $token ) if DEBUG() > 2;
          my $rvar        = $self->_output_buffer_var('array');
          my $resume_code = RESUME_TEMPLATE;
          foreach my $replace (
@@ -745,11 +780,10 @@ sub _resume {
          return $start . $resume_code;
       }
    }
-   else {
-      _LOG ( RESUME_NOT => $token ) if DEBUG() > 2;
-   }
 
-   return "$start .= $token;"
+   LOG( RESUME_NOT => $token ) if DEBUG() > 2;
+
+   return $is_code ? $token : "$start .= $token;"
 }
 
 sub DESTROY {
@@ -1394,6 +1428,7 @@ Some methods/functionality of the module needs these optional modules:
 
    Devel::Size
    Text::Table
+   Perl::Tidy
 
 =head1 SEE ALSO
 

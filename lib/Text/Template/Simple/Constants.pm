@@ -2,7 +2,7 @@ package Text::Template::Simple::Constants;
 use strict;
 use vars qw($VERSION $OID @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
 
-$VERSION = '0.10';
+$VERSION = '0.11';
 
 use constant PARENT         => 'Text::Template::Simple';
 use constant IS_WINDOWS     => $^O eq 'MSWin32' || $^O eq 'MSWin64';
@@ -64,6 +64,15 @@ use constant MAP_KEYS_CHECK => sub {
 use constant MAP_KEYS_INIT     => q(<%BUF%> .= <%HASH%>->{"<%KEY%>"} || '';);
 use constant MAP_KEYS_DEFAULT  => q(<%BUF%> .= <%HASH%>->{"<%KEY%>"};);
 
+use constant FRAGMENT_TMP      => <<'TEMPLATE_CONSTANT';
+
+# BEGIN TIDIED FRAGMENT
+
+%s
+
+# END TIDIED FRAGMENT
+TEMPLATE_CONSTANT
+
 use constant COMPILE_ERROR_TMP => <<'TEMPLATE_CONSTANT';
 Error compiling code fragment (cache id: %s):
 
@@ -75,7 +84,7 @@ PARSED CODE (VERBATIM):
 %s
 
 -------------------------------
-PARSED CODE    (with \n added):
+PARSED CODE    (tidied):
 -------------------------------
 
 %s
@@ -103,7 +112,7 @@ use constant RESUME_TEMPLATE => sub {
                   return "" if(<%VOID%>);
                   return <%RVAR%>->[0] if @{<%RVAR%>} == 1;
                   return +(@{<%RVAR%>});
-         }->();'
+         }->();
    ~;
    $tmp =~ s/\n//xmsg;
    $tmp =~ s/\s{2,}/ /xmsg;
@@ -125,7 +134,7 @@ use constant RESUME_MY => qr{
          (?:\s+|)
          \(
       )
-   }xms;
+}xms;
 
 use constant RESUME_CURLIES => qr{
    \A (?:\s+|) (?:[\{\}]) (?:\s+|) \z
@@ -187,6 +196,7 @@ BEGIN {
                      )],
       templates =>   [qw(
                         COMPILE_ERROR_TMP
+                        FRAGMENT_TMP
                         DISK_CACHE_COMMENT
                         MAP_KEYS_CHECK
                         MAP_KEYS_INIT

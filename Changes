@@ -2,6 +2,13 @@ Revision history for Perl extension Text::Template::Simple.
 
 Time zone is GMT+2.
 
+0.49_09 Sun Dec 16 16:05:18 2007
+   => Fix typos.
+   => Added Perl::Tidy support. If you have this module, bogus templates
+      will be displayed in a tidied way. This also enabled for displaying
+      template fragments (if debug is enabled and set to a higher value).
+   => Forgot a single quote in the resume template.
+
 0.49_08 Sat Dec 15 00:48:48 2007
    => Each subclass is now in it's own file. Monolithic module is no more.
    => Internal cleanup.

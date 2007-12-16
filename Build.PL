@@ -17,6 +17,7 @@ Module::Build->new(
    recommends  => {
       'Devel::Size'  => '0.64',
       'Text::Table'  => '1.107',
+      'Perl::Tidy'   => 0,
    },
    sign        => 0,
    dist_author => 'Burak Gursoy <burak@cpan.org>',

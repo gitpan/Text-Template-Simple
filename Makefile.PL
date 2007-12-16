@@ -6,6 +6,7 @@ Recommended Modules:
 
    Devel::Size v0.64
    Text::Table v1.107
+   Perl::Tidy
 
 RECOMMEND
 

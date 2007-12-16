@@ -26,7 +26,7 @@ BEGIN {
    }
 }
 
-$VERSION = '0.10';
+$VERSION = '0.11';
 
 @ISA         = qw( Exporter );
 %EXPORT_TAGS = (
@@ -90,7 +90,7 @@ sub DIGEST {
       $file .= '.pm';
       eval { require $file; };
       if ( $@ ) {
-         _LOG( FAILED => "$mod - $file" ) if DEBUG();
+         LOG( FAILED => "$mod - $file" ) if DEBUG();
          next;
       }
       $DIGEST = $mod;
@@ -100,14 +100,15 @@ sub DIGEST {
    if ( not $DIGEST ) {
       my @report = DIGEST_MODS;
       my $last   = pop @report;
-      croak _fatal( DIGEST => join(', ', @report), $last, $@ );
+      croak fatal( DIGEST => join(', ', @report), $last, $@ );
    }
 
-   _LOG( DIGESTER => $DIGEST ) if DEBUG();
+   LOG( DIGESTER => $DIGEST ) if DEBUG();
    return $DIGEST->new;
 }
 
 sub LOG {
+   return MYLOG( @_ ) if defined &MYLOG;
    my $self    = shift if ref( $_[0] );
    my $id      = shift;
    my $message = shift;
@@ -128,3 +129,44 @@ sub _is_parent_object {
 1;
 
 __END__
+
+=head1 NAME
+
+Text::Template::Simple::Util - Utility functions for Text::Template::Simple
+
+=head1 SYNOPSIS
+
+TODO
+
+=head1 DESCRIPTION
+
+Contains utility functions for Text::Template::Simple.
+
+=head1 OVERRIDABLE FUNCTIONS
+
+=head2 LOG
+
+If debugging mode is enabled in Text::Template::Simple, all
+debugging messages will be captureb by this function and will
+be printed to C<STDERR>.
+
+If a sub named C<Text::Template::Simple::Util::MYLOG> is defined,
+then all calls to C<LOG> will be redirected to this sub. If you want to
+save the debugging messages to a file or to a database, you must define
+the C<MYLOG> sub.
+
+=head1 AUTHOR
+
+Burak GE<252>rsoy, E<lt>burakE<64>cpan.orgE<gt>
+
+=head1 COPYRIGHT
+
+Copyright 2004-2007 Burak GE<252>rsoy. All rights reserved.
+
+=head1 LICENSE
+
+This library is free software; you can redistribute it and/or modify 
+it under the same terms as Perl itself, either Perl version 5.8.8 or, 
+at your option, any later version of Perl 5 you may have available.
+
+=cut
