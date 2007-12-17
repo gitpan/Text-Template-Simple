@@ -16,7 +16,7 @@ use constant SUBSTR_LENGTH =>  1;
 
 use Carp qw( croak );
 
-$VERSION = '0.10';
+$VERSION = '0.11';
 
 my @COMMANDS = (
    #   cmd id        callback
@@ -30,8 +30,8 @@ sub new {
    my $class = shift;
    my $self  = [];
    bless $self, $class;
-   $self->[ID_DS] = shift || croak "tokenize(): Start delimiter is missing";
-   $self->[ID_DE] = shift || croak "tokenize(): End delimiter is missing";
+   $self->[ID_DS] = shift || croak "Start delimiter is missing";
+   $self->[ID_DE] = shift || croak "End delimiter is missing";
    $self;
 }
 
@@ -65,14 +65,14 @@ sub tokenize {
             $inside = 0;
             next IN_TOKEN;
          }
-         push @tokens, $self->token_code( $j, $inside, $map_keys, \@tokens );
+         push @tokens, $self->_token_code( $j, $inside, $map_keys, \@tokens );
       }
    }
 
    return \@tokens;
 }
 
-sub token_code {
+sub _token_code {
    my $self     = shift;
    my $str      = shift;
    my $inside   = shift;
@@ -125,7 +125,69 @@ sub trim {
       $s;
 }
 
-
 1;
 
 __END__
+
+=head1 NAME
+
+Text::Template::Simple::Tokenizer - Tokenizer for Text::Template::Simple
+
+=head1 SYNOPSIS
+
+   use strict;
+   use constant TYPE => 0;
+   use constant DATA => 1;
+   use Text::Template::Simple::Tokenize;
+   my $t = Text::Template::Simple::Tokenize->new( $start_delim, $end_delim );
+   my $tokens = $t->tokenize( $raw_data );
+   foreach my $token ( @{ $tokens } ) {
+      printf "Token type: %s\n", $token->[TYPE];
+      printf "Token data: %s\n", $token->[DATA];
+   }
+
+=head1 DESCRIPTION
+
+Tokenizes the input with the defined delimiter pair.
+
+=head1 METHODS
+
+=head2 new
+
+The object constructor. Accepts two parameters in this order:
+C<start_delimiter> and C<end_delimiter>.
+
+=head2 tokenize
+
+Tokenizes the input with the supplied delimiter pair. Accepts a single
+parameter: the raw template string.
+
+=head2 ESCAPE METHODS
+
+=head2 tilde
+
+Escapes the tilde character.
+
+=head3 quote
+
+Escapes double quotes.
+
+=head3 trim
+
+Trims the input string.
+
+=head1 AUTHOR
+
+Burak GE<252>rsoy, E<lt>burakE<64>cpan.orgE<gt>
+
+=head1 COPYRIGHT
+
+Copyright 2004-2007 Burak GE<252>rsoy. All rights reserved.
+
+=head1 LICENSE
+
+This library is free software; you can redistribute it and/or modify 
+it under the same terms as Perl itself, either Perl version 5.8.8 or, 
+at your option, any later version of Perl 5 you may have available.
+
+=cut

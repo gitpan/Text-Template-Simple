@@ -147,7 +147,7 @@ Contains utility functions for Text::Template::Simple.
 =head2 LOG
 
 If debugging mode is enabled in Text::Template::Simple, all
-debugging messages will be captureb by this function and will
+debugging messages will be captured by this function and will
 be printed to C<STDERR>.
 
 If a sub named C<Text::Template::Simple::Util::MYLOG> is defined,

@@ -2,6 +2,10 @@ Revision history for Perl extension Text::Template::Simple.
 
 Time zone is GMT+2.
 
+0.49_10 Mon Dec 17 20:06:17 2007
+   => Added support for buffering caller stack dump.
+   => Pod updates.
+
 0.49_09 Sun Dec 16 16:05:18 2007
    => Fix typos.
    => Added Perl::Tidy support. If you have this module, bogus templates

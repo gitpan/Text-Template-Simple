@@ -10,7 +10,7 @@ use Text::Template::Simple::Caller;
 use Text::Template::Simple::Tokenizer;
 use Text::Template::Simple::Util;
 
-$VERSION = '0.49_09';
+$VERSION = '0.49_10';
 
 my $CACHE = {}; # in-memory template cache
 
@@ -675,9 +675,9 @@ sub _parse {
    $wrapper  = "package " . DUMMY_CLASS . ";";
    $wrapper .= 'use strict;'                   if $self->[STRICT];
    $wrapper .= 'sub { ';
-   $wrapper .= $self->_add_stack( $cache_id )  if $self->[STACK];
    $wrapper .= $self->[HEADER].';'             if $self->[HEADER];
    $wrapper .= "my $faker = '';";
+   $wrapper .= $self->_add_stack( $cache_id )  if $self->[STACK];
    $wrapper .= "my $buf_hash = {\@_};"         if $map_keys;
    $wrapper .= "\n#line 1 " .  $self->[FILENAME] . "\n";
    $wrapper .= $code . ";return $faker;";
@@ -696,16 +696,22 @@ sub _add_stack {
 
    return if lc($stack) eq 'off';
 
-   my $type    = ($stack eq '1' || $stack eq 'yes' || $stack eq 'on')
+   my $check   = ($stack eq '1' || $stack eq 'yes' || $stack eq 'on')
                ? 'string'
                : $stack
                ;
 
-   foreach my $e ( $cs_name, $type ) {
+   my($type, $channel) = split /:/, $check;
+   $channel = ! $channel             ? 'warn'
+            :   $channel eq 'buffer' ? $self->[FAKER] . ' .= '
+            :                          'warn'
+            ;
+
+   foreach my $e ( $cs_name, $type, $channel ) {
       $e =~ s{'}{\\'}xmsg;
    }
 
-   return "warn stack( { type => '$type', name => '$cs_name' } );";
+   return "$channel stack( { type => '$type', name => '$cs_name' } );";
 }
 
 sub _include {
@@ -1105,19 +1111,22 @@ Not tested with other encodings.
 
 This option enables caller stack tracing for templates. The generated
 list is sent to C<warn>. So, it is possible to capture
-this data with a signal handler. Available options are:
+this data with a signal handler. See L<Text::Template::Simple::Caller>
+for available options.
 
-   string
-   html_comment
-   html_table
-   text_table  
+It is also possible to send the output to the template output buffer, if you
+append C<:buffer> to the type of the C<stack> option:
+
+   $template = Text::Template::Simple->new(
+      stack => 'string:buffer',
+   );
 
 C<html_comment> is the same as C<string> except that it also includes HTML
 comment markers. C<text_table> needs the optional module C<Text::Table>.
 
 This option is also available to all templates as a function named
-C<stack> for individual stack dumping.
-But, currently this interface is not documented.
+C<stack> for individual stack dumping. See L<Text::Template::Simple::Dummy>
+for more information.
 
 =head2 compile DATA [, FILL_IN_PARAM, OPTIONS]
 

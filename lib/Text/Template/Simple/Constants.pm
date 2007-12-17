@@ -10,16 +10,16 @@ use constant DELIM_START    => 0;
 use constant DELIM_END      => 1;
 use constant RE_NONFILE     => qr{ [ \n \r < > \* \? ] }xmso;
 use constant RE_DUMP_ERROR  => qr{Can\'t locate object method "first" via package "B::SVOP"};
-use constant RESUME_NOSTART => 1; # bool
+use constant RESUME_NOSTART => 1;                         # bool
 use constant COMPILER       => PARENT.'::Compiler';       # The compiler
 use constant COMPILER_SAFE  => PARENT.'::Compiler::Safe'; # Safe compiler
 use constant DUMMY_CLASS    => PARENT.'::Dummy';          # Dummy class
 use constant MAX_FL         => 80;                        # Maximum file name length
 use constant CACHE_EXT      => '.tmpl.cache';             # disk cache extension
-use constant STAT_SIZE      => 7;
-use constant STAT_MTIME     => 9;
+use constant STAT_SIZE      => 7;                         # for stat()
+use constant STAT_MTIME     => 9;                         # for stat()
 use constant DELIMS         => qw( <% %> );               # default delimiter pair
-use constant NEW_PERL       => $] >= 5.008;
+use constant NEW_PERL       => $] >= 5.008;               # for I/O layer
 
 use constant IS_FLOCK       => sub {
    # are we running under dumb OS?
