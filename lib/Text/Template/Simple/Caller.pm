@@ -156,7 +156,7 @@ Text::Template::Simple::Caller - Caller stack tracer for Text::Template::Simple
 
 Caller stack tracer for Text::Template::Simple. This module is not used
 directly inside templates. You must use the global template function
-insted. See L<Text::Template::Simple::Dummy> for usage from the templates.
+instead. See L<Text::Template::Simple::Dummy> for usage from the templates.
 
 =head1 METHODS
 

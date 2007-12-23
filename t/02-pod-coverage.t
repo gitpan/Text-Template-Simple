@@ -1,11 +1,12 @@
 #!/usr/bin/env perl -w
 use strict;
-use Test::More;
+use Test::More;# qw(no_plan);
 
 eval "use Test::Pod::Coverage;1";
-if($@) {
+if ( $@ ) {
    plan skip_all => "Test::Pod::Coverage required for testing pod coverage";
 } else {
-   plan tests => 1;
-   pod_coverage_ok('Text::Template::Simple', {trustme => [qw/IS_DEBUG/]});
+   #plan tests => 1;
+   #pod_coverage_ok('Text::Template::Simple');
+   all_pod_coverage_ok();
 }

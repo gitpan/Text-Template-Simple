@@ -10,14 +10,12 @@ use Text::Template::Simple::Caller;
 use Text::Template::Simple::Tokenizer;
 use Text::Template::Simple::Util;
 
-$VERSION = '0.49_10';
+$VERSION = '0.49_11';
 
 my $CACHE = {}; # in-memory template cache
 
 my %DEFAULT = ( # default object attributes
    delimiters    => [ DELIMS ], # default delimiters
-   as_string     =>  0, # if true, resulting template will not be eval()ed
-   delete_ws     =>  0, # delete whitespace-only fragments?
    cache         =>  0, # use cache or not
    cache_dir     => '', # will use hdd intead of memory for caching...
    strict        =>  1, # set to false for toleration to un-declared vars
@@ -27,7 +25,7 @@ my %DEFAULT = ( # default object attributes
    warn_ids      =>  0, # warn template ids?
    iolayer       => '', # I/O layer for filehandles
    stack         => '',
-
+   # TODO: Consider removing these
    fix_uncuddled =>  0, # do some worst practice?
    resume        =>  0, # resume on error?
 );
@@ -128,8 +126,7 @@ sub dump_cache_ids {
       require File::Find;
       require File::Spec;
       my $ext = quotemeta CACHE_EXT;
-      my $id;
-      my @list;
+      my($id, @list);
 
       my $wanted = sub {
          return if $_ !~ m{(.+?) $ext \z}xms;
@@ -207,9 +204,7 @@ sub dump_cache {
    }
 
    my $str;
-   eval {
-      $str = $d->Dump;
-   };
+   eval { $str = $d->Dump; };
 
    if ( my $error = $@ ) {
       if ( $deparse && $error =~ RE_DUMP_ERROR ) {
@@ -631,9 +626,7 @@ sub _parse {
    my($id, $str);
    PARSER: foreach my $token ( @{ $toke->tokenize( $raw, $map_keys ) } ) {
       ($id, $str) = @{ $token };
-      if ( DEBUG() > 3 ) {
-         LOG( TOKEN => "$id => $str" );
-      }
+      LOG( TOKEN => "$id => $str" ) if DEBUG() > 3;
       next PARSER if $id eq 'DISCARD';
 
       if ( $id eq 'DELIMSTART' ) { $inside++; next PARSER; }
@@ -667,12 +660,13 @@ sub _parse {
 
    if ( $inside ) {
       my $type = $inside > 0 ? 'opening' : 'closing';
-      croak "Unbalanced $type delimiter in template " . $self->[FILENAME];
+      my $tmpl = "%d unbalanced %s delimiter(s) in template %s";
+      croak sprintf( $tmpl, abs($inside), $type, $self->[FILENAME] );
    }
 
-   my $wrapper;
+   my $wrapper = '';
    # build the anonymous sub
-   $wrapper  = "package " . DUMMY_CLASS . ";";
+   $wrapper .= "package " . DUMMY_CLASS . ";";
    $wrapper .= 'use strict;'                   if $self->[STRICT];
    $wrapper .= 'sub { ';
    $wrapper .= $self->[HEADER].';'             if $self->[HEADER];

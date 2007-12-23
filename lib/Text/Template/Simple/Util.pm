@@ -142,6 +142,32 @@ TODO
 
 Contains utility functions for Text::Template::Simple.
 
+=head1 FUNCTIONS
+
+=head2 DEBUG
+
+
+
+=head2 DIGEST
+
+
+
+=head2 binary_mode
+
+
+
+=head2 fatal
+
+
+
+=head2 isaref
+
+
+
+=head2 ishref
+
+
+
 =head1 OVERRIDABLE FUNCTIONS
 
 =head2 LOG

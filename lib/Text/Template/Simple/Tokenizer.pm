@@ -12,11 +12,12 @@ use constant LAST_TOKEN    => -1;
 use constant ID_DS         =>  0;
 use constant ID_DE         =>  1;
 
+use constant SUBSTR_OFFSET =>  0;
 use constant SUBSTR_LENGTH =>  1;
 
 use Carp qw( croak );
 
-$VERSION = '0.11';
+$VERSION = '0.12';
 
 my @COMMANDS = (
    #   cmd id        callback
@@ -78,7 +79,8 @@ sub _token_code {
    my $inside   = shift;
    my $map_keys = shift;
    my $tree     = shift;
-   my $first    = substr $str, 0, SUBSTR_LENGTH;
+   my $first    = substr $str, SUBSTR_OFFSET, SUBSTR_LENGTH;
+   # $first is the left-cmd, perhaps we can use a right-cmd?
    #my $last     = substr $str, length($str) - 1, SUBSTR_LENGTH;
 
    my($cmd, $len, $cb, $buf);
