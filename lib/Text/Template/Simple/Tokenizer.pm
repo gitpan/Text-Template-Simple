@@ -11,13 +11,14 @@ use constant LAST_TOKEN    => -1;
 
 use constant ID_DS         =>  0;
 use constant ID_DE         =>  1;
+use constant ID_FU         =>  2;
 
 use constant SUBSTR_OFFSET =>  0;
 use constant SUBSTR_LENGTH =>  1;
 
 use Carp qw( croak );
 
-$VERSION = '0.12';
+$VERSION = '0.50';
 
 my @COMMANDS = (
    #   cmd id        callback
@@ -33,6 +34,7 @@ sub new {
    bless $self, $class;
    $self->[ID_DS] = shift || croak "Start delimiter is missing";
    $self->[ID_DE] = shift || croak "End delimiter is missing";
+   $self->[ID_FU] = shift || 0;
    $self;
 }
 
@@ -41,7 +43,7 @@ sub tokenize {
    my $self       = shift;
    my $tmp        = shift || croak "tokenize(): Template string is missing";
    my $map_keys   = shift;
-   my($ds, $de)   = @{ $self };
+   my($ds, $de)   = ($self->[ID_DS], $self->[ID_DE]);
    my($qds, $qde) = map { quotemeta $_ } $ds, $de;
 
    my(@tokens, $inside, $last, $i, $j);
@@ -81,7 +83,8 @@ sub _token_code {
    my $tree     = shift;
    my $first    = substr $str, SUBSTR_OFFSET, SUBSTR_LENGTH;
    # $first is the left-cmd, perhaps we can use a right-cmd?
-   #my $last     = substr $str, length($str) - 1, SUBSTR_LENGTH;
+   #my $last    = substr $str, length($str) - 1, SUBSTR_LENGTH;
+   my $fu       = $self->[ID_FU];
 
    my($cmd, $len, $cb, $buf);
    TCODE: foreach $cmd ( @COMMANDS ) {
@@ -101,8 +104,12 @@ sub _token_code {
       }
    }
 
-   return [ $map_keys ? 'MAPKEY' : 'CODE', $str                 ] if $inside;
-   return [                         'RAW', $self->tilde( $str ) ];
+   if ( $inside ) {
+      return [ MAPKEY => $str ] if $map_keys;
+      #$str = $self->trim( $str );
+      return [ CODE   => $str ];
+   }
+   return [ RAW => $self->tilde( $str ) ];
 }
 
 sub tilde {
@@ -184,7 +191,7 @@ Burak GE<252>rsoy, E<lt>burakE<64>cpan.orgE<gt>
 
 =head1 COPYRIGHT
 
-Copyright 2004-2007 Burak GE<252>rsoy. All rights reserved.
+Copyright 2004-2008 Burak GE<252>rsoy. All rights reserved.
 
 =head1 LICENSE
 

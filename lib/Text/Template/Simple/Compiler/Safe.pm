@@ -4,7 +4,7 @@ use strict;
 use vars qw($VERSION);
 use Text::Template::Simple::Dummy;
 
-$VERSION = '0.10';
+$VERSION = '0.50';
 
 sub _compile { shift; return __PACKAGE__->_object->reval(shift) }
 
@@ -52,7 +52,7 @@ Burak GE<252>rsoy, E<lt>burakE<64>cpan.orgE<gt>
 
 =head1 COPYRIGHT
 
-Copyright 2004-2007 Burak GE<252>rsoy. All rights reserved.
+Copyright 2004-2008 Burak GE<252>rsoy. All rights reserved.
 
 =head1 LICENSE
 

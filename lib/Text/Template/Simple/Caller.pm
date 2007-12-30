@@ -14,7 +14,7 @@ use constant BITMASK    => 9;
 
 use Carp qw( croak );
 
-$VERSION = '0.10';
+$VERSION = '0.50';
 
 sub stack {
    my $self    = shift;
@@ -52,6 +52,7 @@ sub stack {
 
    }
 
+   return if ! @callers; # no one called us?
    return reverse @callers if ! $type;
 
    if ( $self->can( my $method = '_' . $type ) ) {
@@ -87,9 +88,53 @@ sub _html_comment {
 }
 
 sub _html_table {
-   warn "Caller stack type 'html_table' is not yet implemented. "
-       ."Changing the option to 'string' instead";
-   shift->_string( @_ );
+   my $self    = shift;
+   my $opt     = shift;
+   my $callers = shift;
+   my $rv      = q{
+   <div id="ttsc-wrapper">
+   <table border="1" cellpadding="1" cellspacing="2" id="ttsc-dump">
+      <tr>
+         <td class="ttsc-title">CONTEXT</td>
+         <td class="ttsc-title">SUB</td>
+         <td class="ttsc-title">LINE</td>
+         <td class="ttsc-title">FILE</td>
+         <td class="ttsc-title">HASARGS</td>
+         <td class="ttsc-title">IS_REQUIRE</td>
+         <td class="ttsc-title">EVALTEXT</td>
+         <td class="ttsc-title">HINTS</td>
+         <td class="ttsc-title">BITMASK</td>
+      </tr>
+   };
+
+   foreach my $c ( reverse @{$callers} ) {
+      $self->_html_table_blank_check( $c ); # modifies  in place
+      $rv .= qq{
+      <tr>
+         <td class="ttsc-value">$c->{context}</td>
+         <td class="ttsc-value">$c->{sub}</td>
+         <td class="ttsc-value">$c->{line}</td>
+         <td class="ttsc-value">$c->{file}</td>
+         <td class="ttsc-value">$c->{hasargs}</td>
+         <td class="ttsc-value">$c->{isreq}</td>
+         <td class="ttsc-value">$c->{evaltext}</td>
+         <td class="ttsc-value">$c->{hints}</td>
+         <td class="ttsc-value">$c->{bitmask}</td>
+      </tr>
+      };
+   }
+
+   return $rv . q{</table></div>};
+}
+
+sub _html_table_blank_check {
+   my $self   = shift;
+   my $struct = shift;
+   foreach my $id ( keys %{ $struct }) {
+      if ( not defined $struct->{ $id } or $struct->{ $id } eq '' ) {
+         $struct->{ $id } = '&#160;';
+      }
+   }
 }
 
 sub _text_table {
@@ -202,7 +247,7 @@ Burak GE<252>rsoy, E<lt>burakE<64>cpan.orgE<gt>
 
 =head1 COPYRIGHT
 
-Copyright 2004-2007 Burak GE<252>rsoy. All rights reserved.
+Copyright 2004-2008 Burak GE<252>rsoy. All rights reserved.
 
 =head1 LICENSE
 

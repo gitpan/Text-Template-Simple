@@ -4,6 +4,8 @@ use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
 use Text::Template::Simple::Constants qw( :info DIGEST_MODS );
 use Carp qw( croak );
 
+$VERSION = '0.50';
+
 BEGIN {
    if ( IS_WINDOWS ) {
       local $@; # perl 5.5.4 does not seem to have a Win32.pm
@@ -25,8 +27,6 @@ BEGIN {
       *binary_mode = sub { binmode $_[0] };
    }
 }
-
-$VERSION = '0.11';
 
 @ISA         = qw( Exporter );
 %EXPORT_TAGS = (
@@ -187,7 +187,7 @@ Burak GE<252>rsoy, E<lt>burakE<64>cpan.orgE<gt>
 
 =head1 COPYRIGHT
 
-Copyright 2004-2007 Burak GE<252>rsoy. All rights reserved.
+Copyright 2004-2008 Burak GE<252>rsoy. All rights reserved.
 
 =head1 LICENSE
 

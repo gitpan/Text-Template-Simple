@@ -2,6 +2,10 @@ Revision history for Perl extension Text::Template::Simple.
 
 Time zone is GMT+2.
 
+0.50 Sun Dec 30 22:05:32 2007
+   => Implemented the html_table output of ::Caller->stack.
+   => New version just before the new year! Yay! :)
+
 0.49_11 Sun Dec 23 23:20:44 2007
    => Internal cleanup.
 

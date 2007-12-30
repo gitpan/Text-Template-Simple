@@ -10,7 +10,7 @@ use Text::Template::Simple::Caller;
 use Text::Template::Simple::Tokenizer;
 use Text::Template::Simple::Util;
 
-$VERSION = '0.49_11';
+$VERSION = '0.50';
 
 my $CACHE = {}; # in-memory template cache
 
@@ -1448,7 +1448,7 @@ Burak GE<252>rsoy, E<lt>burakE<64>cpan.orgE<gt>
 
 =head1 COPYRIGHT
 
-Copyright 2004-2007 Burak GE<252>rsoy. All rights reserved.
+Copyright 2004-2008 Burak GE<252>rsoy. All rights reserved.
 
 =head1 LICENSE
 

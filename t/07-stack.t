@@ -7,6 +7,7 @@ use Text::Template::Simple;
 local $SIG{__WARN__} = sub { # silence stack dumps
    return if $_[0] =~ m{DUMPING CALLER STACK FOR}s;
    return if $_[0] =~ m{Caller stack type}s;
+   return if $_[0] =~ m{\Qttsc-wrapper};
    warn $_[0];
 };
 
