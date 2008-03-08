@@ -2,6 +2,18 @@ Revision history for Perl extension Text::Template::Simple.
 
 Time zone is GMT+2.
 
+0.51_01 Sun Mar  9 01:19:59 2008
+   => Resume unknown tokens as RAW instead of die()ing.
+   => Added a mechanism to make it possible to add new tokens and token handlers.
+   => New sub modules:
+        Text::Template::Simple::Cache      - Cache object
+        Text::Template::Simple::Cache::ID  - Cache ID generator
+        Text::Template::Simple::IO         - I/O methods
+        Text::Template::Simple::Deprecated - Temporary module to support old interface for a while
+   => All cache methods are now accessible through the cache object.
+   => All I/O methods are now accessible through the io object.
+   => New cache tests.
+
 0.50 Sun Dec 30 22:05:32 2007
    => Implemented the html_table output of ::Caller->stack.
    => New version just before the new year! Yay! :)

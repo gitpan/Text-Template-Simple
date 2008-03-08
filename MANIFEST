@@ -1,4 +1,7 @@
 lib/Text/Template/Simple.pm
+lib/Text/Template/Simple/Cache.pm
+lib/Text/Template/Simple/Cache/ID.pm
+lib/Text/Template/Simple/IO.pm
 lib/Text/Template/Simple/Dummy.pm
 lib/Text/Template/Simple/Compiler.pm
 lib/Text/Template/Simple/Compiler/Safe.pm
@@ -6,6 +9,7 @@ lib/Text/Template/Simple/Caller.pm
 lib/Text/Template/Simple/Constants.pm
 lib/Text/Template/Simple/Tokenizer.pm
 lib/Text/Template/Simple/Util.pm
+lib/Text/Template/Simple/Deprecated.pm
 t/01-pod.t
 t/02-pod-coverage.t
 t/03-simple.t
@@ -16,6 +20,8 @@ t/07-stack.t
 t/08-escape-delim.t
 t/09-subclass.t
 t/10-subclass-define-bufvar.t
+t/11-cache-mem.t
+t/12-cache-disk.t
 t/test.tmpl
 t/lib/My.pm
 Makefile.PL

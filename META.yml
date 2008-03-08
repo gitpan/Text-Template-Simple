@@ -1,6 +1,6 @@
 ---
 name: Text-Template-Simple
-version: 0.50
+version: 0.51_1
 author:
   - 'Burak Gursoy <burak@cpan.org>'
 abstract: Simple text template engine
@@ -23,7 +23,12 @@ recommends:
 provides:
   Text::Template::Simple:
     file: lib/Text/Template/Simple.pm
-    version: 0.50
+    version: 0.51_1
+  Text::Template::Simple::Cache:
+    file: lib/Text/Template/Simple/Cache.pm
+    version: 0.51
+  Text::Template::Simple::Cache::ID:
+    file: lib/Text/Template/Simple/Cache/ID.pm
   Text::Template::Simple::Caller:
     file: lib/Text/Template/Simple/Caller.pm
     version: 0.50
@@ -36,9 +41,15 @@ provides:
   Text::Template::Simple::Constants:
     file: lib/Text/Template/Simple/Constants.pm
     version: 0.50
+  Text::Template::Simple::Deprecated:
+    file: lib/Text/Template/Simple/Deprecated.pm
+    version: 0.51
   Text::Template::Simple::Dummy:
     file: lib/Text/Template/Simple/Dummy.pm
     version: 0.50
+  Text::Template::Simple::IO:
+    file: lib/Text/Template/Simple/IO.pm
+    version: 0.51
   Text::Template::Simple::Tokenizer:
     file: lib/Text/Template/Simple/Tokenizer.pm
     version: 0.50

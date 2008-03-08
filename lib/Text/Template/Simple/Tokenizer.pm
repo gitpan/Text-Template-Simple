@@ -87,7 +87,7 @@ sub _token_code {
    my $fu       = $self->[ID_FU];
 
    my($cmd, $len, $cb, $buf);
-   TCODE: foreach $cmd ( @COMMANDS ) {
+   TCODE: foreach $cmd ( @COMMANDS, $self->_user_commands ) {
       if ( $first eq $cmd->[CMD_CHAR] ) {
          $len = length($str);
          $cb  = $cmd->[CMD_CB];
@@ -110,6 +110,12 @@ sub _token_code {
       return [ CODE   => $str ];
    }
    return [ RAW => $self->tilde( $str ) ];
+}
+
+sub _user_commands {
+   my $self = shift;
+   return +() if ! $self->can('commands');
+   return $self->commands;
 }
 
 sub tilde {

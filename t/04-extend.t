@@ -1,6 +1,5 @@
 #!/usr/bin/env perl -w
-# Extending Text::Template::Simple with 
-# functions and globals
+# Extending Text::Template::Simple with functions and globals
 # SEE ALSO: t/lib/My.pm
 use strict;
 use lib qw(t/lib lib);

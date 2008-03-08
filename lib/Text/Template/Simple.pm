@@ -9,10 +9,12 @@ use Text::Template::Simple::Compiler::Safe;
 use Text::Template::Simple::Caller;
 use Text::Template::Simple::Tokenizer;
 use Text::Template::Simple::Util;
+use Text::Template::Simple::Cache::ID;
+use Text::Template::Simple::Cache;
+use Text::Template::Simple::IO;
+use base qw( Text::Template::Simple::Deprecated );
 
-$VERSION = '0.50';
-
-my $CACHE = {}; # in-memory template cache
+$VERSION = '0.51_1';
 
 my %DEFAULT = ( # default object attributes
    delimiters    => [ DELIMS ], # default delimiters
@@ -25,6 +27,7 @@ my %DEFAULT = ( # default object attributes
    warn_ids      =>  0, # warn template ids?
    iolayer       => '', # I/O layer for filehandles
    stack         => '',
+   user_thandler => undef, # user token handler callback
    # TODO: Consider removing these
    fix_uncuddled =>  0, # do some worst practice?
    resume        =>  0, # resume on error?
@@ -44,250 +47,15 @@ sub new {
       $fid = uc $field;
       next if not $class->can($fid);
       $fid = $class->$fid();
-      $self->[$fid] = defined $param{$field} ? $param{$field}
-                    :                          $DEFAULT{$field}
-                    ;
+      $self->[$fid] = defined $param{$field} ? $param{$field} : $DEFAULT{$field};
    }
 
    $self->_init;
    return $self;
 }
 
-sub _init {
-   my $self = shift;
-
-   if ( $self->[CACHE_DIR] ) {
-      require File::Spec;
-      $self->[CACHE_DIR] = File::Spec->canonpath( $self->[CACHE_DIR] );
-      my $wdir;
-      if ( IS_WINDOWS ) {
-         $wdir = Win32::GetFullPathName( $self->[CACHE_DIR] );
-         if( Win32::GetLastError() ) {
-            LOG( FAIL => "Win32::GetFullPathName(): $^E" ) if DEBUG();
-            $wdir = ''; # croak "Win32::GetFullPathName: $^E";
-         }
-         else {
-            my $ok = -e $wdir && -d _;
-            $wdir  = '' if not $ok;
-         }
-      }
-      $self->[CACHE_DIR] = $wdir if $wdir;
-      my $ok = -e $self->[CACHE_DIR] && -d _;
-      croak fatal( CDIR => $self->[CACHE_DIR]) if not $ok;
-   }
-
-   my $d          = $self->[DELIMITERS];
-   my $bogus_args = $self->[ADD_ARGS] && ! isaref($self->[ADD_ARGS]);
-   my $ok_delim   = isaref( $d )      && $#{ $d } == 1;
-   croak fatal('ARGS')   if     $bogus_args;
-   croak fatal('DELIMS') if not $ok_delim;
-
-   $self->[TYPE]       = '';
-   $self->[COUNTER]    = 0;
-   $self->[CID]        = '';
-   $self->[FAKER]      = $self->_output_buffer_var;
-   $self->[FAKER_HASH] = $self->_output_buffer_var('hash');
-
-   return;
-}
-
-sub reset_cache {
-   my $self  = shift;
-   %{$CACHE} = ();
-
-   if ( $self->[CACHE] && $self->[CACHE_DIR] ) {
-
-      my $cdir = $self->[CACHE_DIR];
-      local  *CDIRH;
-      opendir CDIRH, $cdir or croak fatal( CDIROPEN => $cdir, $! );
-      require File::Spec;
-      my $ext = quotemeta CACHE_EXT;
-      my $file;
-
-      while ( defined( $file = readdir CDIRH ) ) {
-         next if $file !~ m{$ext \z}xmsi;
-         $file = File::Spec->catfile( $self->[CACHE_DIR], $file );
-         LOG( UNLINK => $file ) if DEBUG();
-         unlink $file;
-      }
-
-      closedir CDIRH;
-   }
-}
-
-sub dump_cache_ids {
-   my $self = shift;
-   my %p    = @_ % 2 ? () : (@_);
-   my $VAR  = $p{varname} || '$CACHE_IDS';
-   my @rv;
-
-   if ( $self->[CACHE_DIR] ) {
-
-      require File::Find;
-      require File::Spec;
-      my $ext = quotemeta CACHE_EXT;
-      my($id, @list);
-
-      my $wanted = sub {
-         return if $_ !~ m{(.+?) $ext \z}xms;
-         $id      = $1;
-         $id      =~ s{.*[\\/]}{};
-         push @list, $id;
-      };
-
-      File::Find::find({wanted => $wanted, no_chdir => 1}, $self->[CACHE_DIR]);
-
-      @rv = sort @list;
-
-   }
-   else {
-      @rv = sort keys %{ $CACHE };
-   }
-
-   require Data::Dumper;
-   my $d = Data::Dumper->new( [ \@rv ], [ $VAR ]);
-   return $d->Dump;
-}
-
-sub _get_disk_cache {
-   require File::Find;
-   require File::Spec;
-   my $self    = shift;
-   my $ext     = quotemeta CACHE_EXT;
-   my $pattern = quotemeta '# [line 10]';
-   my(%disk_cache, $id, $content, $ok, $_temp, $line);
-
-   my $wanted = sub {
-      return if $_ !~ m{(.+?) $ext \z}xms;
-      $id      = $1;
-      $id      =~ s{.*[\\/]}{};
-      $content = $self->_slurp( File::Spec->canonpath($_) );
-      $ok      = 0;  # reset
-      $_temp   = ''; # reset
-
-      foreach $line ( split /\n/, $content ) {
-         if ( $line =~ m{$pattern}xmso ) {
-            $ok = 1,
-            next;
-         }
-         next if not $ok;
-         $_temp .= $line;
-      }
-
-      $disk_cache{ $id } = {
-         MTIME => (stat $_)[STAT_MTIME],
-         CODE  => $_temp,
-      };
-   };
- 
-   File::Find::find({ wanted => $wanted, no_chdir => 1 }, $self->[CACHE_DIR]);
-   return \%disk_cache;
-}
-
-sub dump_cache {
-   my $self    = shift;
-   my %p       = @_ % 2 ? () : (@_);
-   my $VAR     = $p{varname} || '$CACHE';
-   my $deparse = $p{no_deparse} ? 0 : 1;
-   require Data::Dumper;
-   my $d;
-
-   if ( $self->[CACHE_DIR] ) {
-      $d = Data::Dumper->new( [ $self->_get_disk_cache ], [ $VAR ] );
-   }
-   else {
-      $d = Data::Dumper->new( [ $CACHE ], [ $VAR ]);
-      if ( $deparse ) {
-         croak fatal(DUMPER => $Data::Dumper::VERSION) if !$d->can('Deparse');
-         $d->Deparse(1);
-      }
-   }
-
-   my $str;
-   eval { $str = $d->Dump; };
-
-   if ( my $error = $@ ) {
-      if ( $deparse && $error =~ RE_DUMP_ERROR ) {
-         my $name = ref($self) . '::dump_cache';
-         warn "$name: An error occurred when dumping with deparse "
-             ."(are you under mod_perl?). Re-Dumping without deparse...\n";
-         warn "$error\n";
-         my $nd = Data::Dumper->new( [ $CACHE ], [ $VAR ]);
-         $d->Deparse(0);
-         $str = $nd->Dump;
-      }
-      else {
-         croak $error;
-      }
-   }
-
-   return $str;
-}
-
-sub cache_size {
-   my $self = shift;
-   return 0 if not $self->[CACHE]; # calculate only if cache is enabled
-
-   if ( $self->[CACHE_DIR] ) { # disk cache
-      require File::Find;
-      my $total  = 0;
-      my $ext    = quotemeta CACHE_EXT;
-
-      my $wanted = sub {
-         return if $_ !~ m{ $ext \z }xms; # only calculate "our" files
-         $total += (stat $_)[STAT_SIZE];
-      };
-
-      File::Find::find({wanted => $wanted, no_chdir => 1}, $self->[CACHE_DIR]);
-      return $total;
-
-   }
-   else { # in memory cache
-
-      local $SIG{__DIE__};
-      if ( eval { require Devel::Size; 1; } ) {
-         LOG( DEBUG => "Devel::Size v$Devel::Size::VERSION is loaded." )
-            if DEBUG();
-         return Devel::Size::total_size( $CACHE );
-      }
-      else {
-         warn "Failed to load Devel::Size: $@";
-         return 0;
-      }
-
-   }
-}
-
-sub in_cache {
-   my $self = shift;
-   if ( not $self->[CACHE] ) {
-      LOG( DEBUG => "Cache is disabled!") if DEBUG();
-      return;
-   }
-
-   croak fatal('PFORMAT') if @_ % 2;
-
-   my %opt = @_;
-   my $id  = $opt{id}   ? $self->idgen($opt{id}  , 'custom')
-           : $opt{data} ? $self->idgen($opt{data}          )
-           :              croak fatal('INCACHE');
-
-   if ( my $cdir = $self->[CACHE_DIR] ) {
-      require File::Spec;
-      return -e File::Spec->catfile( $cdir, $id . CACHE_EXT ) ? 1 : 0;
-   }
-   else {
-      return exists $CACHE->{ $id } ? 1 : 0;
-   }
-}
-
-sub idgen { # cache id generator
-   my $self   = shift;
-   my $data   = shift or croak "Can't generate id without data!";
-   my $custom = shift;
-   return $self->_fake_idgen( $data ) if $custom;
-   return $self->DIGEST->add( $data )->hexdigest;
-}
+sub cache { shift->[CACHE_OBJECT] }
+sub io    { shift->[IO_OBJECT]    }
 
 sub compile {
    my $self  = shift;
@@ -324,22 +92,22 @@ sub compile {
       my @args   = (! $method || $method eq 'AUTO') ? ( $tmp              )
                  :                                    ( $method, 'custom' )
                  ;
-      $cache_id  = $self->idgen( @args );
+      $cache_id  = Text::Template::Simple::Cache::ID->new->generate( @args );
 
-      if ( $CODE = $self->_cache_hit( $cache_id, $opt->{chkmt} ) ) {
+      if ( $CODE = $self->cache->hit( $cache_id, $opt->{chkmt} ) ) {
          LOG( CACHE_HIT =>  $cache_id ) if DEBUG();
          $ok = 1;
       }
    }
 
-   $self->[CID]      = $cache_id; # if $cache_id;
-   $self->[FILENAME] = $self->[TYPE] eq 'FILE' ? $tmpx : $self->[CID];
+   $self->cache->id( $cache_id ); # if $cache_id;
+   $self->[FILENAME] = $self->[TYPE] eq 'FILE' ? $tmpx : $self->cache->id;
 
    if ( not $ok ) {
       # we have a cache miss; parse and compile
       LOG( CACHE_MISS => $cache_id ) if DEBUG();
       my $parsed = $self->_parse( $tmp, $opt->{map_keys}, $cache_id );
-      $CODE      = $self->_populate_cache( $cache_id, $parsed, $opt->{chkmt} );
+      $CODE      = $self->cache->populate( $cache_id, $parsed, $opt->{chkmt} );
    }
 
    my   @args;
@@ -348,9 +116,39 @@ sub compile {
    return $CODE->( @args );
 }
 
-sub get_id { shift->[CID] }
-
 # -------------------[ P R I V A T E   M E T H O D S ]------------------- #
+
+sub _init {
+   my $self = shift;
+   my $d          = $self->[DELIMITERS];
+   my $bogus_args = $self->[ADD_ARGS] && ! isaref($self->[ADD_ARGS]);
+   my $ok_delim   = isaref( $d )      && $#{ $d } == 1;
+
+   croak fatal('ARGS')   if     $bogus_args;
+   croak fatal('DELIMS') if not $ok_delim;
+
+   $self->[TYPE]       = '';
+   $self->[COUNTER]    = 0;
+   $self->[FAKER]      = $self->_output_buffer_var;
+   $self->[FAKER_HASH] = $self->_output_buffer_var('hash');
+
+   if ( $self->[USER_THANDLER] ) {
+      croak "user_thandler parameter must be a CODE reference"
+         if ref($self->[USER_THANDLER]) ne 'CODE';
+   }
+
+   $self->[IO_OBJECT] = Text::Template::Simple::IO->new($self);
+
+   if ( $self->[CACHE_DIR] ) {
+      my $cdir = $self->io->validate( dir => $self->[CACHE_DIR] )
+                     or croak fatal( CDIR => $self->[CACHE_DIR] );
+      $self->[CACHE_DIR] = $cdir;
+   }
+
+   $self->[CACHE_OBJECT] = Text::Template::Simple::Cache->new($self);
+
+   return;
+}
 
 sub _parser_id { __PACKAGE__ . " v$VERSION" }
 
@@ -364,17 +162,6 @@ sub _output_buffer_var {
       $id  .= $$; # . rand() . time;
       $id   =~ tr/a-zA-Z_0-9//cd;
    return '$' . $id;
-}
-
-sub _fake_idgen {
-   my $self = shift;
-   my $data = shift or croak "Can't generate id without data!";
-      $data =~ s{[^A-Za-z_0-9]}{_}xmsg;
-   my $len = length( $data );
-   if ( $len > MAX_FL ) { # limit file name length
-      $data = substr $data, $len - MAX_FL, MAX_FL;
-   }
-   return $data;
 }
 
 sub _examine {
@@ -396,7 +183,7 @@ sub _examine {
       $length = length $tmp;
       if ( $length  <=  255 and $tmp !~ RE_NONFILE and -e $tmp and not -d _ ) {
          $self->[TYPE] = 'FILE';
-         $rv = $self->_slurp($tmp);
+         $rv = $self->io->slurp($tmp);
          # we don't really need to set this after getting data
          $length = length $rv if DEBUG();
       }
@@ -409,37 +196,12 @@ sub _examine {
    return $rv;
 }
 
-sub _iolayer {
-   return if ! NEW_PERL;
-   my $self  = shift;
-   my $fh    = shift || croak "_iolayer(): Filehandle is absent";
-   my $layer = $self->[IOLAYER]; # || croak "_iolayer(): I/O Layer is absent";
-   binary_mode( $fh, $layer ) if $self->[IOLAYER];
-   return;
-}
-
-sub _slurp {
-   require IO::File;
-   require Fcntl;
-   my $self = shift;
-   my $file = shift;
-   my $fh   = IO::File->new;
-   $fh->open($file, 'r') or croak "Error opening $file for reading: $!";
-   flock $fh, Fcntl::LOCK_SH() if IS_FLOCK;
-   $self->_iolayer( $fh );
-   local $/;
-   my $tmp = <$fh>;
-   flock $fh, Fcntl::LOCK_UN() if IS_FLOCK;
-   $fh->close;
-   return $tmp;
-}
-
 sub _compiler { shift->[SAFE] ? COMPILER_SAFE : COMPILER }
 
 sub _wrap_compile {
    my $self   = shift;
    my $parsed = shift or croak "nothing to compile";
-   LOG( CACHE_ID => $self->[CID] ) if $self->[WARN_IDS] && $self->[CID];
+   LOG( CACHE_ID => $self->cache->id ) if $self->[WARN_IDS] && $self->cache->id;
    LOG( COMPILER => $self->[SAFE] ? 'Safe' : 'Normal' ) if DEBUG();
    my($CODE, $error);
 
@@ -449,11 +211,7 @@ sub _wrap_compile {
       my $error2;
       if ( $self->[RESUME] ) {
          $CODE =  sub {
-                     return sprintf (
-                                       qq~[%s Fatal Error] %s~,
-                                       $self->_parser_id,
-                                       $error
-                                    )
+                     sprintf ("[%s Fatal Error] %s", $self->_parser_id, $error )
                   };
          $error2 = $@;
       }
@@ -461,104 +219,6 @@ sub _wrap_compile {
    }
 
    return $CODE, $error;
-}
-
-sub _cache_hit {
-   my $self     = shift;
-   my $cache_id = shift;
-   my $chkmt    = shift || 0;
-   my($CODE, $error);
-
-   if ( my $cdir = $self->[CACHE_DIR] ) {
-      require File::Spec;
-      my $cache = File::Spec->catfile( $cdir, $cache_id . CACHE_EXT );
-
-      if ( -e $cache && not -d _ && -f _ ) {
-         my $disk_cache = $self->_slurp($cache);
-
-         if ( $chkmt ) {
-            if ( $disk_cache =~ m{^#(\d+)#} ) {
-               my $mtime  = $1;
-               if ( $mtime != $chkmt ) {
-                  LOG( MTIME_DIFF => "\tOLD: $mtime\n\t\tNEW: $chkmt")
-                     if DEBUG();
-                  return; # i.e.: Update cache
-               }
-            }
-         }
-
-         ($CODE, $error) = $self->_wrap_compile($disk_cache);
-         croak "Error loading from disk cache: $error" if $error;
-         LOG( FILE_CACHE => '' ) if DEBUG();
-         #$self->[COUNTER]++;
-         return $CODE;
-      }
-
-   }
-   else {
-      if ( $chkmt ) {
-         my $mtime = $CACHE->{$cache_id}{MTIME} || 0;
-
-         if ( $mtime != $chkmt ) {
-            LOG( MTIME_DIFF => "\tOLD: $mtime\n\t\tNEW: $chkmt" ) if DEBUG();
-            return; # i.e.: Update cache
-         }
-
-      }
-      LOG( MEM_CACHE => '' ) if DEBUG();
-      return $CACHE->{$cache_id}->{CODE};
-   }
-   return;
-}
-
-sub _populate_cache {
-   my $self     = shift;
-   my $cache_id = shift;
-   my $parsed   = shift;
-   my $chkmt    = shift;
-   my($CODE, $error);
-
-   if ( $self->[CACHE] ) {
-      if ( my $cdir = $self->[CACHE_DIR] ) {
-         require File::Spec;
-         require Fcntl;
-         require IO::File;
-
-         my $cache = File::Spec->catfile( $cdir, $cache_id . CACHE_EXT);
-         my $fh    = IO::File->new;
-         $fh->open($cache, '>') or croak "Error writing disk-cache $cache : $!";
-         flock $fh, Fcntl::LOCK_EX() if IS_FLOCK;
-         $self->_iolayer($fh);
-         print $fh $chkmt ? "#$chkmt#\n" : "##\n",
-                   $self->_cache_comment,
-                   $parsed; 
-         flock $fh, Fcntl::LOCK_UN() if IS_FLOCK;
-         close $fh;
-
-         ($CODE, $error) = $self->_wrap_compile($parsed);
-         LOG( DISK_POPUL => $cache_id ) if DEBUG() > 2;
-      } 
-      else {
-         $CACHE->{$cache_id} = {CODE => undef, MTIME => 0}; # init
-         ($CODE, $error) = $self->_wrap_compile($parsed);
-         $CACHE->{$cache_id}->{CODE}  = $CODE;
-         $CACHE->{$cache_id}->{MTIME} = $chkmt if $chkmt;
-         LOG( MEM_POPUL => $cache_id ) if DEBUG() > 2;
-      }
-   }
-   else {
-      ($CODE, $error) = $self->_wrap_compile($parsed); # cache is disabled
-      LOG( NC_POPUL => $cache_id ) if DEBUG() > 2;
-   }
-
-   if ( $error ) {
-      my $cid    = $cache_id ? $cache_id : 'N/A';
-      my $tidied = $self->_tidy( $parsed );
-      croak sprintf COMPILE_ERROR_TMP, $cid, $error, $parsed, $tidied;
-   }
-
-   $self->[COUNTER]++;
-   return $CODE;
 }
 
 sub _tidy {
@@ -622,6 +282,11 @@ sub _parse {
 
    $self->_fix_uncuddled(\$raw, $ds, $de) if $self->[FIX_UNCUDDLED];
 
+   my $handler = $self->[USER_THANDLER];
+
+   my $w_raw = sub { ";$faker .= q~$_[0]~;" };
+   my $w_cap = sub { ";$faker .= sub {" . $_[0] . "}->();"; };
+
    # fetch and walk the tree
    my($id, $str);
    PARSER: foreach my $token ( @{ $toke->tokenize( $raw, $map_keys ) } ) {
@@ -633,7 +298,7 @@ sub _parse {
       if ( $id eq 'DELIMEND'   ) { $inside--; next PARSER; }
 
       if ( $id eq 'RAW' || $id eq 'NOTADELIM' ) {
-         $code .= ";$faker .= q~$str~;";
+         $code .= $w_raw->($str);
       }
       elsif ( $id eq 'CODE' ) {
          $code .= $resume ? $self->_resume($str, 0, 1) : $str;
@@ -644,19 +309,24 @@ sub _parse {
                 :           " .= sub { $str }->();";
       }
       elsif ( $id eq 'DYNAMIC' || $id eq 'STATIC' ) {
-         $code .= "$faker .= sub {" . $self->_include($id, $str) . "}->();";
+         $code .= $w_cap->( $self->_include($id, $str) );
       }
       elsif ( $id eq 'MAPKEY' ) {
          $code .= sprintf $mko, $mkc ? ( ($str) x 5 ) : $str;
       }
       else {
-         die "Unknown token: $id($str)";
+         if ( $handler ) {
+            LOG( USER_THANDLER => "$id") if DEBUG;
+            $code .= $handler->($self, $id ,$str, { capture => $w_cap, raw => $w_raw } );
+         }
+         else {
+            warn "Adding unknown token as RAW: $id($str)";
+            $code .= $w_raw->($str);
+         }
       }
    }
 
    $self->[FILENAME] ||= '<ANON>';
-
-   #LOG(CASE_END => "state: $is_code; open: $is_open" )if DEBUG();
 
    if ( $inside ) {
       my $type = $inside > 0 ? 'opening' : 'closing';
@@ -727,7 +397,7 @@ sub _include {
 
    my $text;
    LOG( INCLUDE => "$type => '$file'" ) if DEBUG();
-   eval { $text = $self->_slurp($file) };
+   eval { $text = $self->io->slurp($file) };
    return "q~$err $@~" if $@;
 
    if ( $is_normal ) {
@@ -744,10 +414,6 @@ sub _include {
    }
 
    return "$err This can not happen!";
-}
-
-sub _cache_comment {
-   sprintf DISK_CACHE_COMMENT, ref(shift), $VERSION, scalar localtime time;
 }
 
 sub _resume {
@@ -787,7 +453,10 @@ sub _resume {
 }
 
 sub DESTROY {
-   my $self   = shift || return;
+   my $self = shift || return;
+   LOG( DESTROY => ref $self ) if DEBUG;
+   undef $self->[CACHE_OBJECT];
+   undef $self->[IO_OBJECT];
    @{ $self } = ();
    return;
 }
@@ -1252,76 +921,13 @@ If you are using file templates (i.e.: not FH or not string) and you
 set this to a true value, modification time of templates will be checked
 and compared for template change.
 
-=head2 reset_cache
+=head2 cache
 
-Resets the in-memory cache and deletes all cache files, 
-if you are using a disk cache.
+Returns the L<Text::Template::Simple::Cache> object.
 
-=head2 dump_cache
+=head2 io
 
-Returns a string version of the dumped in-memory or disk-cache. 
-Cache is dumped via L<Data::Dumper>. C<Deparse> option is enabled
-for in-memory cache. 
-
-Early versions of C<Data::Dumper> don' t have a C<Deparse>
-method, so you may need to upgrade your C<Data::Dumper> or
-disable deparse-ing if you want to use this method.
-
-C<dump_cache> accepts some arguments in C<< name => value >>
-format:
-
-=over 4
-
-=item *
-
-varname
-
-Controls the name of the dumped structure.
-
-=item *
-
-no_deparse
-
-If you set this to a true value, deparsing will be disabled
-
-=back
-
-=head2 dump_cache_ids
-
-Returns a list including the names (ids) of the templates in
-the cache.
-
-=head2 idgen DATA
-
-This may not have any meaning for the typical user. Used internally 
-to generate unique ids for template C<DATA> (if cache is enabled).
-
-=head2 get_id
-
-Returns the current cache id (if there is any).
-
-=head2 cache_size
-
-Returns the total cache (disk or memory) size in bytes. If you 
-are using memory cache, you must have L<Devel::Size> installed
-on your system or your code will die.
-
-=head2 in_cache data => TEMPLATE_DATA
-
-=head2 in_cache id   => TEMPLATE_ID
-
-This method can be called with C<data> or C<id> named parameter. If you 
-use the two together, C<id> will be used:
-
-   if($template->in_cache(id => 'e369853df766fa44e1ed0ff613f563bd')) {
-      print "ok!";
-   }
-
-or
-
-   if($template->in_cache(data => q~Foo is <%=$bar%>~)) {
-      print "ok!";
-   }
+Returns the L<Text::Template::Simple::IO> object.
 
 =head1 CLASS METHODS
 
@@ -1398,6 +1004,33 @@ TODO
 You may need to C<eval> your code blocks to trap exceptions. Some 
 failures are silently ignored, but you can display them as warnings 
 if you enable debugging.
+
+=begin EXPERTS
+
+How to add your own tokens into Text::Template::Simple?
+
+   use strict;
+   use Text::Template::Simple;
+   use constant MYTEMP => q{ Testing: <%$ PROCESS some.tmpl %> };
+   # first, register our handler for unknown tokens
+   my $t = Text::Template::Simple->new( user_thandler => \&thandler );
+   print $t->compile( MYTEMP );
+   # then describe how to handle "our" commands
+   sub Text::Template::Simple::Tokenizer::commands {
+      my $self = shift;
+      return(
+         #   cmd id        callback
+         [ qw/ $ DIRECTIVE trim  / ],
+      );
+   }
+   # we can now use some black magic
+   sub thandler {
+      my($self, $id ,$str, $h) = @_;
+      # $h is the wrapper handler. it has two handlers: capture & raw
+      return $h->{raw}->( "id($id) cmd($str)" );
+   }
+
+=end EXPERTS
 
 =head1 BUGS
 
