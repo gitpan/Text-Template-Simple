@@ -4,6 +4,9 @@ use Module::Build;
 Module::Build->new(
    module_name => 'Text::Template::Simple',
    license     => 'perl',
+   build_requires => {
+      'File::Temp' => 0,
+   },
    requires    => {
       'Data::Dumper' => '2.101',
       'File::Spec'   => '0.6',

@@ -26,6 +26,14 @@ sub id {
    $self->[CACHE_PARENT][CID];
 }
 
+sub type {
+   my $self = shift;
+   my $parent = $self->[CACHE_PARENT];
+   return $parent->[CACHE] ? $parent->[CACHE_DIR] ? 'DISK'
+                                                  : 'MEMORY'
+                           : 'OFF';
+}
+
 sub reset {
    my $self  = shift;
    my $parent = $self->[CACHE_PARENT];
@@ -363,6 +371,7 @@ This is a base class for C<Text::Template::Simple>.
 
 =head1 METHODS
 
+=head2 type
 
 =head2 reset
 
@@ -420,13 +429,13 @@ on your system or your code will die.
 This method can be called with C<data> or C<id> named parameter. If you 
 use the two together, C<id> will be used:
 
-   if($template->has(id => 'e369853df766fa44e1ed0ff613f563bd')) {
+   if($template->cache->has(id => 'e369853df766fa44e1ed0ff613f563bd')) {
       print "ok!";
    }
 
 or
 
-   if($template->has(data => q~Foo is <%=$bar%>~)) {
+   if($template->cache->has(data => q~Foo is <%=$bar%>~)) {
       print "ok!";
    }
 

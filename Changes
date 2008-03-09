@@ -2,6 +2,10 @@ Revision history for Perl extension Text::Template::Simple.
 
 Time zone is GMT+2.
 
+0.51_01 Sun Mar  9 23:13:17 2008
+   => Implemented new tests for the cache interface.
+   => Cache tests are using File::Temp.
+
 0.51_01 Sun Mar  9 01:19:59 2008
    => Resume unknown tokens as RAW instead of die()ing.
    => Added a mechanism to make it possible to add new tokens and token handlers.

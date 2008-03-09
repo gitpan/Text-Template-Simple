@@ -1,13 +1,16 @@
 #!/usr/bin/env perl -w
 # Simple test. Just try to use the module.
 use strict;
-use Test;
-BEGIN { plan tests => 2 }
+use Test::More qw( no_plan );
 
 use Text::Template::Simple; 
 Text::Template::Simple->DEBUG(0);
-ok(simple());
-ok(simple2());
+ok(simple() , "Simple test 1");
+ok(simple2(), "Simple test 2");
+
+my $t = Text::Template::Simple->new();
+
+ok( $t->cache->type eq 'OFF', "Correct cache type is set" );
 
 sub simple {
    my $template = Text::Template::Simple->new(

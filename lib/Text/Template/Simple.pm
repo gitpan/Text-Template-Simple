@@ -14,7 +14,7 @@ use Text::Template::Simple::Cache;
 use Text::Template::Simple::IO;
 use base qw( Text::Template::Simple::Deprecated );
 
-$VERSION = '0.51_1';
+$VERSION = '0.51_2';
 
 my %DEFAULT = ( # default object attributes
    delimiters    => [ DELIMS ], # default delimiters

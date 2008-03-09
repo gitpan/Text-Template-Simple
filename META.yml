@@ -1,6 +1,6 @@
 ---
 name: Text-Template-Simple
-version: 0.51_1
+version: 0.51_2
 author:
   - 'Burak Gursoy <burak@cpan.org>'
 abstract: Simple text template engine
@@ -16,6 +16,8 @@ requires:
   IO::Handle: 1.1505
   Safe: 2.06
   Test::More: 0.40
+build_requires:
+  File::Temp: 0
 recommends:
   Devel::Size: 0.64
   Perl::Tidy: 0
@@ -23,7 +25,7 @@ recommends:
 provides:
   Text::Template::Simple:
     file: lib/Text/Template/Simple.pm
-    version: 0.51_1
+    version: 0.51_2
   Text::Template::Simple::Cache:
     file: lib/Text/Template/Simple/Cache.pm
     version: 0.51

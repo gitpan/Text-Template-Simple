@@ -22,6 +22,7 @@ WriteMakefile(
       'Fcntl'        => '1.03',
       'Safe'         => '2.06',
       'Test::More'   => '0.40',
+      'File::Temp '  => 0,
       #'Devel::Size'  => 0,
    },
    ($] >= 5.005 ? (
