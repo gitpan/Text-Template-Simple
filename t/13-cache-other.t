@@ -27,7 +27,7 @@ sub run {
 
     my $struct2 = $t->cache->dumper( structure => { varname => 'ABC' } );
     print $struct2;
-    ok( $struct2 =~ m{ \$ABC \s+ = \s+ }xms, "Got the structure with the specified name");
+    like( $struct2, qr{ \$ABC \s+ = \s+ }xms, "Got the structure with the specified name");
 
     my $struct3 = $t->cache->dumper( structure => { no_deparse => 1 } );
     print $struct3;
@@ -39,10 +39,10 @@ sub run {
 
     my $ids2 = $t->cache->dumper( ids => { varname => 'XYZ' } );
     print $ids2;
-    ok( $ids2 =~ m{ \$XYZ \s+ = \s+ }xms, "Got the ids with the specified name");
+    like( $ids2, qr{ \$XYZ \s+ = \s+ }xms, "Got the ids with the specified name");
 
     my $type = $t->cache->type;
-    ok( $type =~ m{ DISK | MEMORY | OFF }xms, "Cache type ($type) is OK" );
+    like( $type, qr{ DISK | MEMORY | OFF }xms, "Cache type ($type) is OK" );
 
     #to test or not?
     #hit

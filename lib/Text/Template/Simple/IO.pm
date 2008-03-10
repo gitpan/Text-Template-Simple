@@ -86,7 +86,7 @@ __END__
 
 =head1 NAME
 
-Text::Template::Simple::IO - Text::Template::Simple I/O
+Text::Template::Simple::IO - I/O methods
 
 =head1 SYNOPSIS
 
@@ -98,13 +98,23 @@ TODO
 
 =head1 METHODS
 
-=head2 new
+=head2 new PARENT_OBJECT
 
-=head2 layer
+Constructor. Accepts a C<Text::Template::Simple> object as the parameter.
 
-=head2 slurp
+=head2 layer FH
 
-=head2 validate
+Sets the I/O layer of the supplied filehandle is there is a layer and perl
+version is greater or equal to C<5.8>.
+
+=head2 slurp FILE_PATH
+
+Returns the contents of the supplied file as a string.
+
+=head2 validate TYPE, PATH
+
+C<TYPE> can either be C<dir> or C<file>. Returns the corrected path if
+it is valid, C<undef> otherwise.
 
 =head1 AUTHOR
 

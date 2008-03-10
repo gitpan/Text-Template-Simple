@@ -23,6 +23,7 @@ t/10-subclass-define-bufvar.t
 t/11-cache-mem.t
 t/12-cache-disk.t
 t/13-cache-other.t
+t/14-interface.t
 t/test.tmpl
 t/lib/My.pm
 Makefile.PL

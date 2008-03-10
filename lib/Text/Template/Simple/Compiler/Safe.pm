@@ -36,7 +36,7 @@ __END__
 
 =head1 NAME
 
-Text::Template::Simple::Compiler::Safe - Safe compiler for Text::Template::Simple
+Text::Template::Simple::Compiler::Safe - Safe compiler
 
 =head1 SYNOPSIS
 

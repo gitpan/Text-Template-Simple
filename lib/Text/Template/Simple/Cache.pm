@@ -35,9 +35,9 @@ sub type {
 }
 
 sub reset {
-   my $self  = shift;
+   my $self   = shift;
    my $parent = $self->[CACHE_PARENT];
-   %{$CACHE} = ();
+   %{$CACHE}  = ();
 
    if ( $parent->[CACHE] && $parent->[CACHE_DIR] ) {
 
@@ -49,7 +49,7 @@ sub reset {
       my $file;
 
       while ( defined( $file = readdir CDIRH ) ) {
-         next if $file !~ m{$ext \z}xmsi;
+         next if $file !~ m{ $ext \z}xmsi;
          $file = File::Spec->catfile( $parent->[CACHE_DIR], $file );
          LOG( UNLINK => $file ) if DEBUG();
          unlink $file;
@@ -85,7 +85,7 @@ sub _dump_ids {
       my($id, @list);
 
       my $wanted = sub {
-         return if $_ !~ m{(.+?) $ext \z}xms;
+         return if $_ !~ m{ (.+?) $ext \z }xms;
          $id      = $1;
          $id      =~ s{.*[\\/]}{};
          push @list, $id;
@@ -188,7 +188,7 @@ sub size {
 
    return 0 if not $parent->[CACHE]; # calculate only if cache is enabled
 
-   if ( $parent->[CACHE_DIR] ) { # disk cache
+   if ( my $cdir = $parent->[CACHE_DIR] ) { # disk cache
       require File::Find;
       my $total  = 0;
       my $ext    = quotemeta CACHE_EXT;
@@ -198,7 +198,7 @@ sub size {
          $total += (stat $_)[STAT_SIZE];
       };
 
-      File::Find::find({wanted => $wanted, no_chdir => 1}, $parent->[CACHE_DIR]);
+      File::Find::find( { wanted => $wanted, no_chdir => 1 }, $cdir );
       return $total;
 
    }
@@ -315,7 +315,8 @@ sub populate {
          flock $fh, Fcntl::LOCK_EX() if IS_FLOCK;
          $parent->io->layer($fh);
          print $fh $chkmt ? "#$chkmt#\n" : "##\n",
-                   sprintf( DISK_CACHE_COMMENT, PARENT->_parser_id, scalar localtime time),
+                   sprintf( DISK_CACHE_COMMENT,
+                            PARENT->_parser_id, scalar localtime time),
                    $parsed; 
          flock $fh, Fcntl::LOCK_UN() if IS_FLOCK;
          close $fh;
@@ -359,7 +360,7 @@ __END__
 
 =head1 NAME
 
-Text::Template::Simple::Cache - Cache manager for Text::Template::Simple
+Text::Template::Simple::Cache - Cache manager
 
 =head1 SYNOPSIS
 
@@ -367,29 +368,31 @@ TODO
 
 =head1 DESCRIPTION
 
-This is a base class for C<Text::Template::Simple>.
+Cache manager for C<Text::Template::Simple>.
 
 =head1 METHODS
 
+=head2 new PARENT_OBJECT
+
+Constructor. Accepts a C<Text::Template::Simple> object as the parameter.
+
 =head2 type
+
+Returns the type of the cache.
 
 =head2 reset
 
 Resets the in-memory cache and deletes all cache files, 
 if you are using a disk cache.
 
-=head2 dumper structure
+=head2 dumper TYPE
 
-Returns a string version of the dumped in-memory or disk-cache. 
-Cache is dumped via L<Data::Dumper>. C<Deparse> option is enabled
-for in-memory cache. 
+   $template->cache->dumper( $type, \%opt );
 
-Early versions of C<Data::Dumper> don' t have a C<Deparse>
-method, so you may need to upgrade your C<Data::Dumper> or
-disable deparse-ing if you want to use this method.
+C<TYPE> can either be C<structure> or C<ids>.
+C<dumper> accepts some arguments as a hashref:
 
-C<dump_cache> accepts some arguments in C<< name => value >>
-format:
+   $template->cache->dumper( $type, \%opt );
 
 =over 4
 
@@ -407,7 +410,17 @@ If you set this to a true value, deparsing will be disabled
 
 =back
 
-=head2 dumper ids
+=head3 structure
+
+Returns a string version of the dumped in-memory or disk-cache. 
+Cache is dumped via L<Data::Dumper>. C<Deparse> option is enabled
+for in-memory cache. 
+
+Early versions of C<Data::Dumper> don' t have a C<Deparse>
+method, so you may need to upgrade your C<Data::Dumper> or
+disable deparse-ing if you want to use this method.
+
+=head3 ids
 
 Returns a list including the names (ids) of the templates in
 the cache.
@@ -418,9 +431,9 @@ Gets/sets the cache id.
 
 =head2 size
 
-Returns the total cache (disk or memory) size in bytes. If you 
-are using memory cache, you must have L<Devel::Size> installed
-on your system or your code will die.
+Returns the total cache (disk or memory) size in bytes. If
+memory cache is used, then you must have L<Devel::Size> installed
+on your system to get the size of the data structure inside memory.
 
 =head2 has data => TEMPLATE_DATA
 
@@ -429,21 +442,23 @@ on your system or your code will die.
 This method can be called with C<data> or C<id> named parameter. If you 
 use the two together, C<id> will be used:
 
-   if($template->cache->has(id => 'e369853df766fa44e1ed0ff613f563bd')) {
+   if ( $template->cache->has( id => 'e369853df766fa44e1ed0ff613f563bd' ) ) {
       print "ok!";
    }
 
 or
 
-   if($template->cache->has(data => q~Foo is <%=$bar%>~)) {
+   if ( $template->cache->has( data => q~Foo is <%=$bar%>~ ) ) {
       print "ok!";
    }
 
 =head2 hit
 
-=head2 new
+TODO
 
 =head2 populate
+
+TODO
 
 =head1 AUTHOR
 

@@ -59,13 +59,19 @@ TODO
 
 =head2 new
 
-=head2 generate
+Constructor
 
+=head2 generate DATA [, CUSTOM, INVALID_CHARS_REGEX ]
+
+Generates an unique cache id for the supplied data.
 
 =head2 get
 
+Returns the generated cache ID.
 
 =head2 set
+
+Set the cache ID.
 
 =head1 AUTHOR
 

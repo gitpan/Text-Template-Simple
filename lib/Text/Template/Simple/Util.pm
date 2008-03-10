@@ -132,7 +132,7 @@ __END__
 
 =head1 NAME
 
-Text::Template::Simple::Util - Utility functions for Text::Template::Simple
+Text::Template::Simple::Util - Utility functions
 
 =head1 SYNOPSIS
 
@@ -146,27 +146,27 @@ Contains utility functions for Text::Template::Simple.
 
 =head2 DEBUG
 
-
+Returns the debug status.
 
 =head2 DIGEST
 
+Returns the digester object.
 
+=head2 binary_mode FH, LAYER
 
-=head2 binary_mode
+Sets the I/O layer of FH in moern perls, only sets binmode on FH otherwise.
 
+=head2 fatal ID [, PARAMS]
 
+Internal method.
 
-=head2 fatal
+=head2 isaref THING
 
+Returns true if C<THING> is an ARRAY.
 
+=head2 ishref THING
 
-=head2 isaref
-
-
-
-=head2 ishref
-
-
+Returns true if C<THING> is a HASH.
 
 =head1 OVERRIDABLE FUNCTIONS
 

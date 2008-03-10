@@ -146,7 +146,7 @@ __END__
 
 =head1 NAME
 
-Text::Template::Simple::Tokenizer - Tokenizer for Text::Template::Simple
+Text::Template::Simple::Tokenizer - Tokenizer
 
 =head1 SYNOPSIS
 

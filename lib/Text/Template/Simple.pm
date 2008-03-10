@@ -14,7 +14,7 @@ use Text::Template::Simple::Cache;
 use Text::Template::Simple::IO;
 use base qw( Text::Template::Simple::Deprecated );
 
-$VERSION = '0.51_2';
+$VERSION = '0.51_3';
 
 my %DEFAULT = ( # default object attributes
    delimiters    => [ DELIMS ], # default delimiters
@@ -317,7 +317,9 @@ sub _parse {
       else {
          if ( $handler ) {
             LOG( USER_THANDLER => "$id") if DEBUG;
-            $code .= $handler->($self, $id ,$str, { capture => $w_cap, raw => $w_raw } );
+            $code .= $handler->(
+                        $self, $id ,$str, { capture => $w_cap, raw => $w_raw }
+                     );
          }
          else {
             warn "Adding unknown token as RAW: $id($str)";

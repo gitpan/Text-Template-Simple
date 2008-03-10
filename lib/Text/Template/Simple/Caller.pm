@@ -186,7 +186,7 @@ __END__
 
 =head1 NAME
 
-Text::Template::Simple::Caller - Caller stack tracer for Text::Template::Simple
+Text::Template::Simple::Caller - Caller stack tracer
 
 =head1 SYNOPSIS
 

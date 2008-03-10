@@ -265,7 +265,7 @@ __END__
 
 =head1 NAME
 
-Text::Template::Simple::Constants - Constants for Text::Template::Simple
+Text::Template::Simple::Constants - Constants
 
 =head1 SYNOPSIS
 
