@@ -1,6 +1,9 @@
 package Text::Template::Simple;
 use strict;
 use vars qw($VERSION);
+
+$VERSION = '0.52';
+
 use Carp qw( croak );
 use Text::Template::Simple::Constants;
 use Text::Template::Simple::Dummy;
@@ -12,9 +15,8 @@ use Text::Template::Simple::Util;
 use Text::Template::Simple::Cache::ID;
 use Text::Template::Simple::Cache;
 use Text::Template::Simple::IO;
+# To be removed ...
 use base qw( Text::Template::Simple::Deprecated );
-
-$VERSION = '0.51_3';
 
 my %DEFAULT = ( # default object attributes
    delimiters    => [ DELIMS ], # default delimiters
@@ -137,7 +139,7 @@ sub _init {
          if ref($self->[USER_THANDLER]) ne 'CODE';
    }
 
-   $self->[IO_OBJECT] = Text::Template::Simple::IO->new($self);
+   $self->[IO_OBJECT] = Text::Template::Simple::IO->new( $self->[IOLAYER] );
 
    if ( $self->[CACHE_DIR] ) {
       my $cdir = $self->io->validate( dir => $self->[CACHE_DIR] )

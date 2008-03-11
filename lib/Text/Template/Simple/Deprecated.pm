@@ -2,7 +2,7 @@ package Text::Template::Simple::Deprecated;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.51';
+$VERSION = '0.52';
 
 my $DEPRECATED = qq{THIS METHOD IS DEPRECATED AND WILL BE REMOVED IN THE FUTURE!};
 

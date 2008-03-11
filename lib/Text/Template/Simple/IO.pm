@@ -1,20 +1,18 @@
 package Text::Template::Simple::IO;
 use strict;
 use vars qw($VERSION);
-use constant IO_PARENT => 0;
 use Text::Template::Simple::Constants;
 use Text::Template::Simple::Util qw( DEBUG LOG ishref binary_mode );
 use Text::Template::Simple::Cache::ID;
 use Carp qw( croak );
 
-$VERSION = '0.51';
+$VERSION = '0.52';
 
 sub new {
-   my $class  = shift;
-   my $parent = shift || croak "Parent object is missing";
-   my $self   = [undef];
-   bless $self, $class;
-   $self->[IO_PARENT] = $parent;
+   my $class = shift;
+   my $layer = shift;
+   my $self  = bless do { \my $anon }, $class;
+   $$self    = $layer if defined $layer;
    $self;
 }
 
@@ -50,10 +48,9 @@ sub validate {
 sub layer {
    return if ! NEW_PERL;
    my $self   = shift;
-   my $parent = $self->[IO_PARENT];
    my $fh     = shift || croak "layer(): Filehandle is absent";
-   my $layer  = $parent->[IOLAYER]; # || croak "_iolayer(): I/O Layer is absent";
-   binary_mode( $fh, $layer ) if $parent->[IOLAYER];
+   my $layer  = $$self; # || croak "_iolayer(): I/O Layer is absent";
+   binary_mode( $fh, $layer ) if $layer;
    return;
 }
 
@@ -66,8 +63,7 @@ sub slurp {
    $fh->open($file, 'r') or croak "Error opening $file for reading: $!";
    flock $fh, Fcntl::LOCK_SH() if IS_FLOCK;
    $self->layer( $fh );
-   local $/;
-   my $tmp = <$fh>;
+   my $tmp  = do { local $/; <$fh> };
    flock $fh, Fcntl::LOCK_UN() if IS_FLOCK;
    $fh->close;
    return $tmp;
@@ -76,7 +72,7 @@ sub slurp {
 sub DESTROY {
    my $self = shift;
    LOG( DESTROY => ref $self ) if DEBUG;
-   @{$self} = ();
+   $$self = undef;
    return;
 }
 

@@ -9,7 +9,7 @@ use strict;
 use vars qw($VERSION);
 use Text::Template::Simple::Caller;
 
-$VERSION = '0.50';
+$VERSION = '0.52';
 
 sub stack { # just a wrapper
    my $opt = shift || {};
@@ -24,7 +24,7 @@ __END__
 
 =head1 NAME
 
-Text::Template::Simple::Dummy - Container class for Text::Template::Simple
+Text::Template::Simple::Dummy - Container class
 
 =head1 SYNOPSIS
 

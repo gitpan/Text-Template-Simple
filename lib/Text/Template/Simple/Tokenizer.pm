@@ -18,7 +18,7 @@ use constant SUBSTR_LENGTH =>  1;
 
 use Carp qw( croak );
 
-$VERSION = '0.50';
+$VERSION = '0.52';
 
 my @COMMANDS = (
    #   cmd id        callback
