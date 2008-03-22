@@ -24,6 +24,7 @@ t/11-cache-mem.t
 t/12-cache-disk.t
 t/13-cache-other.t
 t/14-interface.t
+t/15-connector.t
 t/99-all-modules-have-the-same-version.t
 t/test.tmpl
 t/lib/My.pm

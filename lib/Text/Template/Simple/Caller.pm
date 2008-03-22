@@ -14,7 +14,7 @@ use constant BITMASK    => 9;
 
 use Carp qw( croak );
 
-$VERSION = '0.52';
+$VERSION = '0.53';
 
 sub stack {
    my $self    = shift;

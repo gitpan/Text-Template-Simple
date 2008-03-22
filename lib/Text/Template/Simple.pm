@@ -2,7 +2,7 @@ package Text::Template::Simple;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.52';
+$VERSION = '0.53';
 
 use Carp qw( croak );
 use Text::Template::Simple::Constants;
@@ -17,6 +17,13 @@ use Text::Template::Simple::Cache;
 use Text::Template::Simple::IO;
 # To be removed ...
 use base qw( Text::Template::Simple::Deprecated );
+
+my %CONNECTOR = ( # Default classes list
+   'Cache'     => 'Text::Template::Simple::Cache',
+   'Cache::ID' => 'Text::Template::Simple::Cache::ID',
+   'IO'        => 'Text::Template::Simple::IO',
+   'Tokenizer' => 'Text::Template::Simple::Tokenizer',
+);
 
 my %DEFAULT = ( # default object attributes
    delimiters    => [ DELIMS ], # default delimiters
@@ -54,6 +61,13 @@ sub new {
 
    $self->_init;
    return $self;
+}
+
+sub connector {
+   my $self = shift;
+   my $id   = shift || croak "connector(): id is missing";
+   my $name = $CONNECTOR{ $id } || croak "connector(): $id is not valid";
+   $name;
 }
 
 sub cache { shift->[CACHE_OBJECT] }
@@ -94,7 +108,7 @@ sub compile {
       my @args   = (! $method || $method eq 'AUTO') ? ( $tmp              )
                  :                                    ( $method, 'custom' )
                  ;
-      $cache_id  = Text::Template::Simple::Cache::ID->new->generate( @args );
+      $cache_id  = $self->connector('Cache::ID')->new->generate( @args );
 
       if ( $CODE = $self->cache->hit( $cache_id, $opt->{chkmt} ) ) {
          LOG( CACHE_HIT =>  $cache_id ) if DEBUG();
@@ -139,7 +153,7 @@ sub _init {
          if ref($self->[USER_THANDLER]) ne 'CODE';
    }
 
-   $self->[IO_OBJECT] = Text::Template::Simple::IO->new( $self->[IOLAYER] );
+   $self->[IO_OBJECT] = $self->connector('IO')->new( $self->[IOLAYER] );
 
    if ( $self->[CACHE_DIR] ) {
       my $cdir = $self->io->validate( dir => $self->[CACHE_DIR] )
@@ -147,7 +161,7 @@ sub _init {
       $self->[CACHE_DIR] = $cdir;
    }
 
-   $self->[CACHE_OBJECT] = Text::Template::Simple::Cache->new($self);
+   $self->[CACHE_OBJECT] = $self->connector('Cache')->new($self);
 
    return;
 }
@@ -262,7 +276,7 @@ sub _parse {
    my $de       = $self->[DELIMITERS][DELIM_END  ];
    my $faker    = $self->[FAKER];
    my $buf_hash = $self->[FAKER_HASH];
-   my $toke     = Text::Template::Simple::Tokenizer->new( $ds, $de );
+   my $toke     = $self->connector('Tokenizer')->new( $ds, $de );
    my $code     = '';
    my $inside   = 0;
 
@@ -932,6 +946,10 @@ Returns the L<Text::Template::Simple::Cache> object.
 =head2 io
 
 Returns the L<Text::Template::Simple::IO> object.
+
+=head2 connector
+
+Returns the class name of the supplied connector.
 
 =head1 CLASS METHODS
 

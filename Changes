@@ -2,6 +2,11 @@ Revision history for Perl extension Text::Template::Simple.
 
 Time zone is GMT+2.
 
+0.53 Sat Mar 22 02:32:51 2008
+   => Abstracted several sub classes into a function. It is now possible to
+      alter them via subclassing.
+   => New test: 15-connector.t.
+
 0.52 Tue Mar 11 23:10:25 2008
    => Added a test to check module versions.
    => Internal cleanup.

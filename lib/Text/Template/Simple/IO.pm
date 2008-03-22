@@ -3,10 +3,9 @@ use strict;
 use vars qw($VERSION);
 use Text::Template::Simple::Constants;
 use Text::Template::Simple::Util qw( DEBUG LOG ishref binary_mode );
-use Text::Template::Simple::Cache::ID;
 use Carp qw( croak );
 
-$VERSION = '0.52';
+$VERSION = '0.53';
 
 sub new {
    my $class = shift;

@@ -2,7 +2,7 @@ package Text::Template::Simple::Constants;
 use strict;
 use vars qw($VERSION $OID @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
 
-$VERSION = '0.52';
+$VERSION = '0.53';
 
 # object fields
 BEGIN { $OID = -1 } # init object field id counter

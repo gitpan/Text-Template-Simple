@@ -19,6 +19,7 @@ can_ok( 'Text::Template::Simple',
             cache
             io
             compile
+            connector
             _init
             _parser_id
             _output_buffer_var

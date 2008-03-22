@@ -19,8 +19,8 @@ my $td = Text::Template::Simple->new(
 run( $_ ) for $tm, $td;
 
 sub run {
-    my $t = shift;
-    my $raw = $t->compile( template() );
+    my $t      = shift;
+    my $raw    = $t->compile( template() );
     my $struct = $t->cache->dumper( 'structure' );
     print $struct;
     ok( $struct, "Got the structure");
@@ -49,6 +49,10 @@ sub run {
     #populate
 
     SKIP: {
+        if ( $type eq 'OFF' ) {
+            skip("Cache is disabled");
+        }
+
         if ( $type ne 'DISK' ) {
             skip("Disable below tests for memcache until someone fixes RT#14849 for Devel::Size");
         }

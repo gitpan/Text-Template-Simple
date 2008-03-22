@@ -4,10 +4,9 @@ use vars qw($VERSION);
 use constant CACHE_PARENT => 0;
 use Text::Template::Simple::Constants;
 use Text::Template::Simple::Util qw( DEBUG LOG ishref );
-use Text::Template::Simple::Cache::ID;
 use Carp qw( croak );
 
-$VERSION = '0.52';
+$VERSION = '0.53';
 
 my $CACHE = {}; # in-memory template cache
 
@@ -232,7 +231,7 @@ sub has {
    croak fatal('PFORMAT') if @_ % 2;
 
    my %opt = @_;
-   my $id  = Text::Template::Simple::Cache::ID->new;
+   my $id  = $parent->connector('Cache::ID')->new;
    my $cid = $opt{id}   ? $id->generate($opt{id}  , 'custom')
            : $opt{data} ? $id->generate($opt{data}          )
            :              croak fatal('INCACHE');

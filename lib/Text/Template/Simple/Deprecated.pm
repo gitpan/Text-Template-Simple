@@ -2,20 +2,20 @@ package Text::Template::Simple::Deprecated;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.52';
+$VERSION = '0.53';
 
 my $DEPRECATED = qq{THIS METHOD IS DEPRECATED AND WILL BE REMOVED IN THE FUTURE!};
 
 sub idgen { # cache id generator
    warn "idgen(): $DEPRECATED See Text::Template::Simple::Cache::ID\n";
    my $self = shift;
-   return Text::Template::Simple::Cache::ID->new->generate(@_);
+   return $self->connector('Cache::ID')->new->generate(@_);
 }
 
 sub custom_idgen {
    warn "custom_idgen(): $DEPRECATED See Text::Template::Simple::Cache::ID\n";
    my $self = shift;
-   return Text::Template::Simple::Cache::ID->new->_custom(@_);
+   return $self->connector('Cache::ID')->new->_custom(@_);
 }
 
 sub reset_cache {
