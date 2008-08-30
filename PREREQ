@@ -1,0 +1,27 @@
+#!/usr/bin/perl -w
+use strict;
+use vars qw( %PREREQ %RECOMMEND $AUTHOR $MODULE );
+
+$AUTHOR = 'Burak Gursoy <burak@cpan.org>';
+$MODULE = 'Text::Template::Simple';
+
+%PREREQ = (
+    'Data::Dumper' => '2.101',
+    'File::Spec'   => '0.6',
+    'File::Find'   => '0',
+    'IO::Handle'   => '1.1505',
+    'IO::File'     => '1.06021',
+    'Fcntl'        => '1.03',
+    'Safe'         => '2.06',
+    'Test::More'   => '0.40',
+    'File::Temp'   => '0',
+    'Digest::MD5'  => '0',
+);
+
+%RECOMMEND = (
+    'Devel::Size'  => '0.64',
+    'Text::Table'  => '1.107',
+    'Perl::Tidy'   => '0',
+);
+
+1;

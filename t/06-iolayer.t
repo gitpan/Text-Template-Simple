@@ -1,13 +1,11 @@
 #!/usr/bin/env perl -w
 # Simple test. Just try to use the module.
 use strict;
-use Test;
-BEGIN { plan tests => 2 }
-
+use Test::More qw( no_plan );
 use Text::Template::Simple; 
 
-ok(simple());
-ok(simple2());
+ok( simple() , "Simple test 1" );
+ok( simple2(), "Simple test 2" );
 
 sub simple {
    my $template = Text::Template::Simple->new(
@@ -15,7 +13,7 @@ sub simple {
       add_args => ['bar',['baz']],
       iolayer  => 'utf8',
    );
-   my $result = $template->compile('t/test.tmpl', ['Burak']);
+   my $result = $template->compile('t/data/test.tmpl', ['Burak']);
    #warn "[COMPILED] $result\n";
    return $result;
 }
@@ -23,19 +21,16 @@ sub simple {
 sub simple2 {
    my $template = Text::Template::Simple->new;
    my $result   = $template->compile(
-                  'Hello <%name%>. Foo is: <%foo%> and bar is <%bar%>.',
-                  [
-                     name => 'Burak',
-                     foo  => 'bar',
-                     bar  => 'baz',
-                  ],
-                  {
-                     map_keys => 1
-                  });
+                     'Hello <%name%>. Foo is: <%foo%> and bar is <%bar%>.',
+                     [
+                        name => 'Burak',
+                        foo  => 'bar',
+                        bar  => 'baz',
+                     ],
+                     {
+                        map_keys => 1
+                     }
+                  );
    #warn "[COMPILED] $result\n";
    return $result;
 }
-
-exit;
-
-__END__

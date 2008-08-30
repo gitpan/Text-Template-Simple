@@ -33,22 +33,24 @@ use strict;
 use Test::More qw( no_plan );
 use Text::Template::Simple;
 
-my $t   = Text::Template::Simple->new;
-my $sub = TTS->new( cache => 1 );
+my $t = Text::Template::Simple->new;
+my $s = TTS->new( cache => 1 );
 
-ok(   $t->connector('Cache')     eq 'Text::Template::Simple::Cache',     'Connector Cache'         );
-ok(   $t->connector('Cache::ID') eq 'Text::Template::Simple::Cache::ID', 'Connector Cache::ID'     );
-ok(   $t->connector('IO')        eq 'Text::Template::Simple::IO',        'Connector IO'            );
-ok(   $t->connector('Tokenizer') eq 'Text::Template::Simple::Tokenizer', 'Connector Tokenizer'     );
+my $p = 'Text::Template::Simple::';
 
-ok( $sub->connector('Cache')     eq 'TTS::Cache',                        'Sub-Connector Cache'     );
-ok( $sub->connector('Cache::ID') eq 'TTS::Cache::ID',                    'Sub-Connector Cache::ID' );
-ok( $sub->connector('IO')        eq 'TTS::IO',                           'Sub-Connector IO'        );
-ok( $sub->connector('Tokenizer') eq 'TTS::Tokenizer',                    'Sub-Connector Tokenizer' );
+ok( $t->connector('Cache')     eq $p . 'Cache',     'Connector Cache'       );
+ok( $t->connector('Cache::ID') eq $p . 'Cache::ID', 'Connector Cache::ID'   );
+ok( $t->connector('IO')        eq $p . 'IO',        'Connector IO'          );
+ok( $t->connector('Tokenizer') eq $p . 'Tokenizer', 'Connector Tokenizer'   );
+
+ok( $s->connector('Cache')     eq 'TTS::Cache',     'S-Connector Cache'     );
+ok( $s->connector('Cache::ID') eq 'TTS::Cache::ID', 'S-Connector Cache::ID' );
+ok( $s->connector('IO')        eq 'TTS::IO',        'S-Connector IO'        );
+ok( $s->connector('Tokenizer') eq 'TTS::Tokenizer', 'S-Connector Tokenizer' );
+
+my $template = q|<%my@p=@_%>Compile from subclass: <%=$p[0]%>|;
 
 ok(
-   $sub->compile(q|<%my@p=@_%>Testing compile from subclass: <%=$p[0]%>|,['Test'])
-   eq
-   'Testing compile from subclass: Test',
-   'Testing compile from subclass'
+    $s->compile( $template, [ 'Test' ] ) eq 'Compile from subclass: Test',
+    'Compile from subclass'
 );

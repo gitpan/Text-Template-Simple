@@ -2,7 +2,7 @@ package Text::Template::Simple;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.53';
+$VERSION = '0.54_01';
 
 use Carp qw( croak );
 use Text::Template::Simple::Constants;
@@ -15,8 +15,6 @@ use Text::Template::Simple::Util;
 use Text::Template::Simple::Cache::ID;
 use Text::Template::Simple::Cache;
 use Text::Template::Simple::IO;
-# To be removed ...
-use base qw( Text::Template::Simple::Deprecated );
 
 my %CONNECTOR = ( # Default classes list
    'Cache'     => 'Text::Template::Simple::Cache',
@@ -26,20 +24,21 @@ my %CONNECTOR = ( # Default classes list
 );
 
 my %DEFAULT = ( # default object attributes
-   delimiters    => [ DELIMS ], # default delimiters
-   cache         =>  0, # use cache or not
-   cache_dir     => '', # will use hdd intead of memory for caching...
-   strict        =>  1, # set to false for toleration to un-declared vars
-   safe          =>  0, # use safe compartment?
-   header        =>  0, # template header. i.e. global codes.
-   add_args      => '', # will unshift template argument list. ARRAYref.
-   warn_ids      =>  0, # warn template ids?
-   iolayer       => '', # I/O layer for filehandles
-   stack         => '',
-   user_thandler => undef, # user token handler callback
+   delimiters     => [ DELIMS ], # default delimiters
+   cache          =>  0, # use cache or not
+   cache_dir      => '', # will use hdd intead of memory for caching...
+   strict         =>  1, # set to false for toleration to un-declared vars
+   safe           =>  0, # use safe compartment?
+   header         =>  0, # template header. i.e. global codes.
+   add_args       => '', # will unshift template argument list. ARRAYref.
+   warn_ids       =>  0, # warn template ids?
+   iolayer        => '', # I/O layer for filehandles
+   stack          => '',
+   user_thandler  => undef, # user token handler callback
+   cache_monolith =>  1, # ???
    # TODO: Consider removing these
-   fix_uncuddled =>  0, # do some worst practice?
-   resume        =>  0, # resume on error?
+   fix_uncuddled  =>  0, # do some worst practice?
+   resume         =>  0, # resume on error?
 );
 
 sub new {
@@ -65,9 +64,9 @@ sub new {
 
 sub connector {
    my $self = shift;
-   my $id   = shift || croak "connector(): id is missing";
-   my $name = $CONNECTOR{ $id } || croak "connector(): $id is not valid";
-   $name;
+   my $id   = shift             || croak "connector(): id is missing";
+   my $name = $CONNECTOR{ $id } || croak "connector(): invalid id: $id";
+   return $name;
 }
 
 sub cache { shift->[CACHE_OBJECT] }
@@ -75,20 +74,40 @@ sub io    { shift->[IO_OBJECT]    }
 
 sub compile {
    my $self  = shift;
-   my $tmpx  = shift or croak "No template specified";
+   my $rv    = $self->_compile( @_ );
+   # we need to reset this to prevent false positives
+   $self->[COUNTER_INCLUDE] = undef;
+   return $rv;
+}
+
+# -------------------[ P R I V A T E   M E T H O D S ]------------------- #
+
+sub _compile {
+   my $self  = shift;
+   my $tmpx  = shift || croak "No template specified";
    my $param = shift || [];
-   my $opt   = shift || {
-      id       => '', # id is AUTO
-      map_keys => 0,  # use normal behavior
-      chkmt    => 0,  # check mtime of file template?
-   };
+   my $opt   = shift || {};
 
    croak "params must be an arrayref!" if not isaref($param);
    croak "opts must be a hashref!"     if not ishref($opt);
 
+   # set defaults
+   $opt->{id}        ||= ''; # id is AUTO
+   $opt->{map_keys}  ||= 0;  # use normal behavior
+   $opt->{chkmt}     ||= 0;  # check mtime of file template?
+   $opt->{_sub_inc}  ||= 0;  # are we called from a dynamic include op?
+
+   if ( $opt->{_sub_inc} ) {
+      # TODO:generate a single error handler for includes, merge with _include()
+      # tmpx is a "file" included from an upper level compile()
+      my $etitle = $self->_include_error('dynamic');
+      return $etitle . " '$tmpx' is not a file"  if ! -e $tmpx;
+      return $etitle . " '$tmpx' is a directory" if   -d _;
+   }
+
    my $tmp = $self->_examine($tmpx);
    if ( $opt->{chkmt} ) {
-      if ( $self->[TYPE] eq 'FILE' ) { 
+      if ( $self->[TYPE] eq 'FILE' ) {
          $opt->{chkmt} = (stat $tmpx)[STAT_MTIME];
       }
       else {
@@ -103,12 +122,18 @@ sub compile {
    my($CODE, $ok);
    my $cache_id = '';
 
+   my $as_is = $opt->{_sub_inc} && $opt->{_sub_inc} eq 'static';
+
    if ( $self->[CACHE] ) {
       my $method = $opt->{id};
       my @args   = (! $method || $method eq 'AUTO') ? ( $tmp              )
                  :                                    ( $method, 'custom' )
                  ;
       $cache_id  = $self->connector('Cache::ID')->new->generate( @args );
+
+      # prevent overwriting the compiled version in cache
+      # since we need the non-compiled version
+      $cache_id .= '_1' if $as_is;
 
       if ( $CODE = $self->cache->hit( $cache_id, $opt->{chkmt} ) ) {
          LOG( CACHE_HIT =>  $cache_id ) if DEBUG();
@@ -122,17 +147,16 @@ sub compile {
    if ( not $ok ) {
       # we have a cache miss; parse and compile
       LOG( CACHE_MISS => $cache_id ) if DEBUG();
-      my $parsed = $self->_parse( $tmp, $opt->{map_keys}, $cache_id );
+      my $parsed = $self->_parse( $tmp, $opt->{map_keys}, $cache_id, $as_is  );
       $CODE      = $self->cache->populate( $cache_id, $parsed, $opt->{chkmt} );
    }
 
    my   @args;
+   push @args, $self if $self->[NEEDS_OBJECT];
    push @args, @{ $self->[ADD_ARGS] } if $self->[ADD_ARGS];
    push @args, @{ $param };
    return $CODE->( @args );
 }
-
-# -------------------[ P R I V A T E   M E T H O D S ]------------------- #
 
 sub _init {
    my $self = shift;
@@ -143,10 +167,14 @@ sub _init {
    croak fatal('ARGS')   if     $bogus_args;
    croak fatal('DELIMS') if not $ok_delim;
 
-   $self->[TYPE]       = '';
-   $self->[COUNTER]    = 0;
-   $self->[FAKER]      = $self->_output_buffer_var;
-   $self->[FAKER_HASH] = $self->_output_buffer_var('hash');
+   $self->[TYPE]           = '';
+   $self->[COUNTER]        = 0;
+   $self->[FAKER]          = $self->_output_buffer_var;
+   $self->[FAKER_HASH]     = $self->_output_buffer_var('hash');
+   $self->[FAKER_SELF]     = $self->_output_buffer_var('self');
+   $self->[INSIDE_INCLUDE] = -1; # must be -1 not 0
+   $self->[NEEDS_OBJECT]   =  0; # does the template need $self ?
+   $self->[DEEP_RECURSION] =  0; # recursion detector
 
    if ( $self->[USER_THANDLER] ) {
       croak "user_thandler parameter must be a CODE reference"
@@ -166,7 +194,11 @@ sub _init {
    return;
 }
 
-sub _parser_id { __PACKAGE__ . " v$VERSION" }
+sub _parser_id {
+   my $self = shift;
+   my $class = ref($self) || $self;
+   return sprintf( "%s v%s", $class, $self->VERSION() );
+}
 
 sub _output_buffer_var {
    my $self = shift;
@@ -175,39 +207,45 @@ sub _output_buffer_var {
             : $type eq 'array' ? []
             :                    \my $fake
             ;
-      $id  .= $$; # . rand() . time;
-      $id   =~ tr/a-zA-Z_0-9//cd;
+   $id  = "$id";
+   $id .= int( rand($$) ); # . rand() . time;
+   $id  =~ tr/a-zA-Z_0-9//cd;
+   $id  =~ s{SCALAR}{SELF}xms if $type eq 'self';
    return '$' . $id;
 }
 
 sub _examine {
    my $self   = shift;
-   my $tmp    = shift;
+   my $TMP    = shift;
    my $length = 0;
    my $rv;
-   if ( my $ref = ref($tmp) ) {
+
+   if ( my $ref = ref($TMP) ) {
       croak fatal(  NOTGLOB => $ref ) if $ref ne 'GLOB';
-      croak fatal( 'NOTFH'          ) if not  fileno $tmp;
-      # hmmm... require Fcntl; flock $tmp, Fcntl::LOCK_SH() if IS_FLOCK;
-      local $/;
-      $rv = <$tmp>;
-      #flock $tmp, Fcntl::LOCK_UN() if IS_FLOCK;
-      close $tmp; # ??? can this be a user option?
+      croak fatal( 'NOTFH'          ) if not  fileno $TMP;
+      $rv = $self->io->slurp( $TMP );
       $self->[TYPE] = 'GLOB';
    }
    else {
-      $length = length $tmp;
-      if ( $length  <=  255 and $tmp !~ RE_NONFILE and -e $tmp and not -d _ ) {
-         $self->[TYPE] = 'FILE';
-         $rv = $self->io->slurp($tmp);
+      $length     = length $TMP;
+      my $is_file =    ( $length  <= 255        )
+                    && ( $TMP     !~ RE_NONFILE )
+                    &&   -e $TMP
+                    && ! -d _
+                  ;
+      if ( $is_file ) {
+         $self->[TYPE]      = 'FILE';
+         $self->[TYPE_FILE] = $TMP;
+         $rv = $self->io->slurp( $TMP );
          # we don't really need to set this after getting data
          $length = length $rv if DEBUG();
       }
       else {
          $self->[TYPE] = 'STRING';
-         $rv = $tmp;
+         $rv = $TMP;
       }
    }
+
    LOG( EXAMINE => $self->[TYPE]."; LENGTH: $length" ) if DEBUG();
    return $rv;
 }
@@ -270,11 +308,15 @@ sub _parse {
    my $raw      = shift;
    my $map_keys = shift; # code sections are hash keys
    my $cache_id = shift;
+   my $as_is    = shift; # i.e.: do not parse -> static include
+   #$self->[NEEDS_OBJECT] = 0; # reset
 
    my $resume   = $self->[RESUME] || '';
    my $ds       = $self->[DELIMITERS][DELIM_START];
    my $de       = $self->[DELIMITERS][DELIM_END  ];
-   my $faker    = $self->[FAKER];
+   my $faker    = $self->[INSIDE_INCLUDE] ? $self->_output_buffer_var
+                                          : $self->[FAKER]
+                                          ;
    my $buf_hash = $self->[FAKER_HASH];
    my $toke     = $self->connector('Tokenizer')->new( $ds, $de );
    my $code     = '';
@@ -287,11 +329,11 @@ sub _parse {
       $mkc = $map_keys eq 'check';
       $mko = $mki ? MAP_KEYS_INIT
            : $mkc ? MAP_KEYS_CHECK
-           :        MAP_KEYS_DEFAULT;
-
-      $mko =~ s/<%BUF%>/$faker/xmsg;
-      $mko =~ s/<%HASH%>/$buf_hash/xmsg;
-      $mko =~ s/<%KEY%>/%s/xmsg;
+           :        MAP_KEYS_DEFAULT
+           ;
+      $mko =~ s{<%BUF%>}{$faker}xmsg;
+      $mko =~ s{<%HASH%>}{$buf_hash}xmsg;
+      $mko =~ s{<%KEY%>}{%s}xmsg;
    }
 
    LOG( RAW => $raw ) if ( DEBUG() > 3 );
@@ -303,11 +345,14 @@ sub _parse {
    my $w_raw = sub { ";$faker .= q~$_[0]~;" };
    my $w_cap = sub { ";$faker .= sub {" . $_[0] . "}->();"; };
 
+   # little hack to convert delims into escaped delims for static inclusion
+   $raw =~ s{\Q$ds}{$ds!}xmsg if $as_is;
+
    # fetch and walk the tree
    my($id, $str);
    PARSER: foreach my $token ( @{ $toke->tokenize( $raw, $map_keys ) } ) {
       ($id, $str) = @{ $token };
-      LOG( TOKEN => "$id => $str" ) if DEBUG() > 3;
+      LOG( TOKEN => "$id => $str" ) if DEBUG() > 1;
       next PARSER if $id eq 'DISCARD';
 
       if ( $id eq 'DELIMSTART' ) { $inside++; next PARSER; }
@@ -316,20 +361,26 @@ sub _parse {
       if ( $id eq 'RAW' || $id eq 'NOTADELIM' ) {
          $code .= $w_raw->($str);
       }
+
       elsif ( $id eq 'CODE' ) {
          $code .= $resume ? $self->_resume($str, 0, 1) : $str;
       }
+
       elsif ( $id eq 'CAPTURE' ) {
          $code .= $faker;
          $code .= $resume ? $self->_resume($str, RESUME_NOSTART)
                 :           " .= sub { $str }->();";
       }
+
       elsif ( $id eq 'DYNAMIC' || $id eq 'STATIC' ) {
+         $self->[NEEDS_OBJECT]++;
          $code .= $w_cap->( $self->_include($id, $str) );
       }
+
       elsif ( $id eq 'MAPKEY' ) {
          $code .= sprintf $mko, $mkc ? ( ($str) x 5 ) : $str;
       }
+
       else {
          if ( $handler ) {
             LOG( USER_THANDLER => "$id") if DEBUG;
@@ -338,10 +389,12 @@ sub _parse {
                      );
          }
          else {
-            warn "Adding unknown token as RAW: $id($str)";
+            LOG( UNKNOWN_TOKEN => "Adding unknown token as RAW: $id($str)")
+               if DEBUG;
             $code .= $w_raw->($str);
          }
       }
+
    }
 
    $self->[FILENAME] ||= '<ANON>';
@@ -352,11 +405,31 @@ sub _parse {
       croak sprintf( $tmpl, abs($inside), $type, $self->[FILENAME] );
    }
 
-   my $wrapper = '';
+   return $self->_wrapper( $code, $cache_id, $faker, $map_keys );
+}
+
+sub _wrapper {
+   my $self     = shift;
+   my $code     = shift;
+   my $cache_id = shift;
+   my $faker    = shift;
+   my $map_keys = shift;
+   my $buf_hash = $self->[FAKER_HASH];
+
+   my $wrapper    = '';
+   my $inside_inc = $self->[INSIDE_INCLUDE] != -1 ? 1 : 0;
+
    # build the anonymous sub
-   $wrapper .= "package " . DUMMY_CLASS . ";";
-   $wrapper .= 'use strict;'                   if $self->[STRICT];
+   if ( ! $inside_inc ) {
+      # don't duplicate these if we're including something
+      $wrapper .= "package " . DUMMY_CLASS . ";";
+      $wrapper .= 'use strict;' if $self->[STRICT];
+   }
    $wrapper .= 'sub { ';
+   if ( $self->[NEEDS_OBJECT] ) {
+      --$self->[NEEDS_OBJECT];
+      $wrapper .= 'my ' . $self->[FAKER_SELF] . ' = shift;';
+   }
    $wrapper .= $self->[HEADER].';'             if $self->[HEADER];
    $wrapper .= "my $faker = '';";
    $wrapper .= $self->_add_stack( $cache_id )  if $self->[STACK];
@@ -364,10 +437,14 @@ sub _parse {
    $wrapper .= "\n#line 1 " .  $self->[FILENAME] . "\n";
    $wrapper .= $code . ";return $faker;";
    $wrapper .= '}';
+   # make this a capture sub if we're including
+   $wrapper .= '->()' if $inside_inc;
 
    LOG( COMPILED => sprintf FRAGMENT_TMP, $self->_tidy($wrapper) )
       if DEBUG() > 1;
-
+   #LOG( OUTPUT => $wrapper );
+   # reset
+   $self->[DEEP_RECURSION] = 0 if $self->[DEEP_RECURSION];
    return $wrapper;
 }
 
@@ -396,42 +473,129 @@ sub _add_stack {
    return "$channel stack( { type => '$type', name => '$cs_name' } );";
 }
 
+sub _include_error {
+   my $self  = shift;
+   my $type  = shift;
+   my $title = '[ ' . $type . ' include error ]';
+   return $title;
+}
+
 sub _include {
-   my $self      = shift;
-   my $type      = shift || '';
-      $type      = lc $type;
-   my $is_static = $type eq 'static';
-   my $is_normal = $type eq 'normal' || $type eq 'dynamic';
-   my $known     = $is_static || $is_normal;
+   my $self       = shift;
+   my $type       = shift || '';
+   my $file       = shift;
+      $type       = lc $type;
+      $file       = trim $file;
+   my $is_static  = $type eq 'static';
+   my $is_dynamic = $type eq 'dynamic';
+   my $known      = $is_static || $is_dynamic;
 
    croak "Unknown include type: $type" if not $known;
 
-   my $file = shift;
-   my $err  = '['.($is_static ? ' static' : '').' include error ]';
-   $file =~ s{\A \s+   }{}xms;
-   $file =~ s{   \s+ \z}{}xms;
-   -e $file  or return "q~$err '$file' does not exist~";
-   -d $file and return "q~$err '$file' is a directory~";
+   my $err = $self->_include_error( $type );
+
+   # just guessing ...
+   my $interpolate = -e $file ? 0 : 1;
+
+   if ( -d $file ) {
+      $file = escape '~' => $file;
+      return "q~$err '$file' is a directory~";
+   }
+
+   LOG( INCLUDE => "$type => '$file'" ) if DEBUG();
 
    my $text;
-   LOG( INCLUDE => "$type => '$file'" ) if DEBUG();
-   eval { $text = $self->io->slurp($file) };
-   return "q~$err $@~" if $@;
-
-   if ( $is_normal ) {
-      # creates endless recursive loop if template includes itself
-      # cloning $self can help to overcome this issue
-      return "q~$err dynamic include is disabled. file: '$file'~";
-      $text = $self->_parse($text);
-      return $text;
+   if ( $interpolate ) {
+      my $rv = $self->_interpolate( $file, $type );
+      $self->[NEEDS_OBJECT]++;
+      LOG(INTERPOLATE_INC => "TYPE: $type; DATA: $file; RV: $rv") if DEBUG();
+      return $rv;
+   }
+   else {
+      eval { $text = $self->io->slurp($file) };
+      return "q~$err $@~" if $@;
    }
 
-   if ( $is_static ) {
-      $text =~ s{\~}{\\~}xmsog;
-      return 'q~'.$text.'~;';
+   return $self->_include_dynamic( $file, $text, $err) if $is_dynamic;
+   return $self->_include_static(  $file, $text, $err);
+}
+
+sub _interpolate {
+   my $self = shift;
+   my $file = shift;
+   my $type = shift;
+   # we need string eval in this template to catch syntax errors
+   my $template = q~
+      %s->_compile(
+         do {
+            local $@;
+            my $file = eval '%s';
+            if ( $@ ) {
+               $file ||= '%s';
+               die "Error from sub dynamic include ($file): $@";
+            }
+            $file;
+         },
+         undef,
+         {
+            _sub_inc => '%s'
+         }
+      )
+   ~;
+   $template =~ s{\s+}{ }xmsg;
+   (my $buf = $file) =~ s{'}{\\'}xmsg;
+   my $rv = sprintf $template,
+                     $self->[FAKER_SELF],
+                     $buf,
+                     $buf,
+                     $type
+                     ;
+   return $rv;
+}
+
+sub _include_static {
+   my $self = shift;
+   my $file = shift;
+   my $text = shift;
+   my $err  = shift;
+      $text = escape '~' => $text;
+   return 'q~' . $text . '~;';
+}
+
+sub _include_dynamic {
+   my $self = shift;
+   my $file = shift;
+   my $text = shift;
+   my $err  = shift;
+   my $rv   = '';
+
+   ++$self->[INSIDE_INCLUDE];
+   $self->[COUNTER_INCLUDE] ||= {};
+
+   # ++$self->[COUNTER_INCLUDE]{ $file } if $self->[TYPE_FILE] eq $file;
+
+   if ( ++$self->[COUNTER_INCLUDE]{ $file } >= MAX_RECURSION ) {
+      # failsafe
+      my $max   = MAX_RECURSION;
+      my $error = qq{$err Deep recursion (>=$max) detected in }
+                . qq{the included file: $file};
+      LOG( DEEP_RECURSION => $file ) if DEBUG;
+      $error = escape '~' => $error;
+      $self->[DEEP_RECURSION] = 1;
+      $rv .= "q~$error~";
+   }
+   else {
+      if ( $self->[CACHE_MONOLITH] ) {
+         $rv .= $self->_parse( $text );
+      }
+      else {
+         die "TODO! cache_monolith must be set to true for now";
+         $rv .= $self->[FAKER_SELF] . "->_parse( $text );";
+      }
    }
 
-   return "$err This can not happen!";
+   --$self->[INSIDE_INCLUDE]; # critical: always adjust this
+   return $rv;
 }
 
 sub _resume {
@@ -555,8 +719,8 @@ manager.
 
 Template syntax is very simple. There are few kinds of delimiters:
 code blocks (C<< <% %> >>), self-printing blocks (C<< <%= %> >>),
-escaped delimiters (C<< <%! %> >>)
-and static include directive (C<< <%+ %> >>):
+escaped delimiters (C<< <%! %> >>), static include directives (C<< <%+ %> >>),
+and dynamic include directives (C<< <%* %> >>):
 
    <%
       my @foo = qw(bar baz);
@@ -587,7 +751,11 @@ static include directive:
    <%+ my_other.html %>
    <%+ my_other.txt  %>
 
-Included files won't be parsed and included statically.
+Included files won't be parsed and included statically. To enable
+parsing for the included files, use the dynamic includes:
+
+   <%* my_other.html %>
+   <%* my_other.txt  %>
 
 =head2 Escaping Delimiters
 
@@ -623,12 +791,6 @@ You can fetch parameters (passed to compile) in the usual perl way:
       my %bar = @_;
    %>
    Baz is <%= $bar{baz} %>
-
-=head2 Special Variables
-
-There is a special variable inside all templates. You must not
-define a variable with the same name inside templates or alter
-it's name before L</compile>.
 
 =head1 METHODS
 
@@ -1090,12 +1252,8 @@ Some methods/functionality of the module needs these optional modules:
 
 =head1 SEE ALSO
 
-For similar functionality, see L<Apache::SimpleTemplate>.
-Also see L<Text::Template> for a similar 
-functionality. L<HTML::Template::Compiled> has a similar approach
-for compiled templates. There is another similar module
-named L<Text::ScriptTemplate>. Also see L<Safe> and
-L<Opcode>.
+L<Apache::SimpleTemplate>, L<Text::Template>, L<Text::ScriptTemplate>,
+L<Safe>, L<Opcode>.
 
 =head1 AUTHOR
 

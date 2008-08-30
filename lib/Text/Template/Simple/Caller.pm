@@ -14,15 +14,14 @@ use constant BITMASK    => 9;
 
 use Carp qw( croak );
 
-$VERSION = '0.53';
+$VERSION = '0.54_01';
 
 sub stack {
    my $self    = shift;
    my $opt     = shift || {};
    die "Parameters to stack() must be a HASH" if ref($opt) ne 'HASH';
-   my $frame   = $opt->{frame};
-   my $type    = $opt->{type} || '';
-      $frame ||= 0;
+   my $frame   = $opt->{frame} || 0;
+   my $type    = $opt->{type}  || '';
    my(@callers, $context);
 
    TRACE: while ( my @c = caller ++$frame ) {

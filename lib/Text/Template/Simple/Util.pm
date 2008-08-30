@@ -4,7 +4,7 @@ use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
 use Text::Template::Simple::Constants qw( :info DIGEST_MODS );
 use Carp qw( croak );
 
-$VERSION = '0.53';
+$VERSION = '0.54_01';
 
 BEGIN {
    if ( IS_WINDOWS ) {
@@ -18,7 +18,7 @@ BEGIN {
       eval q/
          sub binary_mode { 
             my($fh, $layer) = @_;
-            binmode $fh, ':'.$layer
+            binmode $fh, ':' . $layer;
          }
       /;
       die "Error compiling binary_mode(): $@" if $@;
@@ -30,9 +30,9 @@ BEGIN {
 
 @ISA         = qw( Exporter );
 %EXPORT_TAGS = (
-   macro => [qw( isaref      ishref     )],
-   util  => [qw( binary_mode DIGEST     )],
-   debug => [qw( fatal       DEBUG  LOG )],
+   macro => [qw( isaref      ishref      )],
+   util  => [qw( binary_mode DIGEST trim escape )],
+   debug => [qw( fatal       DEBUG  LOG  )],
 );
 @EXPORT_OK        = map { @{ $EXPORT_TAGS{$_} } } keys %EXPORT_TAGS;
 $EXPORT_TAGS{all} = \@EXPORT_OK;
@@ -70,13 +70,30 @@ sub fatal  {
    return sprintf $str, @_;
 }
 
+sub escape {
+   my $c = shift || die "Missing the character to escape";
+   my $s = shift;
+   return $s if ! $s; # false or undef
+   my $e = quotemeta $c;
+      $s =~ s{ $e }{\\$c}xmsg;
+      $s;
+}
+
+sub trim {
+   my $s = shift;
+   return $s if ! $s; # false or undef
+      $s =~ s{\A \s+   }{}xms;
+      $s =~ s{   \s+ \z}{}xms;
+   return $s;
+}
+
 sub DEBUG {
    my $thing = shift;
 
    # so that one can use: $self->DEBUG or DEBUG
    $thing = shift if _is_parent_object( $thing );
 
-   $DEBUG = $thing if defined $thing;
+   $DEBUG = $thing+0 if defined $thing; # must be numeric
    $DEBUG;
 }
 
@@ -167,6 +184,14 @@ Returns true if C<THING> is an ARRAY.
 =head2 ishref THING
 
 Returns true if C<THING> is a HASH.
+
+=head2 trim STRING
+
+Returns the trimmed version of the C<STRING>.
+
+=head2 escape CHAR, STRING
+
+Escapes all occurrances of C<CHAR> in C<STRING> with backslashes.
 
 =head1 OVERRIDABLE FUNCTIONS
 

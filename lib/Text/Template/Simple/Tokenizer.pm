@@ -17,8 +17,9 @@ use constant SUBSTR_OFFSET =>  0;
 use constant SUBSTR_LENGTH =>  1;
 
 use Carp qw( croak );
+use Text::Template::Simple::Util ();
 
-$VERSION = '0.53';
+$VERSION = '0.54_01';
 
 my @COMMANDS = (
    #   cmd id        callback
@@ -118,27 +119,9 @@ sub _user_commands {
    return $self->commands;
 }
 
-sub tilde {
-   my $self = shift;
-   my $s    = shift;
-      $s    =~ s{ \~ }{\\~}xmsg;
-      $s;
-}
-
-sub quote {
-   my $self = shift;
-   my $s    = shift;
-      $s    =~ s{ " }{\\"}xmsg;
-      $s;
-}
-
-sub trim {
-   my $self = shift;
-   my $s    = shift;
-      $s    =~ s{ \A \s+    }{}xms;
-      $s    =~ s{    \s+ \z }{}xms;
-      $s;
-}
+sub tilde { Text::Template::Simple::Util::escape( '~' => $_[1] ) }
+sub quote { Text::Template::Simple::Util::escape( '"' => $_[1] ) }
+sub trim  { Text::Template::Simple::Util::trim(          $_[1] ) }
 
 1;
 

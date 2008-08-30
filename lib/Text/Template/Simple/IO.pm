@@ -5,7 +5,7 @@ use Text::Template::Simple::Constants;
 use Text::Template::Simple::Util qw( DEBUG LOG ishref binary_mode );
 use Carp qw( croak );
 
-$VERSION = '0.53';
+$VERSION = '0.54_01';
 
 sub new {
    my $class = shift;
@@ -58,13 +58,24 @@ sub slurp {
    require Fcntl;
    my $self = shift;
    my $file = shift;
-   my $fh   = IO::File->new;
-   $fh->open($file, 'r') or croak "Error opening $file for reading: $!";
-   flock $fh, Fcntl::LOCK_SH() if IS_FLOCK;
+   my($fh, $seek);
+   LOG(IO_SLURP => $file) if DEBUG;
+
+   if ( fileno $file ) {
+      $fh   = $file;
+      $seek = 1;
+   }
+   else {
+      $fh = IO::File->new;
+      $fh->open($file, 'r') or croak "Error opening '$file' for reading: $!";
+   }
+
+   flock $fh,    Fcntl::LOCK_SH()  if IS_FLOCK;
+   seek  $fh, 0, Fcntl::SEEK_SET() if IS_FLOCK && $seek;
    $self->layer( $fh );
-   my $tmp  = do { local $/; <$fh> };
+   my $tmp = do { local $/; <$fh> };
    flock $fh, Fcntl::LOCK_UN() if IS_FLOCK;
-   $fh->close;
+   close $fh if ! $seek; # close only if we opened this
    return $tmp;
 }
 
@@ -93,9 +104,9 @@ TODO
 
 =head1 METHODS
 
-=head2 new PARENT_OBJECT
+=head2 new IO_LAYER
 
-Constructor. Accepts a C<Text::Template::Simple> object as the parameter.
+Constructor. Accepts an I/O layer name as the parameter.
 
 =head2 layer FH
 

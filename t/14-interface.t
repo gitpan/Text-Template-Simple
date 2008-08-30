@@ -200,7 +200,3 @@ can_ok( 'Text::Template::Simple::IO',
             DESTROY
         /
     );
-
-1;
-
-__END__

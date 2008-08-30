@@ -7,16 +7,16 @@ use Data::Dumper;
 
 BEGIN {
    find {
-         no_chdir => 1,
-         wanted   => sub {
-            return if $File::Find::name !~ m{ \.pm \z }xmsi;
-            my $mod = $File::Find::name;
-            $mod =~ s{ [\\/] ? lib [\\/] }{}xms;
-            $mod =~ s{ [\\/] }{::}xmsg;
-            $mod =~ s{ \. pm \z }{}xmsi;
-            push @LIST, $mod;
-            use_ok( $mod );
-         }
+      no_chdir => 1,
+      wanted   => sub {
+         return if $File::Find::name !~ m{ \.pm \z }xmsi;
+         my $mod = $File::Find::name;
+         $mod =~ s{ [\\/] ? lib [\\/] }{}xms;
+         $mod =~ s{ [\\/] }{::}xmsg;
+         $mod =~ s{ \. pm \z }{}xmsi;
+         push @LIST, $mod;
+         use_ok( $mod );
+      }
    }, "lib";
 }
 
@@ -44,7 +44,8 @@ if ( @NONE ) {
 my $total = () = keys %CHECK;
 
 if ( $total > 1 ) {
-   diag "VERSION MISMATCH: ", Dumper( \%CHECK );
+   my $m = Data::Dumper->new( [ \%CHECK ], [ 'VERSION_MISMATCH' ] );
+   diag($m->Dump);
 }
 else {
    ok( 1, "All module versions are identical\n");

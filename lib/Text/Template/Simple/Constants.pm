@@ -2,54 +2,61 @@ package Text::Template::Simple::Constants;
 use strict;
 use vars qw($VERSION $OID @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
 
-$VERSION = '0.53';
+$VERSION = '0.54_01';
 
 # object fields
 BEGIN { $OID = -1 } # init object field id counter
-use constant DELIMITERS     => ++$OID;
-use constant AS_STRING      => ++$OID;
-use constant DELETE_WS      => ++$OID;
-use constant FAKER          => ++$OID;
-use constant FAKER_HASH     => ++$OID;
-use constant CACHE          => ++$OID;
-use constant CACHE_DIR      => ++$OID;
-use constant CACHE_OBJECT   => ++$OID;
-use constant IO_OBJECT      => ++$OID;
-use constant STRICT         => ++$OID;
-use constant SAFE           => ++$OID;
-use constant HEADER         => ++$OID;
-use constant ADD_ARGS       => ++$OID;
-use constant WARN_IDS       => ++$OID;
-use constant FIX_UNCUDDLED  => ++$OID;
-use constant TYPE           => ++$OID;
-use constant COUNTER        => ++$OID;
-use constant CID            => ++$OID;
-use constant FILENAME       => ++$OID;
-use constant RESUME         => ++$OID;
-use constant IOLAYER        => ++$OID;
-use constant STACK          => ++$OID;
-use constant USER_THANDLER  => ++$OID;
-# number of the last object field
-use constant MAXOBJFIELD    =>   $OID;
+use constant DELIMITERS      => ++$OID;
+use constant AS_STRING       => ++$OID;
+use constant DELETE_WS       => ++$OID;
+use constant FAKER           => ++$OID;
+use constant FAKER_HASH      => ++$OID;
+use constant FAKER_SELF      => ++$OID;
+use constant CACHE_MONOLITH  => ++$OID;
+use constant CACHE           => ++$OID;
+use constant CACHE_DIR       => ++$OID;
+use constant CACHE_OBJECT    => ++$OID;
+use constant IO_OBJECT       => ++$OID;
+use constant STRICT          => ++$OID;
+use constant SAFE            => ++$OID;
+use constant HEADER          => ++$OID;
+use constant ADD_ARGS        => ++$OID;
+use constant WARN_IDS        => ++$OID;
+use constant FIX_UNCUDDLED   => ++$OID;
+use constant TYPE            => ++$OID;
+use constant TYPE_FILE       => ++$OID;
+use constant COUNTER         => ++$OID;
+use constant COUNTER_INCLUDE => ++$OID;
+use constant INSIDE_INCLUDE  => ++$OID;
+use constant NEEDS_OBJECT    => ++$OID;
+use constant CID             => ++$OID;
+use constant FILENAME        => ++$OID;
+use constant RESUME          => ++$OID;
+use constant IOLAYER         => ++$OID;
+use constant STACK           => ++$OID;
+use constant USER_THANDLER   => ++$OID;
+use constant DEEP_RECURSION  => ++$OID;
+use constant MAXOBJFIELD     =>   $OID; # number of the last object field
+# settings
+use constant MAX_RECURSION   => 50; # recursion limit for dynamic includes
+use constant PARENT          => 'Text::Template::Simple';
+use constant IS_WINDOWS      => $^O eq 'MSWin32' || $^O eq 'MSWin64';
+use constant DELIM_START     => 0; # field id
+use constant DELIM_END       => 1; # field id
+use constant RE_NONFILE      => qr{ [ \n \r < > \* \? ] }xmso;
+use constant RE_DUMP_ERROR   => qr{Can\'t locate object method "first" via package "B::SVOP"};
+use constant RESUME_NOSTART  => 1;                         # bool
+use constant COMPILER        => PARENT.'::Compiler';       # The compiler
+use constant COMPILER_SAFE   => PARENT.'::Compiler::Safe'; # Safe compiler
+use constant DUMMY_CLASS     => PARENT.'::Dummy';          # Dummy class
+use constant MAX_FL          => 120;                       # Maximum file name length
+use constant CACHE_EXT       => '.tmpl.cache';             # disk cache extension
+use constant STAT_SIZE       => 7;                         # for stat()
+use constant STAT_MTIME      => 9;                         # for stat()
+use constant DELIMS          => qw( <% %> );               # default delimiter pair
+use constant NEW_PERL        => $] >= 5.008;               # for I/O layer
 
-use constant PARENT         => 'Text::Template::Simple';
-use constant IS_WINDOWS     => $^O eq 'MSWin32' || $^O eq 'MSWin64';
-use constant DELIM_START    => 0;
-use constant DELIM_END      => 1;
-use constant RE_NONFILE     => qr{ [ \n \r < > \* \? ] }xmso;
-use constant RE_DUMP_ERROR  => qr{Can\'t locate object method "first" via package "B::SVOP"};
-use constant RESUME_NOSTART => 1;                         # bool
-use constant COMPILER       => PARENT.'::Compiler';       # The compiler
-use constant COMPILER_SAFE  => PARENT.'::Compiler::Safe'; # Safe compiler
-use constant DUMMY_CLASS    => PARENT.'::Dummy';          # Dummy class
-use constant MAX_FL         => 80;                        # Maximum file name length
-use constant CACHE_EXT      => '.tmpl.cache';             # disk cache extension
-use constant STAT_SIZE      => 7;                         # for stat()
-use constant STAT_MTIME     => 9;                         # for stat()
-use constant DELIMS         => qw( <% %> );               # default delimiter pair
-use constant NEW_PERL       => $] >= 5.008;               # for I/O layer
-
-use constant IS_FLOCK       => sub {
+use constant IS_FLOCK        => sub {
    # are we running under dumb OS?
    if ( IS_WINDOWS ) {
       return Win32::IsWin95() ? 0 : 1;
@@ -215,9 +222,11 @@ BEGIN {
                         DELETE_WS
                         FAKER
                         FAKER_HASH
+                        FAKER_SELF
                         CACHE
                         CACHE_DIR
                         CACHE_OBJECT
+                        CACHE_MONOLITH
                         IO_OBJECT
                         STRICT
                         SAFE
@@ -226,13 +235,18 @@ BEGIN {
                         WARN_IDS
                         FIX_UNCUDDLED
                         TYPE
+                        TYPE_FILE
                         COUNTER
+                        COUNTER_INCLUDE
+                        INSIDE_INCLUDE
+                        NEEDS_OBJECT
                         CID
                         FILENAME
                         RESUME
                         IOLAYER
                         STACK
                         USER_THANDLER
+                        DEEP_RECURSION
                         MAXOBJFIELD
                      )],
       resume    =>   [qw(
@@ -250,6 +264,7 @@ BEGIN {
                         RE_DUMP_ERROR
                         STAT_SIZE
                         RE_NONFILE
+                        MAX_RECURSION
                      )],
    );
 

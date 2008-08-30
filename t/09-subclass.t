@@ -1,6 +1,5 @@
 #!/usr/bin/env perl -w
 # Simple Subclassing
-
 package MyTTS;
 use strict;
 use base qw(Text::Template::Simple);
@@ -25,10 +24,5 @@ use strict;
 use Test::More qw( no_plan );
 
 my $t = MyTTS->new;
-#$t->DEBUG(0);
 
-ok( $t->compile(q/Just a test/), "Define output buffer variables");
-
-exit;
-
-__END__
+ok( $t->compile(q/Just a test/), "Compiled by subclass");

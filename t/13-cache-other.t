@@ -27,7 +27,8 @@ sub run {
 
     my $struct2 = $t->cache->dumper( structure => { varname => 'ABC' } );
     print $struct2;
-    like( $struct2, qr{ \$ABC \s+ = \s+ }xms, "Got the structure with the specified name");
+    like( $struct2, qr{ \$ABC \s+ = \s+ }xms,
+          "Got the structure with the specified name");
 
     my $struct3 = $t->cache->dumper( structure => { no_deparse => 1 } );
     print $struct3;
@@ -39,7 +40,8 @@ sub run {
 
     my $ids2 = $t->cache->dumper( ids => { varname => 'XYZ' } );
     print $ids2;
-    like( $ids2, qr{ \$XYZ \s+ = \s+ }xms, "Got the ids with the specified name");
+    like( $ids2, qr{ \$XYZ \s+ = \s+ }xms,
+          "Got the ids with the specified name");
 
     my $type = $t->cache->type;
     like( $type, qr{ DISK | MEMORY | OFF }xms, "Cache type ($type) is OK" );
@@ -49,12 +51,13 @@ sub run {
     #populate
 
     SKIP: {
-        if ( $type eq 'OFF' ) {
-            skip("Cache is disabled");
-        }
+        skip("Cache is disabled") if $type eq 'OFF';
 
-        if ( $type ne 'DISK' ) {
-            skip("Disable below tests for memcache until someone fixes RT#14849 for Devel::Size");
+        if ( $type eq 'MEMORY' ) {
+            skip(
+                 "Disable below tests for memcache until someone "
+                ."fixes RT#14849 for Devel::Size"
+            );
         }
 
         my $size = $t->cache->size;
@@ -73,6 +76,6 @@ sub run {
 
 sub template {
 <<'TEMPLATE';
-Time now: <%=scalar localtime time %>
+Time now: <%=scalar localtime 1219952008 %>
 TEMPLATE
 }

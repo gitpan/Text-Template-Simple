@@ -32,10 +32,12 @@ This module requires these other modules:
       IO::File     1.06021
       Fcntl        1.03
       Safe         2.06
+      Digest::MD5
 
-this module is only required for testing:
+these modules are only required for testing:
 
       Test::More   0.40
+      File::Temp
 
 and this module is recommended:
 
@@ -45,7 +47,7 @@ All are available on CPAN.
 
 COPYRIGHT AND LICENCE
 
-Copyright (C) 2004-2008 Burak Gürsoy <burak@cpan.org>. All rights reserved.
+Copyright (C) 2004-2008 Burak GÃ¼rsoy <burak@cpan.org>. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify 
 it under the same terms as Perl itself, either Perl version 5.8.8 or, 

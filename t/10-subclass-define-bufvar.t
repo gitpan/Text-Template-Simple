@@ -25,5 +25,3 @@ sub _output_buffer_var {
          :                    '$OUT'       # output   buffer
          ;
 }
-
-__END__

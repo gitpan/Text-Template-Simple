@@ -2,6 +2,16 @@ Revision history for Perl extension Text::Template::Simple.
 
 Time zone is GMT+2.
 
+0.54_01 Sat Aug 30 20:12:09 2008
+   => Fix _parser_id().
+   => Pod updates.
+   => Implemented the "dynamic" include directive.
+   => Implemented interpolation in includes
+   => New tests for includes.
+   => Removed deprecated parts.
+   => New cache file format.
+   => All files are now in UTF-8 encoding.
+
 0.53 Sat Mar 22 02:32:51 2008
    => Abstracted several sub classes into a function. It is now possible to
       alter them via subclassing.

@@ -28,11 +28,7 @@ sub simple {
       add_args => ['bar',['baz']],
       stack    => $type,
    );
-   my $result = $template->compile('t/test.tmpl', ['Burak']);
+   my $result = $template->compile('t/data/test.tmpl', ['Burak']);
    #warn "[COMPILED] $result\n";
    return $result;
 }
-
-exit;
-
-__END__

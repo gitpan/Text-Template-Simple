@@ -2,9 +2,8 @@
 # Simple test. Just try to use the module.
 use strict;
 use Test::More qw( no_plan );
-
 use Text::Template::Simple; 
-Text::Template::Simple->DEBUG(0);
+
 ok(simple() , "Simple test 1");
 ok(simple2(), "Simple test 2");
 
@@ -17,7 +16,7 @@ sub simple {
       header   => q~my $foo = shift; my $bar = shift;~,
       add_args => ['bar',['baz']],
    );
-   my $result = $template->compile('t/test.tmpl', ['Burak']);
+   my $result = $template->compile('t/data/test.tmpl', ['Burak']);
    #warn "[COMPILED] $result\n";
    return $result;
 }
@@ -37,7 +36,3 @@ sub simple2 {
    #warn "[COMPILED] $result\n";
    return $result;
 }
-
-exit;
-
-__END__

@@ -3,12 +3,10 @@
 # SEE ALSO: t/lib/My.pm
 use strict;
 use lib qw(t/lib lib);
-use Test;
-BEGIN { plan tests => 2 }
-
+use Test::More qw( no_plan );
 use Text::Template::Simple; 
-use My;
 use Data::Dumper;
+use My;
 
 ok($My::VERSION);
 
@@ -22,18 +20,16 @@ Function call  : <%=      hello  "Burak"          %>
 Global variable: X is <%= $GLOBAL{X}              %>
 THE_TEMPLATE
 
-my $out;
+my $out = $t->compile( $tmpl, [ "http://search.cpan.org/" ] );
 
-ok( $out = $t->compile( $tmpl, [ "http://search.cpan.org/" ] ) );
+ok( $out, "Got output" );
 
 print $out;
+
 my $d = Data::Dumper->new(
            [ \%Text::Template::Simple::Dummy:: ],
            [ '*SYMBOL'                         ]
         );
+
 print "\nDumping template namespace symbol table ...\n";
 print $d->Dump;
-
-exit;
-
-__END__

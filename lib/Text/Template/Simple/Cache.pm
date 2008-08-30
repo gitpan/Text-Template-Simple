@@ -6,7 +6,7 @@ use Text::Template::Simple::Constants;
 use Text::Template::Simple::Util qw( DEBUG LOG ishref );
 use Carp qw( croak );
 
-$VERSION = '0.53';
+$VERSION = '0.54_01';
 
 my $CACHE = {}; # in-memory template cache
 
@@ -246,6 +246,7 @@ sub has {
 }
 
 sub hit {
+   # TODO: return $CODE, $META;
    my $self     = shift;
    my $parent   = $self->[CACHE_PARENT];
    my $cache_id = shift;
@@ -258,19 +259,23 @@ sub hit {
 
       if ( -e $cache && not -d _ && -f _ ) {
          my $disk_cache = $parent->io->slurp($cache);
-
-         if ( $chkmt ) {
-            if ( $disk_cache =~ m{^#(\d+)#} ) {
-               my $mtime  = $1;
-               if ( $mtime != $chkmt ) {
-                  LOG( MTIME_DIFF => "\tOLD: $mtime\n\t\tNEW: $chkmt")
-                     if DEBUG();
-                  return; # i.e.: Update cache
-               }
+         my %meta;
+         if ( $disk_cache =~ m{ \A \#META: (.+?) \n }xms ) {
+            %meta = $self->_get_meta( $1 );
+            croak "Can not get meta data: $@" if $@;
+         }
+         if ( my $mtime = $meta{CHKMT} ) {
+            if ( $mtime != $chkmt ) {
+               LOG( MTIME_DIFF => "\tOLD: $mtime\n\t\tNEW: $chkmt")
+                  if DEBUG();
+               return; # i.e.: Update cache
             }
          }
 
          ($CODE, $error) = $parent->_wrap_compile($disk_cache);
+         $parent->[NEEDS_OBJECT] = $meta{NEEDS_OBJECT} if $meta{NEEDS_OBJECT};
+         $parent->[FAKER_SELF]   = $meta{FAKER_SELF}   if $meta{FAKER_SELF};
+
          croak "Error loading from disk cache: $error" if $error;
          LOG( FILE_CACHE => '' ) if DEBUG();
          #$parent->[COUNTER]++;
@@ -308,12 +313,18 @@ sub populate {
          require Fcntl;
          require IO::File;
 
+         my %meta = (
+            CHKMT        => $chkmt,
+            NEEDS_OBJECT => $parent->[NEEDS_OBJECT],
+            FAKER_SELF   => $parent->[FAKER_SELF],
+         );
+
          my $cache = File::Spec->catfile( $cdir, $cache_id . CACHE_EXT);
          my $fh    = IO::File->new;
          $fh->open($cache, '>') or croak "Error writing disk-cache $cache : $!";
          flock $fh, Fcntl::LOCK_EX() if IS_FLOCK;
          $parent->io->layer($fh);
-         print $fh $chkmt ? "#$chkmt#\n" : "##\n",
+         print $fh '#META:' . $self->_set_meta(\%meta) . "\n",
                    sprintf( DISK_CACHE_COMMENT,
                             PARENT->_parser_id, scalar localtime time),
                    $parsed; 
@@ -324,10 +335,12 @@ sub populate {
          LOG( DISK_POPUL => $cache_id ) if DEBUG() > 2;
       } 
       else {
-         $CACHE->{$cache_id} = {CODE => undef, MTIME => 0}; # init
-         ($CODE, $error) = $parent->_wrap_compile($parsed);
-         $CACHE->{$cache_id}->{CODE}  = $CODE;
-         $CACHE->{$cache_id}->{MTIME} = $chkmt if $chkmt;
+         $CACHE->{ $cache_id } = {}; # init
+         ($CODE, $error)                       = $parent->_wrap_compile($parsed);
+         $CACHE->{ $cache_id }->{CODE}         = $CODE;
+         $CACHE->{ $cache_id }->{MTIME}        = $chkmt if $chkmt;
+         $CACHE->{ $cache_id }->{NEEDS_OBJECT} = $parent->[NEEDS_OBJECT];
+         $CACHE->{ $cache_id }->{FAKER_SELF}   = $parent->[FAKER_SELF];
          LOG( MEM_POPUL => $cache_id ) if DEBUG() > 2;
       }
    }
@@ -346,9 +359,24 @@ sub populate {
    return $CODE;
 }
 
+sub _get_meta {
+   my $self = shift;
+   my $raw  = shift;
+   my %meta = map { split /:/, $_ } split /\|/, $raw;
+   return %meta;
+}
+
+sub _set_meta {
+   my $self = shift;
+   my $meta = shift;
+   my $rv   = join '|', map { $_ . ':' . $meta->{ $_ } } keys %{ $meta };
+   return $rv;
+}
+
 sub DESTROY {
    my $self = shift;
    LOG( DESTROY => ref $self ) if DEBUG;
+   $self->[CACHE_PARENT] = undef;
    @{$self} = ();
    return;
 }

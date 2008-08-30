@@ -1,33 +1,27 @@
+#!/usr/bin/env perl
+use strict;
+use vars qw( %PREREQ %RECOMMEND $AUTHOR $MODULE );
 use ExtUtils::MakeMaker;
 
-print <<'RECOMMEND';
+do 'PREREQ' or die "Can not include PREREQ: $@";
 
-Recommended Modules:
+my $info = "\nRecommended Modules:\n\n";
 
-   Devel::Size v0.64
-   Text::Table v1.107
-   Perl::Tidy
+foreach my $m ( sort keys %RECOMMEND ) {
+    $info .= sprintf "    %s\tv%s\n", $m, $RECOMMEND{$m};
+}
 
-RECOMMEND
+print "$info\n";
+
+(my $FILE = $MODULE) =~ s{::}{/}g;
 
 WriteMakefile(
-   'NAME'         => 'Text::Template::Simple',
-   'VERSION_FROM' => 'lib/Text/Template/Simple.pm',
-   'PREREQ_PM'    => {
-      'Data::Dumper' => '2.101',
-      'File::Spec'   => '0.6',
-      'File::Find'   => 0,
-      'IO::Handle'   => '1.1505',
-      'IO::File'     => '1.06021',
-      'Fcntl'        => '1.03',
-      'Safe'         => '2.06',
-      'Test::More'   => '0.40',
-      'File::Temp '  => 0,
-      #'Devel::Size'  => 0,
-   },
-   ($] >= 5.005 ? (
-   AUTHOR   => 'Burak Gursoy <burak@cpan.org>',
-   ABSTRACT => 'Simple text template engine',
-   ) : ()),
-   PL_FILES => {},
+    NAME         => $MODULE,
+    VERSION_FROM => "lib/$FILE.pm",
+    PREREQ_PM    => \%PREREQ,
+    PL_FILES     => {},
+    ($] >= 5.005 ? (
+    AUTHOR       => $AUTHOR,
+    ABSTRACT     => 'Simple text template engine',
+    ) : ()),
 );
