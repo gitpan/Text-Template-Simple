@@ -19,14 +19,15 @@ use constant SUBSTR_LENGTH =>  1;
 use Carp qw( croak );
 use Text::Template::Simple::Util ();
 
-$VERSION = '0.54_01';
+$VERSION = '0.54_02';
 
 my @COMMANDS = (
    #   cmd id        callback
-   [ qw/ = CAPTURE        / ],
-   [ qw/ * DYNAMIC   trim / ],
-   [ qw/ + STATIC    trim / ],
-   [ qw/ ! NOTADELIM      / ],
+   [ qw/ =       CAPTURE         / ],
+   [ qw/ *       DYNAMIC   trim  / ],
+   [ qw/ +       STATIC    trim  / ],
+   [ qw/ !       NOTADELIM       / ],
+   [    '#', qw/ COMMENT         / ],
 );
 
 sub new {
@@ -71,6 +72,12 @@ sub tokenize {
          }
          push @tokens, $self->_token_code( $j, $inside, $map_keys, \@tokens );
       }
+   }
+
+   if ( $self->can('DEBUG_TOKENS') ) {
+      require Data::Dumper;
+      my $struct = Data::Dumper->new( [ \@tokens ], [ '*TOKENS' ] );
+      Text::Template::Simple::Util::LOG( DEBUG => $struct->Dump );
    }
 
    return \@tokens;

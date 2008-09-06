@@ -3,7 +3,7 @@ use strict;
 use Test::More qw( no_plan );
 use Text::Template::Simple;
 use Text::Template::Simple::Constants qw(MAX_RECURSION);
-use constant TEMPLATE => q{<%* t/data/test_var.tmpl %>};
+use constant TEMPLATE => q{<%* t/data/test_var.tts %>};
 
 my $t   = Text::Template::Simple->new();
 

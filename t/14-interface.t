@@ -32,7 +32,6 @@ can_ok( 'Text::Template::Simple',
             _include
             _resume
             DESTROY
-            _fix_uncuddled
         /
     );
 can_ok( 'Text::Template::Simple::Constants',
@@ -70,7 +69,6 @@ can_ok( 'Text::Template::Simple::Constants',
             HEADER
             ADD_ARGS
             WARN_IDS
-            FIX_UNCUDDLED
             TYPE
             COUNTER
             CID

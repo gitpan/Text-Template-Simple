@@ -2,7 +2,7 @@ package Text::Template::Simple;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.54_01';
+$VERSION = '0.54_02';
 
 use Carp qw( croak );
 use Text::Template::Simple::Constants;
@@ -35,9 +35,8 @@ my %DEFAULT = ( # default object attributes
    iolayer        => '', # I/O layer for filehandles
    stack          => '',
    user_thandler  => undef, # user token handler callback
-   cache_monolith =>  1, # ???
+   monolith       =>  0, # use monolithic template & cache ?
    # TODO: Consider removing these
-   fix_uncuddled  =>  0, # do some worst practice?
    resume         =>  0, # resume on error?
 );
 
@@ -92,10 +91,10 @@ sub _compile {
    croak "opts must be a hashref!"     if not ishref($opt);
 
    # set defaults
-   $opt->{id}        ||= ''; # id is AUTO
-   $opt->{map_keys}  ||= 0;  # use normal behavior
-   $opt->{chkmt}     ||= 0;  # check mtime of file template?
-   $opt->{_sub_inc}  ||= 0;  # are we called from a dynamic include op?
+   $opt->{id}       ||= ''; # id is AUTO
+   $opt->{map_keys} ||= 0;  # use normal behavior
+   $opt->{chkmt}    ||= 0;  # check mtime of file template?
+   $opt->{_sub_inc} ||= 0;  # are we called from a dynamic include op?
 
    if ( $opt->{_sub_inc} ) {
       # TODO:generate a single error handler for includes, merge with _include()
@@ -214,39 +213,68 @@ sub _output_buffer_var {
    return '$' . $id;
 }
 
+sub _is_file {
+   my $self = shift;
+   my $file = shift || return;
+   return     ref $file               ? 0
+         :        $file =~ RE_NONFILE ? 0
+         : length $file >= 255        ? 0
+         : ! -e   $file               ? 0
+         :   -d _                     ? 0
+         :                              1
+         ;
+}
+
+sub _examine_glob {
+   my $self = shift;
+   my $TMP  = shift;
+   my $ref  = ref $TMP;
+   croak fatal(  NOTGLOB => $ref ) if $ref ne 'GLOB';
+   croak fatal( 'NOTFH'          ) if not  fileno $TMP;
+   return $self->io->slurp( $TMP );
+}
+
+sub _examine_type {
+   my $self = shift;
+   my $TMP  = shift;
+   my $ref  = ref $TMP;
+
+   return ''   => $TMP if ! $ref;
+   return GLOB => $TMP if   $ref eq 'GLOB';
+
+   if ( $ref eq 'ARRAY' ) {
+      my $ftype  = shift @{ $TMP } || croak "ARRAY does not contain the type";
+      my $fthing = shift @{ $TMP } || croak "ARRAY does not contain the data";
+      croak "ARRAY overflowed" if @{ $TMP } > 0;
+      return uc $ftype, $fthing;
+   }
+
+   croak "Unknown first argument of $ref type to compile()";
+}
+
 sub _examine {
    my $self   = shift;
    my $TMP    = shift;
-   my $length = 0;
+   my($type, $thing) = $self->_examine_type( $TMP );
    my $rv;
 
-   if ( my $ref = ref($TMP) ) {
-      croak fatal(  NOTGLOB => $ref ) if $ref ne 'GLOB';
-      croak fatal( 'NOTFH'          ) if not  fileno $TMP;
-      $rv = $self->io->slurp( $TMP );
-      $self->[TYPE] = 'GLOB';
+   if ( $type eq 'GLOB' ) {
+      $rv                   = $self->_examine_glob( $thing );
+      $self->[TYPE]         = 'GLOB';
    }
    else {
-      $length     = length $TMP;
-      my $is_file =    ( $length  <= 255        )
-                    && ( $TMP     !~ RE_NONFILE )
-                    &&   -e $TMP
-                    && ! -d _
-                  ;
-      if ( $is_file ) {
+      if ( $type eq 'FILE' || $self->_is_file( $thing ) ) {
+         $rv                = $self->io->slurp( $thing );
          $self->[TYPE]      = 'FILE';
-         $self->[TYPE_FILE] = $TMP;
-         $rv = $self->io->slurp( $TMP );
-         # we don't really need to set this after getting data
-         $length = length $rv if DEBUG();
+         $self->[TYPE_FILE] = $thing;
       }
       else {
-         $self->[TYPE] = 'STRING';
-         $rv = $TMP;
+         $rv                = $thing;
+         $self->[TYPE]      = 'STRING';
       }
    }
 
-   LOG( EXAMINE => $self->[TYPE]."; LENGTH: $length" ) if DEBUG();
+   LOG( EXAMINE => $self->[TYPE]."; LENGTH: ".length($rv) ) if DEBUG();
    return $rv;
 }
 
@@ -338,8 +366,6 @@ sub _parse {
 
    LOG( RAW => $raw ) if ( DEBUG() > 3 );
 
-   $self->_fix_uncuddled(\$raw, $ds, $de) if $self->[FIX_UNCUDDLED];
-
    my $handler = $self->[USER_THANDLER];
 
    my $w_raw = sub { ";$faker .= q~$_[0]~;" };
@@ -354,6 +380,7 @@ sub _parse {
       ($id, $str) = @{ $token };
       LOG( TOKEN => "$id => $str" ) if DEBUG() > 1;
       next PARSER if $id eq 'DISCARD';
+      next PARSER if $id eq 'COMMENT';
 
       if ( $id eq 'DELIMSTART' ) { $inside++; next PARSER; }
       if ( $id eq 'DELIMEND'   ) { $inside--; next PARSER; }
@@ -524,6 +551,7 @@ sub _interpolate {
    my $self = shift;
    my $file = shift;
    my $type = shift;
+
    # we need string eval in this template to catch syntax errors
    my $template = q~
       %s->_compile(
@@ -542,8 +570,9 @@ sub _interpolate {
          }
       )
    ~;
-   $template =~ s{\s+}{ }xmsg;
-   (my $buf = $file) =~ s{'}{\\'}xmsg;
+   $template =~ s{\s+}{ }xmsg; # remove extra spaces
+
+   my $buf = escape q{'} => $file;
    my $rv = sprintf $template,
                      $self->[FAKER_SELF],
                      $buf,
@@ -553,20 +582,30 @@ sub _interpolate {
    return $rv;
 }
 
-sub _include_static {
+sub _include_no_monolith {
+   # no monolith eh?
    my $self = shift;
+   my $type = shift;
    my $file = shift;
-   my $text = shift;
-   my $err  = shift;
-      $text = escape '~' => $text;
-   return 'q~' . $text . '~;';
+   my $tmp  = "%s->compile( q~%s~, undef, { _sub_inc => q~%s~, chkmt => 1 } );";
+   my $rv   = sprintf $tmp,
+                      $self->[FAKER_SELF],
+                      escape('~' => $file),
+                      escape('~' => $type);
+   ++$self->[NEEDS_OBJECT];
+   return $rv;
+}
+
+sub _include_static {
+   my($self, $file, $text, $err) = @_;
+   return $self->[MONOLITH]
+        ? 'q~' . escape('~' => $text) . '~;'
+        : $self->_include_no_monolith( static => $file )
+        ;
 }
 
 sub _include_dynamic {
-   my $self = shift;
-   my $file = shift;
-   my $text = shift;
-   my $err  = shift;
+   my($self, $file, $text, $err) = @_;
    my $rv   = '';
 
    ++$self->[INSIDE_INCLUDE];
@@ -585,13 +624,10 @@ sub _include_dynamic {
       $rv .= "q~$error~";
    }
    else {
-      if ( $self->[CACHE_MONOLITH] ) {
-         $rv .= $self->_parse( $text );
-      }
-      else {
-         die "TODO! cache_monolith must be set to true for now";
-         $rv .= $self->[FAKER_SELF] . "->_parse( $text );";
-      }
+      $rv .= $self->[MONOLITH]
+           ? $self->_parse( $text )
+           : $self->_include_no_monolith( dynamic => $file )
+           ;
    }
 
    --$self->[INSIDE_INCLUDE]; # critical: always adjust this
@@ -640,49 +676,6 @@ sub DESTROY {
    undef $self->[CACHE_OBJECT];
    undef $self->[IO_OBJECT];
    @{ $self } = ();
-   return;
-}
-
-# Experimental and probably nasty stuff. Re-Write or remove!
-
-sub _fix_uncuddled {
-   my $self = shift;
-   my $tmp  = shift;
-   my $ds   = shift;
-   my $de   = shift;
-   LOG( FIXING => "Worst practice: Cuddling uncuddled else/elsif" );
-   # common part
-   my $start = qr{
-      $ds         # delimiter start
-      (?:\s+|)    # ws or not
-      \}          # block ending
-      (?:\s+|)    # ws or not
-      $de         # delimiter end
-      (?:\s+|)    # ws or not
-      $ds         # delimiter start
-      (?:\s+|)    # ws or not
-   }xms;
-   # fix else
-   $$tmp =~ s{
-      $start
-      else        # keyword
-      (?:\s+|)    # ws or not
-      \{          # block opening
-      (?:\s+|)    # ws or not
-      $de         # delimiter-end
-   }{$ds\} else \{$de}xmsgo;
-   # fix elsif
-   $$tmp =~ s{
-      $start
-      elsif       # keyword
-      (?:\s+|)    # ws or not
-      \( (.+?) \) # elsif bool
-      (?:\s+|)    # ws or not
-      \{          # block opening
-      (?:\s+|)    # ws or not
-      $de
-   }{$ds\} elsif ($1) \{$de}xmsgo;
-   LOG( CUDDLE => "#FIXED\n$$tmp\n#/FIXED" ) if DEBUG() > 2;
    return;
 }
 
@@ -937,13 +930,6 @@ If enabled, the module will warn you about compile steps using
 template ids. You must both enable this and the cache. If
 cache is disabled, no warnings will be generated.
 
-=head3 fix_uncuddled
-
-If you are using uncuddled elses/elsifs (which became popular after
-Damian Conway' s PBP Book) in your templates, this will break the parser.
-If you supply this parameter with a true value, the parser will
-reformat the data with cuddled versions before parsing it.
-
 =head3 iolayer
 
 This option does not have any effect under perls older than C<5.8.0>.
@@ -971,6 +957,19 @@ This option is also available to all templates as a function named
 C<stack> for individual stack dumping. See L<Text::Template::Simple::Dummy>
 for more information.
 
+=head3 monolith
+
+Controls the behavior when using includes. If this is enabled, the template
+and all it's includes will be compiled into a single document. If C<monolith>
+is disabled, then the includes will be compiled individually into separate
+documents.
+
+If you need to pass the main template variables (C<my> vars) into dynamic
+includes, then you need to enable this option. However, if you are using the
+cache, then the included templates will not be updated automatically.
+
+C<monolith> is disabled by default.
+
 =head2 compile DATA [, FILL_IN_PARAM, OPTIONS]
 
 Compiles the template you have passed and manages template cache,
@@ -994,7 +993,7 @@ text.
 
 You can pass a file path as the first parameter:
 
-   $text = $template->compile('/my/templates/test.tmpl');
+   $text = $template->compile('/my/templates/test.tts');
 
 =head4 Strings
 
@@ -1012,7 +1011,7 @@ C<GLOB>s must be passed as a reference. If you are using bareword
 filehandles, be sure to pass it's reference or it'll be treated as a 
 file path and your code will probably C<die>:
 
-   open MYHANDLE, '/path/to/foo.tmpl' or die "Error: $!";
+   open MYHANDLE, '/path/to/foo.tts' or die "Error: $!";
    $text = $template->compile(\*MYHANDLE); # RIGHT.
    $text = $template->compile( *MYHANDLE); # WRONG. Recognized as a file path
    $text = $template->compile(  MYHANDLE); # WRONG. Ditto. Will die under strict
@@ -1021,13 +1020,13 @@ or use the standard C<IO::File> module:
 
    use IO::File;
    my $fh = IO::File->new;
-   $fh->open('/path/to/foo.tmpl', 'r') or die "Error: $!";
+   $fh->open('/path/to/foo.tts', 'r') or die "Error: $!";
    $text = $template->compile($fh);
 
 or you can use lexicals inside C<open> if you don't care about 
 compatibility with older perl:
 
-   open my $fh, '/path/to/foo.tmpl' or die "Error: $!";
+   open my $fh, '/path/to/foo.tts' or die "Error: $!";
    $text = $template->compile($fh);
 
 Filehandles will be automatically closed.
@@ -1151,7 +1150,7 @@ compiled into an anonymous sub inside the in-memory cache hash
 and this compiled version will be used instead of continiously
 parsing/compiling the same template.
 
-If disk cache is used, a template file with the "C<.tmpl.cache>"
+If disk cache is used, a template file with the "C<.tts.cache>"
 extension will be generated on the disk.
 
 Using cache is recommended under persistent environments like 
@@ -1195,7 +1194,7 @@ How to add your own tokens into Text::Template::Simple?
 
    use strict;
    use Text::Template::Simple;
-   use constant MYTEMP => q{ Testing: <%$ PROCESS some.tmpl %> };
+   use constant MYTEMP => q{ Testing: <%$ PROCESS some.tts %> };
    # first, register our handler for unknown tokens
    my $t = Text::Template::Simple->new( user_thandler => \&thandler );
    print $t->compile( MYTEMP );

@@ -2,6 +2,15 @@ Revision history for Perl extension Text::Template::Simple.
 
 Time zone is GMT+2.
 
+0.54_02 Sun Sep  7 00:58:38 2008
+   => Implemented comment directives.
+   => Removed fix_uncuddled. Seemed like nonsense :p
+   => Added DEBUG_TOKENS to the tokenizer.
+   => Implemented & documented the no "monolith" option
+      (also renamed cache_monolith to monolith).
+   => ".tts" is now the official file extension for Text::Template::Simple
+      templates. Updated test suite and Pod to reflect this.
+
 0.54_01 Sat Aug 30 20:12:09 2008
    => Fix _parser_id().
    => Pod updates.

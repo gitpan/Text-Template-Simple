@@ -13,7 +13,7 @@ sub simple {
       add_args => ['bar',['baz']],
       iolayer  => 'utf8',
    );
-   my $result = $template->compile('t/data/test.tmpl', ['Burak']);
+   my $result = $template->compile('t/data/test.tts', ['Burak']);
    #warn "[COMPILED] $result\n";
    return $result;
 }

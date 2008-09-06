@@ -4,7 +4,7 @@ use Test::More qw( no_plan );
 use Text::Template::Simple;
 
 my $t   = Text::Template::Simple->new();
-my $out = $t->compile( 't/data/recursive.tmpl' );
+my $out = $t->compile( 't/data/recursive.tts' );
 
 print $out, "\n";
 

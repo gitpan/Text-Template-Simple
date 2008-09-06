@@ -16,7 +16,7 @@ sub simple {
       header   => q~my $foo = shift; my $bar = shift;~,
       add_args => ['bar',['baz']],
    );
-   my $result = $template->compile('t/data/test.tmpl', ['Burak']);
+   my $result = $template->compile('t/data/test.tts', ['Burak']);
    #warn "[COMPILED] $result\n";
    return $result;
 }

@@ -2,7 +2,7 @@ package Text::Template::Simple::Constants;
 use strict;
 use vars qw($VERSION $OID @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
 
-$VERSION = '0.54_01';
+$VERSION = '0.54_02';
 
 # object fields
 BEGIN { $OID = -1 } # init object field id counter
@@ -12,7 +12,7 @@ use constant DELETE_WS       => ++$OID;
 use constant FAKER           => ++$OID;
 use constant FAKER_HASH      => ++$OID;
 use constant FAKER_SELF      => ++$OID;
-use constant CACHE_MONOLITH  => ++$OID;
+use constant MONOLITH        => ++$OID;
 use constant CACHE           => ++$OID;
 use constant CACHE_DIR       => ++$OID;
 use constant CACHE_OBJECT    => ++$OID;
@@ -22,7 +22,6 @@ use constant SAFE            => ++$OID;
 use constant HEADER          => ++$OID;
 use constant ADD_ARGS        => ++$OID;
 use constant WARN_IDS        => ++$OID;
-use constant FIX_UNCUDDLED   => ++$OID;
 use constant TYPE            => ++$OID;
 use constant TYPE_FILE       => ++$OID;
 use constant COUNTER         => ++$OID;
@@ -50,7 +49,7 @@ use constant COMPILER        => PARENT.'::Compiler';       # The compiler
 use constant COMPILER_SAFE   => PARENT.'::Compiler::Safe'; # Safe compiler
 use constant DUMMY_CLASS     => PARENT.'::Dummy';          # Dummy class
 use constant MAX_FL          => 120;                       # Maximum file name length
-use constant CACHE_EXT       => '.tmpl.cache';             # disk cache extension
+use constant CACHE_EXT       => '.tts.cache';             # disk cache extension
 use constant STAT_SIZE       => 7;                         # for stat()
 use constant STAT_MTIME      => 9;                         # for stat()
 use constant DELIMS          => qw( <% %> );               # default delimiter pair
@@ -226,14 +225,13 @@ BEGIN {
                         CACHE
                         CACHE_DIR
                         CACHE_OBJECT
-                        CACHE_MONOLITH
+                        MONOLITH
                         IO_OBJECT
                         STRICT
                         SAFE
                         HEADER
                         ADD_ARGS
                         WARN_IDS
-                        FIX_UNCUDDLED
                         TYPE
                         TYPE_FILE
                         COUNTER
