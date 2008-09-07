@@ -31,9 +31,11 @@ t/19-dynamic-static-interpolate.t
 t/20-fake-include-recursive.t
 t/21-comment.t
 t/22-monolith.t
+t/23-change-delims.t
 t/99-all-modules-have-the-same-version.t
 t/data/test.tts
 t/data/dynamic.tts
+t/data/dynamic_delim.tts
 t/data/recursive.tts
 t/data/static.tts
 t/data/raw.txt

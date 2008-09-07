@@ -2,7 +2,7 @@ package Text::Template::Simple;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.54_02';
+$VERSION = '0.54_03';
 
 use Carp qw( croak );
 use Text::Template::Simple::Constants;
@@ -1029,7 +1029,7 @@ compatibility with older perl:
    open my $fh, '/path/to/foo.tts' or die "Error: $!";
    $text = $template->compile($fh);
 
-Filehandles will be automatically closed.
+Filehandles will B<not> be closed.
 
 =head3 FILL_IN_PARAM
 
