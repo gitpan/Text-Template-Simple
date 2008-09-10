@@ -2,7 +2,7 @@ package Text::Template::Simple;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.54_03';
+$VERSION = '0.54_04';
 
 use Carp qw( croak );
 use Text::Template::Simple::Constants;
@@ -38,6 +38,64 @@ my %DEFAULT = ( # default object attributes
    monolith       =>  0, # use monolithic template & cache ?
    # TODO: Consider removing these
    resume         =>  0, # resume on error?
+);
+
+# internal templates
+my %INTERNAL = (
+   # we need string eval in this template to catch syntax errors
+   sub_include => q~
+      <%OBJECT%>->_compile(
+         do {
+            local $@;
+            my $file = eval '<%INCLUDE%>';
+            my $rv;
+            if ( my $e = $@ ) {
+               chomp $e;
+               $file ||= '<%INCLUDE%>';
+               my $m = "The parameter ($file) is not a file. "
+                     . "Error from sub-include ($file): $e";
+               $rv = [ ERROR => '<%ERROR_TITLE%> ' . $m ]
+            }
+            else {
+               $rv = $file;
+            }
+            $rv;
+         },
+         undef,
+         {
+            _sub_inc => '<%TYPE%>'
+         }
+      )
+   ~,
+   no_monolith => q*
+      <%OBJECT%>->compile(
+         q~<%FILE%>~,
+         undef,
+         {
+            chkmt    => 1,
+            _sub_inc => q~<%TYPE%>~,
+         }
+      );
+   *,
+
+   # see _parse()
+   map_keys_check => q(
+      <%BUF%> .= exists <%HASH%>->{"<%KEY%>"}
+               ? (
+                  defined <%HASH%>->{"<%KEY%>"}
+                  ? <%HASH%>->{"<%KEY%>"}
+                  : "[ERROR] Key not defined: <%KEY%>"
+                  )
+               : "[ERROR] Invalid key: <%KEY%>"
+               ;
+   ),
+
+   map_keys_init => q(
+      <%BUF%> .= <%HASH%>->{"<%KEY%>"} || '';
+   ),
+   map_keys_default => q(
+      <%BUF%> .= <%HASH%>->{"<%KEY%>"};
+   ),
 );
 
 sub new {
@@ -96,6 +154,9 @@ sub _compile {
    $opt->{chkmt}    ||= 0;  # check mtime of file template?
    $opt->{_sub_inc} ||= 0;  # are we called from a dynamic include op?
 
+   my $tmp = $self->_examine($tmpx);
+   return $tmp if $self->[TYPE] eq 'ERROR';
+
    if ( $opt->{_sub_inc} ) {
       # TODO:generate a single error handler for includes, merge with _include()
       # tmpx is a "file" included from an upper level compile()
@@ -104,7 +165,6 @@ sub _compile {
       return $etitle . " '$tmpx' is a directory" if   -d _;
    }
 
-   my $tmp = $self->_examine($tmpx);
    if ( $opt->{chkmt} ) {
       if ( $self->[TYPE] eq 'FILE' ) {
          $opt->{chkmt} = (stat $tmpx)[STAT_MTIME];
@@ -258,7 +318,11 @@ sub _examine {
    my($type, $thing) = $self->_examine_type( $TMP );
    my $rv;
 
-   if ( $type eq 'GLOB' ) {
+   if ( $type eq 'ERROR' ) {
+      $rv = $thing;
+      $self->[TYPE]         = $type;
+   }
+   elsif ( $type eq 'GLOB' ) {
       $rv                   = $self->_examine_glob( $thing );
       $self->[TYPE]         = 'GLOB';
    }
@@ -331,6 +395,28 @@ sub _tidy {
    return $buf;
 }
 
+sub _parse_mapkeys {
+   my($self, $map_keys, $faker, $buf_hash) = @_;
+   return undef, undef if ! $map_keys;
+
+   my $mkc = $map_keys eq 'check';
+   my $mki = $map_keys eq 'init';
+   my $t   = $mki ? 'map_keys_init'
+           : $mkc ? 'map_keys_check'
+           :        'map_keys_default'
+           ;
+   my $mko = $self->_mini_compiler(
+               $self->_internal( $t ) => {
+                  BUF  => $faker,
+                  HASH => $buf_hash,
+                  KEY  => '%s',
+               } => {
+                  flatten => 1,
+               }
+            );
+   return $mko, $mkc;
+}
+
 sub _parse {
    my $self     = shift;
    my $raw      = shift;
@@ -350,19 +436,7 @@ sub _parse {
    my $code     = '';
    my $inside   = 0;
 
-   my($mko, $mkc, $mki);
-
-   if ( $map_keys ) {
-      $mki = $map_keys eq 'init';
-      $mkc = $map_keys eq 'check';
-      $mko = $mki ? MAP_KEYS_INIT
-           : $mkc ? MAP_KEYS_CHECK
-           :        MAP_KEYS_DEFAULT
-           ;
-      $mko =~ s{<%BUF%>}{$faker}xmsg;
-      $mko =~ s{<%HASH%>}{$buf_hash}xmsg;
-      $mko =~ s{<%KEY%>}{%s}xmsg;
-   }
+   my($mko, $mkc) = $self->_parse_mapkeys( $map_keys, $faker, $buf_hash );
 
    LOG( RAW => $raw ) if ( DEBUG() > 3 );
 
@@ -436,6 +510,7 @@ sub _parse {
 }
 
 sub _wrapper {
+   # this'll be tricky to re-implement around a template
    my $self     = shift;
    my $code     = shift;
    my $cache_id = shift;
@@ -547,38 +622,46 @@ sub _include {
    return $self->_include_static(  $file, $text, $err);
 }
 
-sub _interpolate {
+sub _mini_compiler {
+   # little dumb compiler for internal templates
+   my $self     = shift;
+   my $template = shift || croak "_mini_compiler(): missing the template";
+   my $param    = shift || croak "_mini_compiler(): missing the parameters";
+   my $opt      = shift || {};
+
+   croak "_mini_compiler(): options must be a hash"    if ! ref($opt)   eq 'HASH';
+   croak "_mini_compiler(): parameters must be a HASH" if ! ref($param) eq 'HASH';
+
+   foreach my $var ( keys %{ $param } ) {
+      $template =~ s[<%\Q$var\E%>][$param->{$var}]xmsg;
+   }
+
+   $template =~ s{\s+}{ }xmsg if $opt->{flatten}; # remove extra spaces
+   return $template;
+}
+
+sub _internal {
    my $self = shift;
-   my $file = shift;
-   my $type = shift;
+   my $id   = shift            || croak "_internal(): id is missing";
+   my $rv   = $INTERNAL{ $id } || croak "_internal(): id is invalid";
+   return $rv;
+}
 
-   # we need string eval in this template to catch syntax errors
-   my $template = q~
-      %s->_compile(
-         do {
-            local $@;
-            my $file = eval '%s';
-            if ( $@ ) {
-               $file ||= '%s';
-               die "Error from sub dynamic include ($file): $@";
-            }
-            $file;
-         },
-         undef,
-         {
-            _sub_inc => '%s'
-         }
-      )
-   ~;
-   $template =~ s{\s+}{ }xmsg; # remove extra spaces
-
-   my $buf = escape q{'} => $file;
-   my $rv = sprintf $template,
-                     $self->[FAKER_SELF],
-                     $buf,
-                     $buf,
-                     $type
-                     ;
+sub _interpolate {
+   my $self   = shift;
+   my $file   = shift;
+   my $type   = shift;
+   my $etitle = $self->_include_error($type);
+   my $rv     = $self->_mini_compiler(
+                  $self->_internal('sub_include') => {
+                     OBJECT      => $self->[FAKER_SELF],
+                     INCLUDE     => escape( q{'} => $file   ),
+                     ERROR_TITLE => escape( q{'} => $etitle ),
+                     TYPE        => $type,
+                  } => {
+                     flatten => 1,
+                  }
+               );
    return $rv;
 }
 
@@ -587,11 +670,15 @@ sub _include_no_monolith {
    my $self = shift;
    my $type = shift;
    my $file = shift;
-   my $tmp  = "%s->compile( q~%s~, undef, { _sub_inc => q~%s~, chkmt => 1 } );";
-   my $rv   = sprintf $tmp,
-                      $self->[FAKER_SELF],
-                      escape('~' => $file),
-                      escape('~' => $type);
+   my $rv   =  $self->_mini_compiler(
+                  $self->_internal('no_monolith') => {
+                     OBJECT => $self->[FAKER_SELF],
+                     FILE   => escape('~' => $file),
+                     TYPE   => escape('~' => $type),
+                  } => {
+                     flatten => 1,
+                  }
+               );
    ++$self->[NEEDS_OBJECT];
    return $rv;
 }

@@ -2,6 +2,10 @@ Revision history for Perl extension Text::Template::Simple.
 
 Time zone is GMT+2.
 
+0.54_04 Wed Sep 10 22:26:35 2008
+   => Internal cleanup.
+   => Improved interpolation of includes.
+
 0.54_03 Sun Sep  7 21:33:49 2008
    => Added a test for changing the default delimiters.
    => Pod update: if the template is a FH, it will not be closed after reading.

@@ -49,9 +49,6 @@ can_ok( 'Text::Template::Simple::Constants',
             FRAGMENT_TMP
             DISK_CACHE_COMMENT
             DISK_CACHE_MARKER
-            MAP_KEYS_CHECK
-            MAP_KEYS_INIT
-            MAP_KEYS_DEFAULT
             DELIM_START
             DELIM_END
             DELIMS
