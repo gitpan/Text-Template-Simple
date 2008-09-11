@@ -2,6 +2,9 @@ Revision history for Perl extension Text::Template::Simple.
 
 Time zone is GMT+2.
 
+0.54_05 Fri Sep 12 00:15:23 2008
+   => Implemented include paths.
+
 0.54_04 Wed Sep 10 22:26:35 2008
    => Internal cleanup.
    => Improved interpolation of includes.

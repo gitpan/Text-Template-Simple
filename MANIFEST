@@ -32,6 +32,7 @@ t/20-fake-include-recursive.t
 t/21-comment.t
 t/22-monolith.t
 t/23-change-delims.t
+t/24-include-paths.t
 t/99-all-modules-have-the-same-version.t
 t/data/test.tts
 t/data/dynamic.tts

@@ -35,6 +35,7 @@ use constant IOLAYER         => ++$OID;
 use constant STACK           => ++$OID;
 use constant USER_THANDLER   => ++$OID;
 use constant DEEP_RECURSION  => ++$OID;
+use constant INCLUDE_PATHS   => ++$OID;
 use constant MAXOBJFIELD     =>   $OID; # number of the last object field
 # settings
 use constant MAX_RECURSION   => 50; # recursion limit for dynamic includes
@@ -222,6 +223,7 @@ BEGIN {
                         STACK
                         USER_THANDLER
                         DEEP_RECURSION
+                        INCLUDE_PATHS
                         MAXOBJFIELD
                      )],
       resume    =>   [qw(

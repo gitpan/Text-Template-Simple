@@ -2,7 +2,7 @@ package Text::Template::Simple;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.54_04';
+$VERSION = '0.54_05';
 
 use Carp qw( croak );
 use Text::Template::Simple::Constants;
@@ -15,6 +15,7 @@ use Text::Template::Simple::Util;
 use Text::Template::Simple::Cache::ID;
 use Text::Template::Simple::Cache;
 use Text::Template::Simple::IO;
+use File::Spec;
 
 my %CONNECTOR = ( # Default classes list
    'Cache'     => 'Text::Template::Simple::Cache',
@@ -36,6 +37,7 @@ my %DEFAULT = ( # default object attributes
    stack          => '',
    user_thandler  => undef, # user token handler callback
    monolith       =>  0, # use monolithic template & cache ?
+   include_paths  => [],
    # TODO: Consider removing these
    resume         =>  0, # resume on error?
 );
@@ -154,15 +156,17 @@ sub _compile {
    $opt->{chkmt}    ||= 0;  # check mtime of file template?
    $opt->{_sub_inc} ||= 0;  # are we called from a dynamic include op?
 
-   my $tmp = $self->_examine($tmpx);
+   my $tmp = $self->_examine( $tmpx );
    return $tmp if $self->[TYPE] eq 'ERROR';
 
    if ( $opt->{_sub_inc} ) {
       # TODO:generate a single error handler for includes, merge with _include()
       # tmpx is a "file" included from an upper level compile()
       my $etitle = $self->_include_error('dynamic');
-      return $etitle . " '$tmpx' is not a file"  if ! -e $tmpx;
-      return $etitle . " '$tmpx' is a directory" if   -d _;
+      my $exists = $self->_file_exists( $tmpx );
+      return $etitle . " '$tmpx' is not a file" if not $exists;
+      # TODO: remove this second call somehow, reduce  to a single call
+      $tmp = $self->_examine( $exists ); # re-examine
    }
 
    if ( $opt->{chkmt} ) {
@@ -240,6 +244,11 @@ sub _init {
          if ref($self->[USER_THANDLER]) ne 'CODE';
    }
 
+   if ( $self->[INCLUDE_PATHS] ) {
+      croak "include_paths parameter must be a ARRAY reference"
+         if ref($self->[INCLUDE_PATHS]) ne 'ARRAY';
+   }
+
    $self->[IO_OBJECT] = $self->connector('IO')->new( $self->[IOLAYER] );
 
    if ( $self->[CACHE_DIR] ) {
@@ -274,6 +283,7 @@ sub _output_buffer_var {
 }
 
 sub _is_file {
+   # safer than a simple "-e"
    my $self = shift;
    my $file = shift || return;
    return     ref $file               ? 0
@@ -333,8 +343,16 @@ sub _examine {
          $self->[TYPE_FILE] = $thing;
       }
       else {
-         $rv                = $thing;
-         $self->[TYPE]      = 'STRING';
+         # give it a last chance
+         if ( my $e = $self->_file_exists( $thing ) ) {
+            $rv                = $self->io->slurp( $e );
+            $self->[TYPE]      = 'FILE';
+            $self->[TYPE_FILE] = $e;
+         }
+         else {
+            $rv                = $thing;
+            $self->[TYPE]      = 'STRING';
+         }
       }
    }
 
@@ -582,6 +600,20 @@ sub _include_error {
    return $title;
 }
 
+sub _file_exists {
+   my $self = shift;
+   my $file = shift;
+
+   return $file if $self->_is_file( $file );
+
+   foreach my $path ( @{ $self->[INCLUDE_PATHS] } ) {
+      my $test = File::Spec->catfile( $path, $file );
+      return $test if $self->_is_file( $test );
+   }
+
+   return; # fail!
+}
+
 sub _include {
    my $self       = shift;
    my $type       = shift || '';
@@ -594,10 +626,17 @@ sub _include {
 
    croak "Unknown include type: $type" if not $known;
 
-   my $err = $self->_include_error( $type );
+   my $err    = $self->_include_error( $type );
+   my $exists = $self->_file_exists( $file );
+   my $interpolate;
 
-   # just guessing ...
-   my $interpolate = -e $file ? 0 : 1;
+   if ( $exists ) {
+      $file        = $exists; # file path correction
+      $interpolate = 0;
+   }
+   else {
+      $interpolate = 1; # just guessing ...
+   }
 
    if ( -d $file ) {
       $file = escape '~' => $file;
@@ -1056,6 +1095,12 @@ includes, then you need to enable this option. However, if you are using the
 cache, then the included templates will not be updated automatically.
 
 C<monolith> is disabled by default.
+
+=head1 include_paths
+
+An ARRAY reference. If you want to use relative file paths when
+compiling/including template files, add the paths of the templates with
+this parameter.
 
 =head2 compile DATA [, FILL_IN_PARAM, OPTIONS]
 
