@@ -137,8 +137,10 @@ can_ok( 'Text::Template::Simple::Tokenizer',
             ID_DS
             ID_DE
             ID_FU
-            SUBSTR_OFFSET
+            SUBSTR_OFFSET_FIRST
+            SUBSTR_OFFSET_SECOND
             SUBSTR_LENGTH
+            CHOMP_DIRECTIVE
             new
             tokenize
             _token_code

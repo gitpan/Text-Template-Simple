@@ -7,14 +7,17 @@ use constant CMD_CB        =>  2; # callback
 
 use constant TOKEN_ID      =>  0;
 use constant TOKEN_STR     =>  1;
+use constant TOKEN_EXTRA   =>  2;
 use constant LAST_TOKEN    => -1;
 
 use constant ID_DS         =>  0;
 use constant ID_DE         =>  1;
 use constant ID_FU         =>  2;
 
-use constant SUBSTR_OFFSET =>  0;
-use constant SUBSTR_LENGTH =>  1;
+use constant SUBSTR_OFFSET_FIRST  =>  0;
+use constant SUBSTR_OFFSET_SECOND =>  1;
+use constant SUBSTR_LENGTH        =>  1;
+use constant CHOMP_DIRECTIVE      => '-';
 
 use Carp qw( croak );
 use Text::Template::Simple::Util ();
@@ -83,40 +86,71 @@ sub tokenize {
    return \@tokens;
 }
 
+sub _chomp_token {
+   my($self, $open, $close) = @_;
+
+   my $chomp_open  = $open  eq CHOMP_DIRECTIVE;
+   my $chomp_close = $close eq CHOMP_DIRECTIVE;
+   my $chomp_both  = $chomp_open && $chomp_close;
+
+   my $token = $chomp_both  ? 'CHOMP_BOTH'
+             : $chomp_open  ? 'CHOMP_OPEN'
+             : $chomp_close ? 'CHOMP_CLOSE'
+             :                ''
+             ;
+   return $chomp_open, $chomp_close, $token;
+}
+
 sub _token_code {
    my $self     = shift;
    my $str      = shift;
    my $inside   = shift;
    my $map_keys = shift;
    my $tree     = shift;
-   my $first    = substr $str, SUBSTR_OFFSET, SUBSTR_LENGTH;
-   # $first is the left-cmd, perhaps we can use a right-cmd?
-   #my $last    = substr $str, length($str) - 1, SUBSTR_LENGTH;
-   my $fu       = $self->[ID_FU];
+   # $first is the left-cmd, $last is the right-cmd. $second is the extra
+   my $first    = substr $str, SUBSTR_OFFSET_FIRST , SUBSTR_LENGTH;
+   my $second   = substr $str, SUBSTR_OFFSET_SECOND, SUBSTR_LENGTH;
+   my $last     = substr $str, length($str) - 1, SUBSTR_LENGTH;
+   my $len      = length($str);
 
-   my($cmd, $len, $cb, $buf);
-   TCODE: foreach $cmd ( @COMMANDS, $self->_user_commands ) {
-      if ( $first eq $cmd->[CMD_CHAR] ) {
-         $len = length($str);
-         $cb  = $cmd->[CMD_CB];
-         $buf = substr $str, 1, $len - 1;
-         if ( $cmd->[CMD_ID] eq 'NOTADELIM' && $inside ) {
-            $buf = $self->[ID_DS] . $buf;
-            $tree->[LAST_TOKEN][TOKEN_ID] = 'DISCARD';
+   TCODE: {
+      my($copen, $cclose, $ctoken) = $self->_chomp_token( $second, $last );
+
+      foreach my $cmd ( @COMMANDS, $self->_user_commands ) {
+
+         if ( $first eq $cmd->[CMD_CHAR] ) {
+            my $cb   = $map_keys ? 'quote' : $cmd->[CMD_CB];
+            my $soff = $copen ? 2 : 1;
+            my $slen = $len - ($cclose ? $soff+1 : 1);
+            my $buf  = substr $str, $soff, $slen;
+
+            if ( $cmd->[CMD_ID] eq 'NOTADELIM' && $inside ) {
+               $buf = $self->[ID_DS] . $buf;
+               $tree->[LAST_TOKEN][TOKEN_ID] = 'DISCARD';
+            }
+
+            return [
+                     $map_keys ? 'RAW'              : $cmd->[CMD_ID],
+                     $cb       ? $self->$cb( $buf ) : $buf,
+                     ($ctoken  ? $ctoken            : () )
+                   ];
          }
-         $cb = 'quote' if $map_keys;
-         return [
-                  $map_keys ? 'RAW'              : $cmd->[CMD_ID],
-                  $cb       ? $self->$cb( $buf ) : $buf
-                ];
       }
    }
 
    if ( $inside ) {
-      return [ MAPKEY => $str ] if $map_keys;
-      #$str = $self->trim( $str );
-      return [ CODE   => $str ];
+      my($copen, $cclose, $ctoken) = $self->_chomp_token( $first, $last );
+      my @extra = ($ctoken ? $ctoken : () );
+      my $soff  = $copen ? 1 : 0;
+      my $slen  = $len - ( $cclose ? $soff+1 : 0 );
+
+      return   [
+                  $map_keys ? 'MAPKEY' : 'CODE',
+                  substr($str, $soff, $slen),
+                  @extra
+               ];
    }
+
    return [ RAW => $self->tilde( $str ) ];
 }
 

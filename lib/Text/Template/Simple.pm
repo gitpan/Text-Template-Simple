@@ -2,7 +2,7 @@ package Text::Template::Simple;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.54_05';
+$VERSION = '0.54_06';
 
 use Carp qw( croak );
 use Text::Template::Simple::Constants;
@@ -42,7 +42,7 @@ my %DEFAULT = ( # default object attributes
    resume         =>  0, # resume on error?
 );
 
-# internal templates
+# internal code templates
 my %INTERNAL = (
    # we need string eval in this template to catch syntax errors
    sub_include => q~
@@ -135,6 +135,8 @@ sub compile {
    my $self  = shift;
    my $rv    = $self->_compile( @_ );
    # we need to reset this to prevent false positives
+   # the trick is: this is set in _compile() and sub includes call _compile()
+   # instead of compile(), so it will only be reset here
    $self->[COUNTER_INCLUDE] = undef;
    return $rv;
 }
@@ -329,12 +331,12 @@ sub _examine {
    my $rv;
 
    if ( $type eq 'ERROR' ) {
-      $rv = $thing;
-      $self->[TYPE]         = $type;
+      $rv           = $thing;
+      $self->[TYPE] = $type;
    }
    elsif ( $type eq 'GLOB' ) {
-      $rv                   = $self->_examine_glob( $thing );
-      $self->[TYPE]         = 'GLOB';
+      $rv           = $self->_examine_glob( $thing );
+      $self->[TYPE] = 'GLOB';
    }
    else {
       if ( $type eq 'FILE' || $self->_is_file( $thing ) ) {
@@ -343,7 +345,7 @@ sub _examine {
          $self->[TYPE_FILE] = $thing;
       }
       else {
-         # give it a last chance
+         # give it a last chance, before falling back to string
          if ( my $e = $self->_file_exists( $thing ) ) {
             $rv                = $self->io->slurp( $e );
             $self->[TYPE]      = 'FILE';
@@ -546,6 +548,7 @@ sub _wrapper {
       $wrapper .= 'use strict;' if $self->[STRICT];
    }
    $wrapper .= 'sub { ';
+   $wrapper .= sprintf q~local $0 = '%s';~, escape( q{'} => $self->[FILENAME] );
    if ( $self->[NEEDS_OBJECT] ) {
       --$self->[NEEDS_OBJECT];
       $wrapper .= 'my ' . $self->[FAKER_SELF] . ' = shift;';

@@ -2,6 +2,12 @@ Revision history for Perl extension Text::Template::Simple.
 
 Time zone is GMT+2.
 
+0.54_06 Sat Sep 13 02:22:00 2008
+   => You can now use $0 inside templates to access to the name of the template.
+   => Added support for pre/post chomping (a la TT) into the tokenizer.
+      The rest of the tokenizer or the parser currently does not support that,
+      so it's practically useless for now (<%- -%>, <%=- -%>, etc.).
+
 0.54_05 Fri Sep 12 00:15:23 2008
    => Implemented include paths.
 
