@@ -82,22 +82,25 @@ sub escape {
 sub trim {
    my $s = shift;
    return $s if ! $s; # false or undef
-      $s =~ s{\A \s+   }{}xms;
-      $s =~ s{   \s+ \z}{}xms;
+   my $extra = shift || '';
+      $s =~ s{\A \s+   }{$extra}xms;
+      $s =~ s{   \s+ \z}{$extra}xms;
    return $s;
 }
 
 sub ltrim {
    my $s = shift;
    return $s if ! $s; # false or undef
-      $s =~ s{\A \s+ }{}xms;
+   my $extra = shift || '';
+      $s =~ s{\A \s+ }{$extra}xms;
    return $s;
 }
 
 sub rtrim {
    my $s = shift;
    return $s if ! $s; # false or undef
-      $s =~ s{ \s+ \z}{}xms;
+   my $extra = shift || '';
+      $s =~ s{ \s+ \z}{$extra}xms;
    return $s;
 }
 

@@ -6,5 +6,5 @@ use Text::Template::Simple;
 my $t = Text::Template::Simple->new();
 
 TODO: {
-    todo_skip("PRE/POST Chomp");
+    todo_skip("PRE/POST Chomp. Global PRE/POST chomp & collapse");
 }

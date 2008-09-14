@@ -1,18 +1,22 @@
 package Text::Template::Simple::Tokenizer;
 use strict;
 use vars qw($VERSION);
-use constant CMD_CHAR       =>  0;
-use constant CMD_ID         =>  1;
-use constant CMD_CB         =>  2; # callback
+use constant CMD_CHAR             =>  0;
+use constant CMD_ID               =>  1;
+use constant CMD_CB               =>  2; # callback
 
-use constant TOKEN_ID       =>  0;
-use constant TOKEN_STR      =>  1;
-use constant TOKEN_EXTRA    =>  2;
-use constant LAST_TOKEN     => -1;
-use constant PREVIOUS_TOKEN => -3;
+use constant TOKEN_ID             =>  0;
+use constant TOKEN_STR            =>  1;
+use constant TOKEN_EXTRA          =>  2;
+use constant TOKEN_COLLAPSE       =>  3;
 
-use constant ID_DS          =>  0;
-use constant ID_DE          =>  1;
+use constant LAST_TOKEN           => -1;
+use constant PREVIOUS_TOKEN       => -3;
+
+use constant ID_DS                =>  0;
+use constant ID_DE                =>  1;
+use constant ID_PRE_CHOMP         =>  2;
+use constant ID_POST_CHOMP        =>  3;
 
 use constant SUBSTR_OFFSET_FIRST  =>  0;
 use constant SUBSTR_OFFSET_SECOND =>  1;
@@ -20,7 +24,8 @@ use constant SUBSTR_LENGTH        =>  1;
 use constant CHOMP_DIRECTIVE      => '-';
 
 use Carp qw( croak );
-use Text::Template::Simple::Util ();
+use Text::Template::Simple::Util      qw();
+use Text::Template::Simple::Constants qw( :chomp :token );
 
 $VERSION = '0.54_02';
 
@@ -37,8 +42,10 @@ sub new {
    my $class = shift;
    my $self  = [];
    bless $self, $class;
-   $self->[ID_DS] = shift || croak "Start delimiter is missing";
-   $self->[ID_DE] = shift || croak "End delimiter is missing";
+   $self->[ID_DS]         = shift || croak "Start delimiter is missing";
+   $self->[ID_DE]         = shift || croak "End delimiter is missing";
+   $self->[ID_PRE_CHOMP]  = shift || CHOMP_NONE;
+   $self->[ID_POST_CHOMP] = shift || CHOMP_NONE;
    $self;
 }
 
@@ -49,8 +56,7 @@ sub tokenize {
    my $map_keys   = shift;
    my($ds, $de)   = ($self->[ID_DS], $self->[ID_DE]);
    my($qds, $qde) = map { quotemeta $_ } $ds, $de;
-
-   my(@tokens, $inside, $extra);
+   my(@tokens, $inside, $extra, $ecollapse);
 
    OUT_TOKEN: foreach my $i ( split /($qds)/, $tmp ) {
 
@@ -68,7 +74,9 @@ sub tokenize {
                $last->[TOKEN_STR] = $self->tilde( $last->[TOKEN_STR] . $de );
             }
             else {
-               $extra = $tokens[LAST_TOKEN][TOKEN_EXTRA]; # reset in _chomp()
+               # these will be reset in _chomp()
+               $extra = $tokens[LAST_TOKEN][TOKEN_EXTRA];
+               $ecollapse = $tokens[LAST_TOKEN][TOKEN_COLLAPSE];
                push @tokens, [ DELIMEND => $j ];
             }
             $inside = 0;
@@ -76,12 +84,7 @@ sub tokenize {
          }
 
          push @tokens, $self->_token_code( $j, $inside, $map_keys, \@tokens );
-
-         # first one checks for CHOMP_CLOSE and the second checks CHOMP_OPEN
-         # CHOMP_BOTH is checked by both
-         $self->_chomp( \@tokens, undef                           , \$extra );
-         $self->_chomp( \@tokens, $tokens[LAST_TOKEN][TOKEN_EXTRA], undef   );
-
+         $self->_chomp( \@tokens, \$extra, \$ecollapse );
       }
    }
 
@@ -98,26 +101,31 @@ sub _chomp {
    # optimize away the unnecessary white space before parsing happens
    my $self      = shift;
    my $tree_ref  = shift;
-   my $type      = shift || '';
-   my $extra_ref = shift; # don't set a default !!!
-   my $is_close  = defined $extra_ref && $$extra_ref && (
-                        $$extra_ref eq 'CHOMP_CLOSE' ||
-                        $$extra_ref eq 'CHOMP_BOTH'
+   my $extra_ref = shift;
+   my $xc_ref    = shift;
+   my $is_close  = defined $$extra_ref && (
+                        $$extra_ref & TOKEN_CHOMP_CLOSE ||
+                        $$extra_ref & TOKEN_CHOMP_BOTH
                   );
 
+   my $last = $tree_ref->[LAST_TOKEN];
+
    if ( $is_close ) {
-      my $post = @{ $tree_ref } ? $tree_ref->[LAST_TOKEN] : undef;
-      if ( $post ) {
-         $post->[TOKEN_STR] = $self->ltrim( $post->[TOKEN_STR] );
-         $$extra_ref        = undef; # reset!
-      }
-      return if $$extra_ref eq 'CHOMP_CLOSE'; # by-pass below code
+      my $collapse       = $last->[TOKEN_COLLAPSE] || $$xc_ref || CHOMP_NONE;
+      my $cc             = $collapse & CHOMP_COLLAPSE_POST ? ' ' : undef;
+      $last->[TOKEN_STR] = $self->ltrim( $last->[TOKEN_STR], $cc );
+      $$extra_ref        = undef; # reset!
+      $$xc_ref           = undef; # reset!
+      return if $$extra_ref & TOKEN_CHOMP_CLOSE; # by-pass the code below
    }
 
-   if ( $type eq 'CHOMP_OPEN' || $type eq 'CHOMP_BOTH' ) {
+   my $type = $last->[TOKEN_EXTRA] || return;
+
+   if ( $type & TOKEN_CHOMP_OPEN || $type & TOKEN_CHOMP_BOTH ) {
       if ( @{ $tree_ref } >= 2 ) {
-         my $t           = $tree_ref->[PREVIOUS_TOKEN];
-         $t->[TOKEN_STR] = $self->rtrim( $t->[TOKEN_STR] );
+         my $t  = $tree_ref->[PREVIOUS_TOKEN];
+         my $cc = $last->[TOKEN_COLLAPSE] & CHOMP_COLLAPSE_PRE ? ' ' : undef;
+         $t->[TOKEN_STR] = $self->rtrim( $t->[TOKEN_STR], $cc );
       }
    }
 
@@ -126,17 +134,31 @@ sub _chomp {
 
 sub _chomp_token {
    my($self, $open, $close) = @_;
+   my($pre, $post) = ( $self->[ID_PRE_CHOMP], $self->[ID_POST_CHOMP] );
 
-   my $chomp_open  = $open  eq CHOMP_DIRECTIVE;
-   my $chomp_close = $close eq CHOMP_DIRECTIVE;
-   my $chomp_both  = $chomp_open && $chomp_close;
+   my $c      = CHOMP_NONE;
 
-   my $token = $chomp_both  ? 'CHOMP_BOTH'
-             : $chomp_open  ? 'CHOMP_OPEN'
-             : $chomp_close ? 'CHOMP_CLOSE'
-             :                ''
+   my $copen  = $pre  &  CHOMP_COLLAPSE   ? do { $c |= CHOMP_COLLAPSE_PRE;  1 }
+              : $pre  &  CHOMP_ALL        ? 1
+              : $open eq CHOMP_DIRECTIVE  ? 1
+              :                             0
+              ;
+
+   my $cclose = $post  &  CHOMP_COLLAPSE  ? do { $c |= CHOMP_COLLAPSE_POST; 1 }
+              : $post  &  CHOMP_ALL       ? 1
+              : $close eq CHOMP_DIRECTIVE ? 1
+              :                             0
+              ;
+
+   my $cboth  = $copen && $cclose;
+
+   my $token = $cboth  ? TOKEN_CHOMP_BOTH
+             : $copen  ? TOKEN_CHOMP_OPEN
+             : $cclose ? TOKEN_CHOMP_CLOSE
+             :           TOKEN_CHOMP_NONE
              ;
-   return $chomp_open, $chomp_close, $token;
+
+   return $copen, $cclose, $token, $c;
 }
 
 sub _token_code {
@@ -152,7 +174,7 @@ sub _token_code {
    my $len      = length($str);
 
    TCODE: {
-      my($copen, $cclose, $ctoken) = $self->_chomp_token( $second, $last );
+      my($copen, $cclose, $ctoken, $cc) = $self->_chomp_token( $second, $last );
 
       foreach my $cmd ( @COMMANDS, $self->_user_commands ) {
 
@@ -170,22 +192,21 @@ sub _token_code {
             return [
                      $map_keys ? 'RAW'              : $cmd->[CMD_ID],
                      $cb       ? $self->$cb( $buf ) : $buf,
-                     ($ctoken  ? $ctoken            : () )
+                     ($ctoken  ? ($ctoken, $cc )    : () ),
                    ];
          }
       }
    }
 
    if ( $inside ) {
-      my($copen, $cclose, $ctoken) = $self->_chomp_token( $first, $last );
-      my @extra = ($ctoken ? $ctoken : () );
-      my $soff  = $copen ? 1 : 0;
-      my $slen  = $len - ( $cclose ? $soff+1 : 0 );
+      my($copen, $cclose, $ctoken, $cc) = $self->_chomp_token( $first, $last );
+      my $soff = $copen ? 1 : 0;
+      my $slen = $len - ( $cclose ? $soff+1 : 0 );
 
       return   [
                   $map_keys ? 'MAPKEY' : 'CODE',
                   substr($str, $soff, $slen),
-                  @extra
+                  ($ctoken ? ($ctoken, $cc) : () ),
                ];
    }
 
@@ -198,11 +219,11 @@ sub _user_commands {
    return $self->commands;
 }
 
-sub tilde { Text::Template::Simple::Util::escape( '~' => $_[1] ) }
-sub quote { Text::Template::Simple::Util::escape( '"' => $_[1] ) }
-sub trim  { Text::Template::Simple::Util::trim(          $_[1] ) }
-sub rtrim { Text::Template::Simple::Util::rtrim(         $_[1] ) }
-sub ltrim { Text::Template::Simple::Util::ltrim(         $_[1] ) }
+sub tilde { shift; Text::Template::Simple::Util::escape( '~' => @_ ) }
+sub quote { shift; Text::Template::Simple::Util::escape( '"' => @_ ) }
+sub trim  { shift; Text::Template::Simple::Util::trim(          @_ ) }
+sub rtrim { shift; Text::Template::Simple::Util::rtrim(         @_ ) }
+sub ltrim { shift; Text::Template::Simple::Util::ltrim(         @_ ) }
 
 1;
 

@@ -36,6 +36,8 @@ use constant STACK           => ++$OID;
 use constant USER_THANDLER   => ++$OID;
 use constant DEEP_RECURSION  => ++$OID;
 use constant INCLUDE_PATHS   => ++$OID;
+use constant PRE_CHOMP       => ++$OID;
+use constant POST_CHOMP      => ++$OID;
 use constant MAXOBJFIELD     =>   $OID; # number of the last object field
 # settings
 use constant MAX_RECURSION   => 50; # recursion limit for dynamic includes
@@ -50,11 +52,22 @@ use constant COMPILER        => PARENT.'::Compiler';       # The compiler
 use constant COMPILER_SAFE   => PARENT.'::Compiler::Safe'; # Safe compiler
 use constant DUMMY_CLASS     => PARENT.'::Dummy';          # Dummy class
 use constant MAX_FL          => 120;                       # Maximum file name length
-use constant CACHE_EXT       => '.tts.cache';             # disk cache extension
+use constant CACHE_EXT       => '.tts.cache';              # disk cache extension
 use constant STAT_SIZE       => 7;                         # for stat()
 use constant STAT_MTIME      => 9;                         # for stat()
 use constant DELIMS          => qw( <% %> );               # default delimiter pair
 use constant NEW_PERL        => $] >= 5.008;               # for I/O layer
+
+use constant CHOMP_NONE          => 0x00000000;
+use constant CHOMP_ALL           => 0x00000001;
+use constant CHOMP_COLLAPSE      => 0x00000002;
+use constant CHOMP_COLLAPSE_PRE  => 0x00000003;
+use constant CHOMP_COLLAPSE_POST => 0x00000004;
+
+use constant TOKEN_CHOMP_NONE    => 0x00000000;
+use constant TOKEN_CHOMP_OPEN    => 0x00000001;
+use constant TOKEN_CHOMP_CLOSE   => 0x00000002;
+use constant TOKEN_CHOMP_BOTH    => 0x00000003;
 
 use constant IS_FLOCK        => sub {
    # are we running under dumb OS?
@@ -224,6 +237,8 @@ BEGIN {
                         USER_THANDLER
                         DEEP_RECURSION
                         INCLUDE_PATHS
+                        PRE_CHOMP
+                        POST_CHOMP
                         MAXOBJFIELD
                      )],
       resume    =>   [qw(
@@ -234,6 +249,19 @@ BEGIN {
                         RESUME_ELSE
                         RESUME_LOOP
                         RESUME_TEMPLATE
+                     )],
+      chomp     =>   [qw(
+                        CHOMP_NONE
+                        CHOMP_ALL
+                        CHOMP_COLLAPSE
+                        CHOMP_COLLAPSE_PRE
+                        CHOMP_COLLAPSE_POST
+                     )],
+      token     =>   [qw(
+                        TOKEN_CHOMP_NONE
+                        TOKEN_CHOMP_BOTH
+                        TOKEN_CHOMP_OPEN
+                        TOKEN_CHOMP_CLOSE
                      )],
       etc       =>   [qw(
                         DIGEST_MODS

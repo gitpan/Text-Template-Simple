@@ -2,7 +2,7 @@ package Text::Template::Simple;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.54_07';
+$VERSION = '0.54_08';
 
 use Carp qw( croak );
 use Text::Template::Simple::Constants;
@@ -26,20 +26,22 @@ my %CONNECTOR = ( # Default classes list
 
 my %DEFAULT = ( # default object attributes
    delimiters     => [ DELIMS ], # default delimiters
-   cache          =>  0, # use cache or not
-   cache_dir      => '', # will use hdd intead of memory for caching...
-   strict         =>  1, # set to false for toleration to un-declared vars
-   safe           =>  0, # use safe compartment?
-   header         =>  0, # template header. i.e. global codes.
-   add_args       => '', # will unshift template argument list. ARRAYref.
-   warn_ids       =>  0, # warn template ids?
-   iolayer        => '', # I/O layer for filehandles
-   stack          => '',
+   cache          =>  0,    # use cache or not
+   cache_dir      => '',    # will use hdd intead of memory for caching...
+   strict         =>  1,    # set to false for toleration to un-declared vars
+   safe           =>  0,    # use safe compartment?
+   header         =>  0,    # template header. i.e. global codes.
+   add_args       => '',    # will unshift template argument list. ARRAYref.
+   warn_ids       =>  0,    # warn template ids?
+   iolayer        => '',    # I/O layer for filehandles
+   stack          => '',    # dump caller stack?
    user_thandler  => undef, # user token handler callback
-   monolith       =>  0, # use monolithic template & cache ?
-   include_paths  => [],
+   monolith       =>  0,    # use monolithic template & cache ?
+   include_paths  => [],    # list of template dirs
+   pre_chomp      => CHOMP_NONE,
+   post_chomp     => CHOMP_NONE,
    # TODO: Consider removing these
-   resume         =>  0, # resume on error?
+   resume         =>  0,    # resume on error?
 );
 
 # internal code templates
@@ -452,7 +454,9 @@ sub _parse {
                                           : $self->[FAKER]
                                           ;
    my $buf_hash = $self->[FAKER_HASH];
-   my $toke     = $self->connector('Tokenizer')->new( $ds, $de );
+   my $toke     = $self->connector('Tokenizer')->new(
+                     $ds, $de, $self->[PRE_CHOMP], $self->[POST_CHOMP]
+                  );
    my $code     = '';
    my $inside   = 0;
 
@@ -1104,6 +1108,26 @@ C<monolith> is disabled by default.
 An ARRAY reference. If you want to use relative file paths when
 compiling/including template files, add the paths of the templates with
 this parameter.
+
+=head3 pre_chomp
+
+   use Text::Template::Simple::Constants qw( :chomp );
+   $pre = CHOMP_NONE; # no chomp
+   $pre = CHOMP_ALL;  # remove all whitespace
+   $pre = CHOMP_COLLAPSE; # replace all ws with a single space
+   $template = Text::Template::Simple->new(
+      pre_chomp => $pre,
+   );
+
+=head3 post_chomp
+
+   use Text::Template::Simple::Constants qw( :chomp );
+   $post = CHOMP_NONE; # no chomp
+   $post = CHOMP_ALL;  # remove all whitespace
+   $post = CHOMP_COLLAPSE; # replace all ws with a single space
+   $template = Text::Template::Simple->new(
+      post_chomp => $post,
+   );
 
 =head2 compile DATA [, FILL_IN_PARAM, OPTIONS]
 
