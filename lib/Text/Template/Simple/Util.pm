@@ -31,7 +31,7 @@ BEGIN {
 @ISA         = qw( Exporter );
 %EXPORT_TAGS = (
    macro => [qw( isaref      ishref      )],
-   util  => [qw( binary_mode DIGEST trim escape )],
+   util  => [qw( binary_mode DIGEST trim rtrim ltrim escape )],
    debug => [qw( fatal       DEBUG  LOG  )],
 );
 @EXPORT_OK        = map { @{ $EXPORT_TAGS{$_} } } keys %EXPORT_TAGS;
@@ -84,6 +84,20 @@ sub trim {
    return $s if ! $s; # false or undef
       $s =~ s{\A \s+   }{}xms;
       $s =~ s{   \s+ \z}{}xms;
+   return $s;
+}
+
+sub ltrim {
+   my $s = shift;
+   return $s if ! $s; # false or undef
+      $s =~ s{\A \s+ }{}xms;
+   return $s;
+}
+
+sub rtrim {
+   my $s = shift;
+   return $s if ! $s; # false or undef
+      $s =~ s{ \s+ \z}{}xms;
    return $s;
 }
 
@@ -188,6 +202,14 @@ Returns true if C<THING> is a HASH.
 =head2 trim STRING
 
 Returns the trimmed version of the C<STRING>.
+
+=head2 ltrim STRING
+
+Returns the left trimmed version of the C<STRING>.
+
+=head2 rtrim STRING
+
+Returns the right trimmed version of the C<STRING>.
 
 =head2 escape CHAR, STRING
 

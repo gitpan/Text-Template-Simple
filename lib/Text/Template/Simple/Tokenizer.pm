@@ -1,18 +1,18 @@
 package Text::Template::Simple::Tokenizer;
 use strict;
 use vars qw($VERSION);
-use constant CMD_CHAR      =>  0;
-use constant CMD_ID        =>  1;
-use constant CMD_CB        =>  2; # callback
+use constant CMD_CHAR       =>  0;
+use constant CMD_ID         =>  1;
+use constant CMD_CB         =>  2; # callback
 
-use constant TOKEN_ID      =>  0;
-use constant TOKEN_STR     =>  1;
-use constant TOKEN_EXTRA   =>  2;
-use constant LAST_TOKEN    => -1;
+use constant TOKEN_ID       =>  0;
+use constant TOKEN_STR      =>  1;
+use constant TOKEN_EXTRA    =>  2;
+use constant LAST_TOKEN     => -1;
+use constant PREVIOUS_TOKEN => -3;
 
-use constant ID_DS         =>  0;
-use constant ID_DE         =>  1;
-use constant ID_FU         =>  2;
+use constant ID_DS          =>  0;
+use constant ID_DE          =>  1;
 
 use constant SUBSTR_OFFSET_FIRST  =>  0;
 use constant SUBSTR_OFFSET_SECOND =>  1;
@@ -39,7 +39,6 @@ sub new {
    bless $self, $class;
    $self->[ID_DS] = shift || croak "Start delimiter is missing";
    $self->[ID_DE] = shift || croak "End delimiter is missing";
-   $self->[ID_FU] = shift || 0;
    $self;
 }
 
@@ -51,9 +50,9 @@ sub tokenize {
    my($ds, $de)   = ($self->[ID_DS], $self->[ID_DE]);
    my($qds, $qde) = map { quotemeta $_ } $ds, $de;
 
-   my(@tokens, $inside, $last, $i, $j);
+   my(@tokens, $inside, $extra);
 
-   OUT_TOKEN: foreach $i ( split /($qds)/, $tmp ) {
+   OUT_TOKEN: foreach my $i ( split /($qds)/, $tmp ) {
 
       if ( $i eq $ds ) {
          push @tokens, [ DELIMSTART => $i ];
@@ -61,19 +60,28 @@ sub tokenize {
          next OUT_TOKEN;
       }
 
-      IN_TOKEN: foreach $j ( split /($qde)/, $i ) {
+      IN_TOKEN: foreach my $j ( split /($qde)/, $i ) {
+
          if ( $j eq $de ) {
-            $last = $tokens[LAST_TOKEN];
+            my $last = $tokens[LAST_TOKEN];
             if ( $last->[TOKEN_ID] eq 'NOTADELIM' ) {
                $last->[TOKEN_STR] = $self->tilde( $last->[TOKEN_STR] . $de );
             }
             else {
+               $extra = $tokens[LAST_TOKEN][TOKEN_EXTRA]; # reset in _chomp()
                push @tokens, [ DELIMEND => $j ];
             }
             $inside = 0;
             next IN_TOKEN;
          }
+
          push @tokens, $self->_token_code( $j, $inside, $map_keys, \@tokens );
+
+         # first one checks for CHOMP_CLOSE and the second checks CHOMP_OPEN
+         # CHOMP_BOTH is checked by both
+         $self->_chomp( \@tokens, undef                           , \$extra );
+         $self->_chomp( \@tokens, $tokens[LAST_TOKEN][TOKEN_EXTRA], undef   );
+
       }
    }
 
@@ -84,6 +92,36 @@ sub tokenize {
    }
 
    return \@tokens;
+}
+
+sub _chomp {
+   # optimize away the unnecessary white space before parsing happens
+   my $self      = shift;
+   my $tree_ref  = shift;
+   my $type      = shift || '';
+   my $extra_ref = shift; # don't set a default !!!
+   my $is_close  = defined $extra_ref && $$extra_ref && (
+                        $$extra_ref eq 'CHOMP_CLOSE' ||
+                        $$extra_ref eq 'CHOMP_BOTH'
+                  );
+
+   if ( $is_close ) {
+      my $post = @{ $tree_ref } ? $tree_ref->[LAST_TOKEN] : undef;
+      if ( $post ) {
+         $post->[TOKEN_STR] = $self->ltrim( $post->[TOKEN_STR] );
+         $$extra_ref        = undef; # reset!
+      }
+      return if $$extra_ref eq 'CHOMP_CLOSE'; # by-pass below code
+   }
+
+   if ( $type eq 'CHOMP_OPEN' || $type eq 'CHOMP_BOTH' ) {
+      if ( @{ $tree_ref } >= 2 ) {
+         my $t           = $tree_ref->[PREVIOUS_TOKEN];
+         $t->[TOKEN_STR] = $self->rtrim( $t->[TOKEN_STR] );
+      }
+   }
+
+   return;
 }
 
 sub _chomp_token {
@@ -163,6 +201,8 @@ sub _user_commands {
 sub tilde { Text::Template::Simple::Util::escape( '~' => $_[1] ) }
 sub quote { Text::Template::Simple::Util::escape( '"' => $_[1] ) }
 sub trim  { Text::Template::Simple::Util::trim(          $_[1] ) }
+sub rtrim { Text::Template::Simple::Util::rtrim(         $_[1] ) }
+sub ltrim { Text::Template::Simple::Util::ltrim(         $_[1] ) }
 
 1;
 
@@ -213,7 +253,11 @@ Escapes double quotes.
 
 =head3 trim
 
-Trims the input string.
+=head3 rtrim
+
+=head3 ltrim
+
+See L<Text::Template::Simple::Util>.
 
 =head1 AUTHOR
 

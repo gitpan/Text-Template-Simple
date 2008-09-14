@@ -19,10 +19,12 @@ sub validate {
    my $self = shift;
    my $type = shift || croak "No type specified";
    my $path = shift || croak "No path specified";
+
    if ( $type eq 'dir' ) {
       require File::Spec;
       $path = File::Spec->canonpath( $path );
       my $wdir;
+
       if ( IS_WINDOWS ) {
          $wdir = Win32::GetFullPathName( $path );
          if( Win32::GetLastError() ) {
@@ -34,14 +36,14 @@ sub validate {
             $wdir  = '' if not $ok;
          }
       }
+
       $path = $wdir if $wdir;
       my $ok = -e $path && -d _;
       return if not $ok;
       return $path;
    }
-   else {
-      croak "validate(file) is not yet implemented";
-   }
+
+   croak "validate(file) is not yet implemented";
 }
 
 sub layer {
@@ -72,7 +74,7 @@ sub slurp {
 
    flock $fh,    Fcntl::LOCK_SH()  if IS_FLOCK;
    seek  $fh, 0, Fcntl::SEEK_SET() if IS_FLOCK && $seek;
-   $self->layer( $fh );
+   $self->layer( $fh ) if ! $seek; # apply the layer only if we opened this
    my $tmp = do { local $/; <$fh> };
    flock $fh, Fcntl::LOCK_UN() if IS_FLOCK;
    close $fh if ! $seek; # close only if we opened this
@@ -110,7 +112,7 @@ Constructor. Accepts an I/O layer name as the parameter.
 
 =head2 layer FH
 
-Sets the I/O layer of the supplied filehandle is there is a layer and perl
+Sets the I/O layer of the supplied filehandle if there is a layer and perl
 version is greater or equal to C<5.8>.
 
 =head2 slurp FILE_PATH

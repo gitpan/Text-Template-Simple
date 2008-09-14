@@ -201,7 +201,7 @@ sub size {
       return $total;
 
    }
-   else { # in memory cache
+   else { # in-memory cache
 
       local $SIG{__DIE__};
       if ( eval { require Devel::Size; 1; } ) {

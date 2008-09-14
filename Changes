@@ -1,6 +1,12 @@
 Revision history for Perl extension Text::Template::Simple.
 
-Time zone is GMT+2.
+Time zone is UTC+2.
+
+0.54_07 Sun Sep 14 03:09:39 2008
+   => Pod typos.
+   => I/O layer fix.
+   => Added ltrim/rtrim to Util.
+   => Implemented the chomping inside the tokenizer.
 
 0.54_06 Sat Sep 13 02:22:00 2008
    => You can now use $0 inside templates to access to the name of the template.

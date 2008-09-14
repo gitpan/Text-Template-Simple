@@ -136,7 +136,6 @@ can_ok( 'Text::Template::Simple::Tokenizer',
             LAST_TOKEN
             ID_DS
             ID_DE
-            ID_FU
             SUBSTR_OFFSET_FIRST
             SUBSTR_OFFSET_SECOND
             SUBSTR_LENGTH

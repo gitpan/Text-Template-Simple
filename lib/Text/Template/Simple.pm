@@ -2,7 +2,7 @@ package Text::Template::Simple;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.54_06';
+$VERSION = '0.54_07';
 
 use Carp qw( croak );
 use Text::Template::Simple::Constants;
@@ -1099,7 +1099,7 @@ cache, then the included templates will not be updated automatically.
 
 C<monolith> is disabled by default.
 
-=head1 include_paths
+=head3 include_paths
 
 An ARRAY reference. If you want to use relative file paths when
 compiling/including template files, add the paths of the templates with
