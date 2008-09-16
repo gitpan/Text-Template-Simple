@@ -139,7 +139,6 @@ can_ok( 'Text::Template::Simple::Tokenizer',
             SUBSTR_OFFSET_FIRST
             SUBSTR_OFFSET_SECOND
             SUBSTR_LENGTH
-            CHOMP_DIRECTIVE
             new
             tokenize
             _token_code

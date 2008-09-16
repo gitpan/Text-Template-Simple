@@ -39,6 +39,7 @@ use constant INCLUDE_PATHS   => ++$OID;
 use constant PRE_CHOMP       => ++$OID;
 use constant POST_CHOMP      => ++$OID;
 use constant MAXOBJFIELD     =>   $OID; # number of the last object field
+
 # settings
 use constant MAX_RECURSION   => 50; # recursion limit for dynamic includes
 use constant PARENT          => 'Text::Template::Simple';
@@ -57,26 +58,29 @@ use constant STAT_SIZE       => 7;                         # for stat()
 use constant STAT_MTIME      => 9;                         # for stat()
 use constant DELIMS          => qw( <% %> );               # default delimiter pair
 use constant NEW_PERL        => $] >= 5.008;               # for I/O layer
+use constant IS_FLOCK        => IS_WINDOWS ? ( Win32::IsWin95() ? 0 : 1 ) : 1;
 
-use constant CHOMP_NONE          => 0x00000000;
-use constant CHOMP_ALL           => 0x00000001;
-use constant CHOMP_COLLAPSE      => 0x00000002;
-use constant CHOMP_COLLAPSE_PRE  => 0x00000003;
-use constant CHOMP_COLLAPSE_POST => 0x00000004;
+use constant CHOMP_NONE               => 0x00000000;
+use constant CHOMP_ALL                => 0x00000001;
+use constant CHOMP_COLLAPSE           => 0x00000002;
+use constant CHOMP_COLLAPSE_PRE       => 0x00000003;
+use constant CHOMP_COLLAPSE_POST      => 0x00000004;
 
-use constant TOKEN_CHOMP_NONE    => 0x00000000;
-use constant TOKEN_CHOMP_OPEN    => 0x00000001;
-use constant TOKEN_CHOMP_CLOSE   => 0x00000002;
-use constant TOKEN_CHOMP_BOTH    => 0x00000003;
+use constant TOKEN_CHOMP_NONE         => 0x00000000;
+use constant TOKEN_CHOMP_OPEN         => 0x00000001;
+use constant TOKEN_CHOMP_CLOSE        => 0x00000002;
+use constant TOKEN_CHOMP_BOTH         => 0x00000003;
 
-use constant IS_FLOCK        => sub {
-   # are we running under dumb OS?
-   if ( IS_WINDOWS ) {
-      return Win32::IsWin95() ? 0 : 1;
-   }
-   return 1; # TODO: test flock() directly at this point
-   return 0; # disable by default
-}->();
+# first level directives
+use constant DIRECTIVE_CAPTURE        => '=';
+use constant DIRECTIVE_DYNAMIC        => '*';
+use constant DIRECTIVE_STATIC         => '+';
+use constant DIRECTIVE_NOTADELIM      => '!';
+use constant DIRECTIVE_COMMENT        => '#';
+# second level directives
+use constant DIRECTIVE_CHOMP          => '-';
+use constant DIRECTIVE_CHOMP_COLLAPSE => '~';
+use constant DIRECTIVE_CHOMP_NONE     => '^';
 
 # SHA seems to be more accurate, so we'll try them first.
 # Pure-Perl ones are slower, but they are fail-safes.
@@ -262,6 +266,16 @@ BEGIN {
                         TOKEN_CHOMP_BOTH
                         TOKEN_CHOMP_OPEN
                         TOKEN_CHOMP_CLOSE
+                     )],
+      directive =>   [qw(
+                        DIRECTIVE_CHOMP
+                        DIRECTIVE_CHOMP_COLLAPSE
+                        DIRECTIVE_CHOMP_NONE
+                        DIRECTIVE_CAPTURE
+                        DIRECTIVE_DYNAMIC
+                        DIRECTIVE_STATIC
+                        DIRECTIVE_NOTADELIM
+                        DIRECTIVE_COMMENT
                      )],
       etc       =>   [qw(
                         DIGEST_MODS

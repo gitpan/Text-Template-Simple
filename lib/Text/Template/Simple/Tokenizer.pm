@@ -21,21 +21,20 @@ use constant ID_POST_CHOMP        =>  3;
 use constant SUBSTR_OFFSET_FIRST  =>  0;
 use constant SUBSTR_OFFSET_SECOND =>  1;
 use constant SUBSTR_LENGTH        =>  1;
-use constant CHOMP_DIRECTIVE      => '-';
 
 use Carp qw( croak );
 use Text::Template::Simple::Util      qw();
-use Text::Template::Simple::Constants qw( :chomp :token );
+use Text::Template::Simple::Constants qw( :chomp :token :directive );
 
 $VERSION = '0.54_02';
 
 my @COMMANDS = (
-   #   cmd id        callback
-   [ qw/ =       CAPTURE         / ],
-   [ qw/ *       DYNAMIC   trim  / ],
-   [ qw/ +       STATIC    trim  / ],
-   [ qw/ !       NOTADELIM       / ],
-   [    '#', qw/ COMMENT         / ],
+   # cmd                      id        callback
+   [ DIRECTIVE_CAPTURE  , qw/ CAPTURE         / ],
+   [ DIRECTIVE_DYNAMIC  , qw/ DYNAMIC   trim  / ],
+   [ DIRECTIVE_STATIC   , qw/ STATIC    trim  / ],
+   [ DIRECTIVE_NOTADELIM, qw/ NOTADELIM       / ],
+   [ DIRECTIVE_COMMENT  , qw/ COMMENT         / ],
 );
 
 sub new {
@@ -75,8 +74,8 @@ sub tokenize {
             }
             else {
                # these will be reset in _chomp()
-               $extra = $tokens[LAST_TOKEN][TOKEN_EXTRA];
-               $ecollapse = $tokens[LAST_TOKEN][TOKEN_COLLAPSE];
+               $extra     = $last->[TOKEN_EXTRA];
+               $ecollapse = $last->[TOKEN_COLLAPSE];
                push @tokens, [ DELIMEND => $j ];
             }
             $inside = 0;
@@ -95,70 +94,6 @@ sub tokenize {
    }
 
    return \@tokens;
-}
-
-sub _chomp {
-   # optimize away the unnecessary white space before parsing happens
-   my $self      = shift;
-   my $tree_ref  = shift;
-   my $extra_ref = shift;
-   my $xc_ref    = shift;
-   my $is_close  = defined $$extra_ref && (
-                        $$extra_ref & TOKEN_CHOMP_CLOSE ||
-                        $$extra_ref & TOKEN_CHOMP_BOTH
-                  );
-
-   my $last = $tree_ref->[LAST_TOKEN];
-
-   if ( $is_close ) {
-      my $collapse       = $last->[TOKEN_COLLAPSE] || $$xc_ref || CHOMP_NONE;
-      my $cc             = $collapse & CHOMP_COLLAPSE_POST ? ' ' : undef;
-      $last->[TOKEN_STR] = $self->ltrim( $last->[TOKEN_STR], $cc );
-      $$extra_ref        = undef; # reset!
-      $$xc_ref           = undef; # reset!
-      return if $$extra_ref & TOKEN_CHOMP_CLOSE; # by-pass the code below
-   }
-
-   my $type = $last->[TOKEN_EXTRA] || return;
-
-   if ( $type & TOKEN_CHOMP_OPEN || $type & TOKEN_CHOMP_BOTH ) {
-      if ( @{ $tree_ref } >= 2 ) {
-         my $t  = $tree_ref->[PREVIOUS_TOKEN];
-         my $cc = $last->[TOKEN_COLLAPSE] & CHOMP_COLLAPSE_PRE ? ' ' : undef;
-         $t->[TOKEN_STR] = $self->rtrim( $t->[TOKEN_STR], $cc );
-      }
-   }
-
-   return;
-}
-
-sub _chomp_token {
-   my($self, $open, $close) = @_;
-   my($pre, $post) = ( $self->[ID_PRE_CHOMP], $self->[ID_POST_CHOMP] );
-
-   my $c      = CHOMP_NONE;
-
-   my $copen  = $pre  &  CHOMP_COLLAPSE   ? do { $c |= CHOMP_COLLAPSE_PRE;  1 }
-              : $pre  &  CHOMP_ALL        ? 1
-              : $open eq CHOMP_DIRECTIVE  ? 1
-              :                             0
-              ;
-
-   my $cclose = $post  &  CHOMP_COLLAPSE  ? do { $c |= CHOMP_COLLAPSE_POST; 1 }
-              : $post  &  CHOMP_ALL       ? 1
-              : $close eq CHOMP_DIRECTIVE ? 1
-              :                             0
-              ;
-
-   my $cboth  = $copen && $cclose;
-
-   my $token = $cboth  ? TOKEN_CHOMP_BOTH
-             : $copen  ? TOKEN_CHOMP_OPEN
-             : $cclose ? TOKEN_CHOMP_CLOSE
-             :           TOKEN_CHOMP_NONE
-             ;
-
-   return $copen, $cclose, $token, $c;
 }
 
 sub _token_code {
@@ -211,6 +146,73 @@ sub _token_code {
    }
 
    return [ RAW => $self->tilde( $str ) ];
+}
+
+sub _chomp {
+   # optimize away the unnecessary white space before parsing happens
+   my $self      = shift;
+   my $tree_ref  = shift;
+   my $extra_ref = shift;
+   my $xc_ref    = shift;
+   my $is_close  = defined $$extra_ref && (
+                        $$extra_ref & TOKEN_CHOMP_CLOSE ||
+                        $$extra_ref & TOKEN_CHOMP_BOTH
+                  );
+
+   my $last = $tree_ref->[LAST_TOKEN];
+
+   if ( $is_close ) {
+      my $collapse       = $last->[TOKEN_COLLAPSE] || $$xc_ref || CHOMP_NONE;
+      my $cc             = $collapse & CHOMP_COLLAPSE_POST ? ' ' : undef;
+      $last->[TOKEN_STR] = $self->ltrim( $last->[TOKEN_STR], $cc );
+      $$extra_ref        = undef; # reset!
+      $$xc_ref           = undef; # reset!
+      return if $$extra_ref & TOKEN_CHOMP_CLOSE; # by-pass the code below
+   }
+
+   my $type = $last->[TOKEN_EXTRA] || return;
+
+   if ( $type & TOKEN_CHOMP_OPEN || $type & TOKEN_CHOMP_BOTH ) {
+      if ( @{ $tree_ref } >= 2 ) {
+         my $t  = $tree_ref->[PREVIOUS_TOKEN];
+         my $cc = $last->[TOKEN_COLLAPSE] & CHOMP_COLLAPSE_PRE ? ' ' : undef;
+         $t->[TOKEN_STR] = $self->rtrim( $t->[TOKEN_STR], $cc );
+      }
+   }
+
+   return;
+}
+
+sub _chomp_token {
+   my($self, $open, $close) = @_;
+   my($pre, $post) = ( $self->[ID_PRE_CHOMP], $self->[ID_POST_CHOMP] );
+   my $c      = CHOMP_NONE;
+
+   my $copen  = $open eq DIRECTIVE_CHOMP_NONE     ? -1
+              : $open eq DIRECTIVE_CHOMP_COLLAPSE ? do{$c |= CHOMP_COLLAPSE_PRE; 1}
+              : $pre  &  CHOMP_COLLAPSE           ? do{$c |= CHOMP_COLLAPSE_PRE; 1}
+              : $pre  &  CHOMP_ALL                ? 1
+              : $open eq DIRECTIVE_CHOMP          ? 1
+              :                                     0
+              ;
+
+   my $cclose = $close eq DIRECTIVE_CHOMP_NONE     ? -1
+              : $close eq DIRECTIVE_CHOMP_COLLAPSE ? do{$c |= CHOMP_COLLAPSE_POST;1}
+              : $post  &  CHOMP_COLLAPSE           ? do{$c |= CHOMP_COLLAPSE_POST;1}
+              : $post  &  CHOMP_ALL                ? 1
+              : $close eq DIRECTIVE_CHOMP          ? 1
+              :                                      0
+              ;
+
+   my $cboth  = $copen > 0 && $cclose > 0;
+
+   my $token = $cboth      ? TOKEN_CHOMP_BOTH
+             : $copen  > 0 ? TOKEN_CHOMP_OPEN
+             : $cclose > 0 ? TOKEN_CHOMP_CLOSE
+             :               TOKEN_CHOMP_NONE
+             ;
+
+   return $copen, $cclose, $token, $c;
 }
 
 sub _user_commands {

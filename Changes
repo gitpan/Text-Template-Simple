@@ -2,6 +2,12 @@ Revision history for Perl extension Text::Template::Simple.
 
 Time zone is UTC+2.
 
+0.54_09 Wed Sep 17 00:01:41 2008
+   => Internal cleanup.
+   => Implemented collapse/chomp/no-chomp per directive. This hopefully
+      completes the chomp() interface. Unit tests & Pod to come...
+   => Added roadmap & flow chart to distro.
+
 0.54_08 Mon Sep 15 01:44:40 2008
    => More fixes for the _chomp().
    => Implemented pre/post chomp and collapse (tricky!).

@@ -1,0 +1,41 @@
+[TARGET: 0.60]
+
+* Implement & document:
+        o $t->compile( [ FILE   => $thing ] );
+        o $t->compile( [ GLOB   => $thing ] );
+        o $t->compile( [ STRING => $thing ] );
+* Remove code templates from ::Constants (into ::Simple)
+        o Tidy up ::Constants.
+* Implement variable sharing without monolith..?
+        o PROCESS -> no monolith ?
+* Move chomping action from tokenizer into $parent->_parse();
+* Replace token ids with hex or int.
+        o Remove long names
+        o Remove "eq"
+* Re-implement [l|r|]trim in Tokenizer (dupes!)
+* local $0; in templates seems to be buggy.
+* Cleanup ::Simple
+        o Update Pod
+* Improve unit test coverage.
+        o Implement placeholder tests.
+        o Increase # of tests
+
+[BEYOND]
+
+* Keep the code clean & simple (no hacks?).
+* Improve error handling. Minimize uncontrolled die()s.
+*  ***LOW*** Consider trying PPI.
+* Improve safe compartment.
+* Improve cache.
+* Test -T support.
+*  ***LOW*** Implement TTS plugins for major frameworks.
+*  ***LOW*** Consider building a tiny framework for template plugins.
+        o Or just let the user define subs in ::Dummy.
+*  ***LOW*** Consider implementing TT like filters
+        o Block filters
+        o Include filters
+                - Seems to be tricky with interpolation in effect.
+*  ***LOW*** Benchmarks?
+*  ***LOW*** XS based tokenizer?
+* Command line compiler?
+* Check competitors for neat ideas (heh!).

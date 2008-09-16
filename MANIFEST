@@ -46,6 +46,7 @@ t/data/interpolate_data.tts
 t/data/test_var.tts
 t/lib/My.pm
 eg/precompile.pl
+etc/flowchart.txt
 Makefile.PL
 Build.PL
 Changes
@@ -53,3 +54,4 @@ MANIFEST
 PREREQ
 README
 META.yml
+TODO
