@@ -2,7 +2,7 @@ package Text::Template::Simple;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.54_09';
+$VERSION = '0.54_10';
 
 use Carp qw( croak );
 use Text::Template::Simple::Constants;
@@ -101,6 +101,33 @@ my %INTERNAL = (
       <%BUF%> .= <%HASH%>->{"<%KEY%>"};
    ),
 );
+
+my @EXPORT_OK = qw( tts );
+
+sub import {
+   my $class = shift;
+   my $caller = caller;
+   my @args   = @_ or return;
+   my %ok     = map { $_, $_ } @EXPORT_OK;
+
+   foreach my $name ( @args ) {
+      croak "$name isn't a valid import parameter for $class" if not $ok{$name};
+      no strict qw( refs );
+      croak "$name is not defined in $class"      if not defined &{ $name   };
+      my $target = $caller . '::' . $name;
+      croak "$name is already defined in $caller" if     defined &{ $target };
+      *{ $target } = \&{ $name }; # install
+   }
+
+   return;
+}
+
+sub tts {
+   my @args = @_;
+   croak "Nothing to compile!" if ! @args;
+   my @new  = ref $args[0] eq 'HASH' ? @{ shift(@args) } : ();
+   return __PACKAGE__->new( @new )->compile( @args );
+}
 
 sub new {
    my $class = shift;
@@ -1336,6 +1363,25 @@ Cache keys are generated with one of these modules:
 
 SHA algorithm seems to be more reliable for key generation, but
 md5 is widely available and C<Digest::MD5> is in CORE.
+
+=head1 FUNCTIONS
+
+=head2 tts [ NEW_ARGS, ] COMPILE_ARGS
+
+This function is a wrapper around the L<Text::Template::Simple> object. It
+creates it's own temporary object behind the scenes and can be used for
+quick Perl one-liners for example. Using this function other than testing is
+not recommended.
+
+C<NEW_ARGS> is optional and must be a hashref containing the parameters to
+L</new>. C<COMPILE_ARGS> is a list and everything it contains will be passed
+to the L</compile> method.
+
+It is possible to import this function to your namespace:
+
+   use Text::Template::Simple qw( tts );
+   print tts("<%= scalar localtime time %>");
+   print tts( { strict => 1 }, "<%= scalar localtime time %>");
 
 =head1 EXAMPLES
 

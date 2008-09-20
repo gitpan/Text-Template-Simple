@@ -105,7 +105,7 @@ sub _token_code {
    # $first is the left-cmd, $last is the right-cmd. $second is the extra
    my $first    = substr $str, SUBSTR_OFFSET_FIRST , SUBSTR_LENGTH;
    my $second   = substr $str, SUBSTR_OFFSET_SECOND, SUBSTR_LENGTH;
-   my $last     = substr $str, length($str) - 1, SUBSTR_LENGTH;
+   my $last     = substr $str, length($str) - 1    , SUBSTR_LENGTH;
    my $len      = length($str);
 
    TCODE: {
@@ -154,7 +154,7 @@ sub _chomp {
    my $tree_ref  = shift;
    my $extra_ref = shift;
    my $xc_ref    = shift;
-   my $is_close  = defined $$extra_ref && (
+   my $is_close  = defined($$extra_ref) && (
                         $$extra_ref & TOKEN_CHOMP_CLOSE ||
                         $$extra_ref & TOKEN_CHOMP_BOTH
                   );
@@ -165,9 +165,10 @@ sub _chomp {
       my $collapse       = $last->[TOKEN_COLLAPSE] || $$xc_ref || CHOMP_NONE;
       my $cc             = $collapse & CHOMP_COLLAPSE_POST ? ' ' : undef;
       $last->[TOKEN_STR] = $self->ltrim( $last->[TOKEN_STR], $cc );
+      my $short_circuit  = $$extra_ref & TOKEN_CHOMP_CLOSE; # by-pass the code below?
       $$extra_ref        = undef; # reset!
-      $$xc_ref           = undef; # reset!
-      return if $$extra_ref & TOKEN_CHOMP_CLOSE; # by-pass the code below
+      $$xc_ref           = undef; # reset
+      return if $short_circuit;
    }
 
    my $type = $last->[TOKEN_EXTRA] || return;

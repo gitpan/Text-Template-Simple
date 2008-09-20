@@ -17,7 +17,7 @@
 * Cleanup ::Simple
         o Update Pod
 * Improve unit test coverage.
-        o Implement placeholder tests.
+        o Implement placeholder tests (24-include-paths.t).
         o Increase # of tests
 
 [BEYOND]
