@@ -2,6 +2,10 @@ Revision history for Perl extension Text::Template::Simple.
 
 Time zone is UTC+2.
 
+0.54_11 Sat Sep 20 23:51:43 2008
+   => Split Text::Template::Simple into smaller base classes.
+   => Internal cleanup.
+
 0.54_10 Sat Sep 20 22:32:39 2008
    => tts() wrapper function.
    => Implement 25-chomp.t.

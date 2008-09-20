@@ -21,7 +21,7 @@ can_ok( 'Text::Template::Simple',
             compile
             connector
             _init
-            _parser_id
+            _class_id
             _output_buffer_var
             _examine
             _compiler

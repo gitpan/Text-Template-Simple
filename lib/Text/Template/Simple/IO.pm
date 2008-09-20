@@ -5,7 +5,7 @@ use Text::Template::Simple::Constants;
 use Text::Template::Simple::Util qw( DEBUG LOG ishref binary_mode );
 use Carp qw( croak );
 
-$VERSION = '0.54_02';
+$VERSION = '0.54_11';
 
 sub new {
    my $class = shift;
@@ -81,6 +81,19 @@ sub slurp {
    return $tmp;
 }
 
+sub is_file {
+   # safer than a simple "-e"
+   my $self = shift;
+   my $file = shift || return;
+   return     ref $file               ? 0
+         :        $file =~ RE_NONFILE ? 0
+         : length $file >= 255        ? 0
+         : ! -e   $file               ? 0
+         :   -d _                     ? 0
+         :                              1
+         ;
+}
+
 sub DESTROY {
    my $self = shift;
    LOG( DESTROY => ref $self ) if DEBUG;
@@ -123,6 +136,10 @@ Returns the contents of the supplied file as a string.
 
 C<TYPE> can either be C<dir> or C<file>. Returns the corrected path if
 it is valid, C<undef> otherwise.
+
+=head2 is_file THING
+
+Test if C<THING> is a file.
 
 =head1 AUTHOR
 

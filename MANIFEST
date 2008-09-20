@@ -1,4 +1,8 @@
 lib/Text/Template/Simple.pm
+lib/Text/Template/Simple/Base/Compiler.pm
+lib/Text/Template/Simple/Base/Examine.pm
+lib/Text/Template/Simple/Base/Include.pm
+lib/Text/Template/Simple/Base/Parser.pm
 lib/Text/Template/Simple/Cache.pm
 lib/Text/Template/Simple/Cache/ID.pm
 lib/Text/Template/Simple/IO.pm

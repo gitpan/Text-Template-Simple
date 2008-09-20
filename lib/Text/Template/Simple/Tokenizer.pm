@@ -26,7 +26,7 @@ use Carp qw( croak );
 use Text::Template::Simple::Util      qw();
 use Text::Template::Simple::Constants qw( :chomp :token :directive );
 
-$VERSION = '0.54_02';
+$VERSION = '0.54_11';
 
 my @COMMANDS = (
    # cmd                      id        callback

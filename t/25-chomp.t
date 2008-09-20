@@ -6,9 +6,10 @@ use Text::Template::Simple;
 use Text::Template::Simple::Constants qw( :chomp );
 my(%pool, %tts, %valid);
 
-# <%- -%> -> chomp    (token directive takes precedence over global)
-# <%~ ~%> -> no chomp (token directive takes precedence over global)
-# <%^ ^%> -> collapse (token directive takes precedence over global)
+# token directive takes precedence over global
+# <%- -%> -> chomp
+# <%^ ^%> -> no chomp
+# <%~ ~%> -> collapse
 
 foreach my $oid ( sort keys %pool ) {
     my $t = $pool{ $oid };
@@ -25,6 +26,8 @@ foreach my $oid ( sort keys %pool ) {
     }
 
 }
+
+# wrong naming below! swap col <-> none
 
 BEGIN {
     sub rv {

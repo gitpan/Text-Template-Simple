@@ -6,7 +6,7 @@ use Text::Template::Simple::Constants qw( MAX_FL );
 use Text::Template::Simple::Util      qw( DIGEST );
 use Carp qw( croak );
 
-$VERSION = '0.54_02';
+$VERSION = '0.54_11';
 
 my $RE_INVALID = qr{[^A-Za-z_0-9]};
 

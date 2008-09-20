@@ -6,7 +6,7 @@ use Text::Template::Simple::Constants;
 use Text::Template::Simple::Util qw( DEBUG LOG ishref );
 use Carp qw( croak );
 
-$VERSION = '0.54_02';
+$VERSION = '0.54_11';
 
 my $CACHE = {}; # in-memory template cache
 
@@ -326,7 +326,7 @@ sub populate {
          $parent->io->layer($fh);
          print $fh '#META:' . $self->_set_meta(\%meta) . "\n",
                    sprintf( DISK_CACHE_COMMENT,
-                            PARENT->_parser_id, scalar localtime time),
+                            PARENT->_class_id, scalar localtime time),
                    $parsed; 
          flock $fh, Fcntl::LOCK_UN() if IS_FLOCK;
          close $fh;

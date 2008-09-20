@@ -2,9 +2,11 @@ package Text::Template::Simple;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.54_10';
+$VERSION = '0.54_11';
 
 use Carp qw( croak );
+use File::Spec;
+
 use Text::Template::Simple::Constants;
 use Text::Template::Simple::Dummy;
 use Text::Template::Simple::Compiler;
@@ -15,7 +17,13 @@ use Text::Template::Simple::Util;
 use Text::Template::Simple::Cache::ID;
 use Text::Template::Simple::Cache;
 use Text::Template::Simple::IO;
-use File::Spec;
+
+use base qw(
+   Text::Template::Simple::Base::Compiler
+   Text::Template::Simple::Base::Examine
+   Text::Template::Simple::Base::Include
+   Text::Template::Simple::Base::Parser
+);
 
 my %CONNECTOR = ( # Default classes list
    'Cache'     => 'Text::Template::Simple::Cache',
@@ -42,64 +50,6 @@ my %DEFAULT = ( # default object attributes
    post_chomp     => CHOMP_NONE,
    # TODO: Consider removing these
    resume         =>  0,    # resume on error?
-);
-
-# internal code templates
-my %INTERNAL = (
-   # we need string eval in this template to catch syntax errors
-   sub_include => q~
-      <%OBJECT%>->_compile(
-         do {
-            local $@;
-            my $file = eval '<%INCLUDE%>';
-            my $rv;
-            if ( my $e = $@ ) {
-               chomp $e;
-               $file ||= '<%INCLUDE%>';
-               my $m = "The parameter ($file) is not a file. "
-                     . "Error from sub-include ($file): $e";
-               $rv = [ ERROR => '<%ERROR_TITLE%> ' . $m ]
-            }
-            else {
-               $rv = $file;
-            }
-            $rv;
-         },
-         undef,
-         {
-            _sub_inc => '<%TYPE%>'
-         }
-      )
-   ~,
-   no_monolith => q*
-      <%OBJECT%>->compile(
-         q~<%FILE%>~,
-         undef,
-         {
-            chkmt    => 1,
-            _sub_inc => q~<%TYPE%>~,
-         }
-      );
-   *,
-
-   # see _parse()
-   map_keys_check => q(
-      <%BUF%> .= exists <%HASH%>->{"<%KEY%>"}
-               ? (
-                  defined <%HASH%>->{"<%KEY%>"}
-                  ? <%HASH%>->{"<%KEY%>"}
-                  : "[ERROR] Key not defined: <%KEY%>"
-                  )
-               : "[ERROR] Invalid key: <%KEY%>"
-               ;
-   ),
-
-   map_keys_init => q(
-      <%BUF%> .= <%HASH%>->{"<%KEY%>"} || '';
-   ),
-   map_keys_default => q(
-      <%BUF%> .= <%HASH%>->{"<%KEY%>"};
-   ),
 );
 
 my @EXPORT_OK = qw( tts );
@@ -135,7 +85,7 @@ sub new {
    my $self  = [ map { undef } 0 .. MAXOBJFIELD ];
    bless $self, $class;
 
-   LOG( CONSTRUCT => $self->_parser_id . " @ ".(scalar localtime time) )
+   LOG( CONSTRUCT => $self->_class_id . " @ ".(scalar localtime time) )
       if DEBUG();
 
    my $fid;
@@ -171,86 +121,6 @@ sub compile {
 }
 
 # -------------------[ P R I V A T E   M E T H O D S ]------------------- #
-
-sub _compile {
-   my $self  = shift;
-   my $tmpx  = shift || croak "No template specified";
-   my $param = shift || [];
-   my $opt   = shift || {};
-
-   croak "params must be an arrayref!" if not isaref($param);
-   croak "opts must be a hashref!"     if not ishref($opt);
-
-   # set defaults
-   $opt->{id}       ||= ''; # id is AUTO
-   $opt->{map_keys} ||= 0;  # use normal behavior
-   $opt->{chkmt}    ||= 0;  # check mtime of file template?
-   $opt->{_sub_inc} ||= 0;  # are we called from a dynamic include op?
-
-   my $tmp = $self->_examine( $tmpx );
-   return $tmp if $self->[TYPE] eq 'ERROR';
-
-   if ( $opt->{_sub_inc} ) {
-      # TODO:generate a single error handler for includes, merge with _include()
-      # tmpx is a "file" included from an upper level compile()
-      my $etitle = $self->_include_error('dynamic');
-      my $exists = $self->_file_exists( $tmpx );
-      return $etitle . " '$tmpx' is not a file" if not $exists;
-      # TODO: remove this second call somehow, reduce  to a single call
-      $tmp = $self->_examine( $exists ); # re-examine
-   }
-
-   if ( $opt->{chkmt} ) {
-      if ( $self->[TYPE] eq 'FILE' ) {
-         $opt->{chkmt} = (stat $tmpx)[STAT_MTIME];
-      }
-      else {
-         LOG( DISABLE_MT => "Disabling chkmt. Template is not a file" )
-            if DEBUG();
-         $opt->{chkmt} = 0;
-      }
-   }
-
-   LOG( COMPILE => $opt->{id} ) if defined $opt->{id} && DEBUG();
-
-   my($CODE, $ok);
-   my $cache_id = '';
-
-   my $as_is = $opt->{_sub_inc} && $opt->{_sub_inc} eq 'static';
-
-   if ( $self->[CACHE] ) {
-      my $method = $opt->{id};
-      my @args   = (! $method || $method eq 'AUTO') ? ( $tmp              )
-                 :                                    ( $method, 'custom' )
-                 ;
-      $cache_id  = $self->connector('Cache::ID')->new->generate( @args );
-
-      # prevent overwriting the compiled version in cache
-      # since we need the non-compiled version
-      $cache_id .= '_1' if $as_is;
-
-      if ( $CODE = $self->cache->hit( $cache_id, $opt->{chkmt} ) ) {
-         LOG( CACHE_HIT =>  $cache_id ) if DEBUG();
-         $ok = 1;
-      }
-   }
-
-   $self->cache->id( $cache_id ); # if $cache_id;
-   $self->[FILENAME] = $self->[TYPE] eq 'FILE' ? $tmpx : $self->cache->id;
-
-   if ( not $ok ) {
-      # we have a cache miss; parse and compile
-      LOG( CACHE_MISS => $cache_id ) if DEBUG();
-      my $parsed = $self->_parse( $tmp, $opt->{map_keys}, $cache_id, $as_is  );
-      $CODE      = $self->cache->populate( $cache_id, $parsed, $opt->{chkmt} );
-   }
-
-   my   @args;
-   push @args, $self if $self->[NEEDS_OBJECT];
-   push @args, @{ $self->[ADD_ARGS] } if $self->[ADD_ARGS];
-   push @args, @{ $param };
-   return $CODE->( @args );
-}
 
 sub _init {
    my $self = shift;
@@ -293,12 +163,6 @@ sub _init {
    return;
 }
 
-sub _parser_id {
-   my $self = shift;
-   my $class = ref($self) || $self;
-   return sprintf( "%s v%s", $class, $self->VERSION() );
-}
-
 sub _output_buffer_var {
    my $self = shift;
    my $type = shift || 'scalar';
@@ -313,107 +177,25 @@ sub _output_buffer_var {
    return '$' . $id;
 }
 
-sub _is_file {
-   # safer than a simple "-e"
+sub _file_exists {
+   # TODO: pass INCLUDE_PATHS to ::IO to move this there
    my $self = shift;
-   my $file = shift || return;
-   return     ref $file               ? 0
-         :        $file =~ RE_NONFILE ? 0
-         : length $file >= 255        ? 0
-         : ! -e   $file               ? 0
-         :   -d _                     ? 0
-         :                              1
-         ;
+   my $file = shift;
+
+   return $file if $self->io->is_file( $file );
+
+   foreach my $path ( @{ $self->[INCLUDE_PATHS] } ) {
+      my $test = File::Spec->catfile( $path, $file );
+      return $test if $self->io->is_file( $test );
+   }
+
+   return; # fail!
 }
 
-sub _examine_glob {
+sub _class_id {
    my $self = shift;
-   my $TMP  = shift;
-   my $ref  = ref $TMP;
-   croak fatal(  NOTGLOB => $ref ) if $ref ne 'GLOB';
-   croak fatal( 'NOTFH'          ) if not  fileno $TMP;
-   return $self->io->slurp( $TMP );
-}
-
-sub _examine_type {
-   my $self = shift;
-   my $TMP  = shift;
-   my $ref  = ref $TMP;
-
-   return ''   => $TMP if ! $ref;
-   return GLOB => $TMP if   $ref eq 'GLOB';
-
-   if ( $ref eq 'ARRAY' ) {
-      my $ftype  = shift @{ $TMP } || croak "ARRAY does not contain the type";
-      my $fthing = shift @{ $TMP } || croak "ARRAY does not contain the data";
-      croak "ARRAY overflowed" if @{ $TMP } > 0;
-      return uc $ftype, $fthing;
-   }
-
-   croak "Unknown first argument of $ref type to compile()";
-}
-
-sub _examine {
-   my $self   = shift;
-   my $TMP    = shift;
-   my($type, $thing) = $self->_examine_type( $TMP );
-   my $rv;
-
-   if ( $type eq 'ERROR' ) {
-      $rv           = $thing;
-      $self->[TYPE] = $type;
-   }
-   elsif ( $type eq 'GLOB' ) {
-      $rv           = $self->_examine_glob( $thing );
-      $self->[TYPE] = 'GLOB';
-   }
-   else {
-      if ( $type eq 'FILE' || $self->_is_file( $thing ) ) {
-         $rv                = $self->io->slurp( $thing );
-         $self->[TYPE]      = 'FILE';
-         $self->[TYPE_FILE] = $thing;
-      }
-      else {
-         # give it a last chance, before falling back to string
-         if ( my $e = $self->_file_exists( $thing ) ) {
-            $rv                = $self->io->slurp( $e );
-            $self->[TYPE]      = 'FILE';
-            $self->[TYPE_FILE] = $e;
-         }
-         else {
-            $rv                = $thing;
-            $self->[TYPE]      = 'STRING';
-         }
-      }
-   }
-
-   LOG( EXAMINE => $self->[TYPE]."; LENGTH: ".length($rv) ) if DEBUG();
-   return $rv;
-}
-
-sub _compiler { shift->[SAFE] ? COMPILER_SAFE : COMPILER }
-
-sub _wrap_compile {
-   my $self   = shift;
-   my $parsed = shift or croak "nothing to compile";
-   LOG( CACHE_ID => $self->cache->id ) if $self->[WARN_IDS] && $self->cache->id;
-   LOG( COMPILER => $self->[SAFE] ? 'Safe' : 'Normal' ) if DEBUG();
-   my($CODE, $error);
-
-   $CODE = $self->_compiler->_compile($parsed);
-
-   if( $error = $@ ) {
-      my $error2;
-      if ( $self->[RESUME] ) {
-         $CODE =  sub {
-                     sprintf ("[%s Fatal Error] %s", $self->_parser_id, $error )
-                  };
-         $error2 = $@;
-      }
-      $error .= $error2 if $error2;
-   }
-
-   return $CODE, $error;
+   my $class = ref($self) || $self;
+   return sprintf( "%s v%s", $class, $self->VERSION() );
 }
 
 sub _tidy {
@@ -442,392 +224,6 @@ sub _tidy {
 
    LOG( TIDY_WARNING => $stderr ) if $stderr;
    return $buf;
-}
-
-sub _parse_mapkeys {
-   my($self, $map_keys, $faker, $buf_hash) = @_;
-   return undef, undef if ! $map_keys;
-
-   my $mkc = $map_keys eq 'check';
-   my $mki = $map_keys eq 'init';
-   my $t   = $mki ? 'map_keys_init'
-           : $mkc ? 'map_keys_check'
-           :        'map_keys_default'
-           ;
-   my $mko = $self->_mini_compiler(
-               $self->_internal( $t ) => {
-                  BUF  => $faker,
-                  HASH => $buf_hash,
-                  KEY  => '%s',
-               } => {
-                  flatten => 1,
-               }
-            );
-   return $mko, $mkc;
-}
-
-sub _parse {
-   my $self     = shift;
-   my $raw      = shift;
-   my $map_keys = shift; # code sections are hash keys
-   my $cache_id = shift;
-   my $as_is    = shift; # i.e.: do not parse -> static include
-   #$self->[NEEDS_OBJECT] = 0; # reset
-
-   my $resume   = $self->[RESUME] || '';
-   my $ds       = $self->[DELIMITERS][DELIM_START];
-   my $de       = $self->[DELIMITERS][DELIM_END  ];
-   my $faker    = $self->[INSIDE_INCLUDE] ? $self->_output_buffer_var
-                                          : $self->[FAKER]
-                                          ;
-   my $buf_hash = $self->[FAKER_HASH];
-   my $toke     = $self->connector('Tokenizer')->new(
-                     $ds, $de, $self->[PRE_CHOMP], $self->[POST_CHOMP]
-                  );
-   my $code     = '';
-   my $inside   = 0;
-
-   my($mko, $mkc) = $self->_parse_mapkeys( $map_keys, $faker, $buf_hash );
-
-   LOG( RAW => $raw ) if ( DEBUG() > 3 );
-
-   my $handler = $self->[USER_THANDLER];
-
-   my $w_raw = sub { ";$faker .= q~$_[0]~;" };
-   my $w_cap = sub { ";$faker .= sub {" . $_[0] . "}->();"; };
-
-   # little hack to convert delims into escaped delims for static inclusion
-   $raw =~ s{\Q$ds}{$ds!}xmsg if $as_is;
-
-   # fetch and walk the tree
-   my($id, $str);
-   PARSER: foreach my $token ( @{ $toke->tokenize( $raw, $map_keys ) } ) {
-      ($id, $str) = @{ $token };
-      LOG( TOKEN => "$id => $str" ) if DEBUG() > 1;
-      next PARSER if $id eq 'DISCARD';
-      next PARSER if $id eq 'COMMENT';
-
-      if ( $id eq 'DELIMSTART' ) { $inside++; next PARSER; }
-      if ( $id eq 'DELIMEND'   ) { $inside--; next PARSER; }
-
-      if ( $id eq 'RAW' || $id eq 'NOTADELIM' ) {
-         $code .= $w_raw->($str);
-      }
-
-      elsif ( $id eq 'CODE' ) {
-         $code .= $resume ? $self->_resume($str, 0, 1) : $str;
-      }
-
-      elsif ( $id eq 'CAPTURE' ) {
-         $code .= $faker;
-         $code .= $resume ? $self->_resume($str, RESUME_NOSTART)
-                :           " .= sub { $str }->();";
-      }
-
-      elsif ( $id eq 'DYNAMIC' || $id eq 'STATIC' ) {
-         $self->[NEEDS_OBJECT]++;
-         $code .= $w_cap->( $self->_include($id, $str) );
-      }
-
-      elsif ( $id eq 'MAPKEY' ) {
-         $code .= sprintf $mko, $mkc ? ( ($str) x 5 ) : $str;
-      }
-
-      else {
-         if ( $handler ) {
-            LOG( USER_THANDLER => "$id") if DEBUG;
-            $code .= $handler->(
-                        $self, $id ,$str, { capture => $w_cap, raw => $w_raw }
-                     );
-         }
-         else {
-            LOG( UNKNOWN_TOKEN => "Adding unknown token as RAW: $id($str)")
-               if DEBUG;
-            $code .= $w_raw->($str);
-         }
-      }
-
-   }
-
-   $self->[FILENAME] ||= '<ANON>';
-
-   if ( $inside ) {
-      my $type = $inside > 0 ? 'opening' : 'closing';
-      my $tmpl = "%d unbalanced %s delimiter(s) in template %s";
-      croak sprintf( $tmpl, abs($inside), $type, $self->[FILENAME] );
-   }
-
-   return $self->_wrapper( $code, $cache_id, $faker, $map_keys );
-}
-
-sub _wrapper {
-   # this'll be tricky to re-implement around a template
-   my $self     = shift;
-   my $code     = shift;
-   my $cache_id = shift;
-   my $faker    = shift;
-   my $map_keys = shift;
-   my $buf_hash = $self->[FAKER_HASH];
-
-   my $wrapper    = '';
-   my $inside_inc = $self->[INSIDE_INCLUDE] != -1 ? 1 : 0;
-
-   # build the anonymous sub
-   if ( ! $inside_inc ) {
-      # don't duplicate these if we're including something
-      $wrapper .= "package " . DUMMY_CLASS . ";";
-      $wrapper .= 'use strict;' if $self->[STRICT];
-   }
-   $wrapper .= 'sub { ';
-   $wrapper .= sprintf q~local $0 = '%s';~, escape( q{'} => $self->[FILENAME] );
-   if ( $self->[NEEDS_OBJECT] ) {
-      --$self->[NEEDS_OBJECT];
-      $wrapper .= 'my ' . $self->[FAKER_SELF] . ' = shift;';
-   }
-   $wrapper .= $self->[HEADER].';'             if $self->[HEADER];
-   $wrapper .= "my $faker = '';";
-   $wrapper .= $self->_add_stack( $cache_id )  if $self->[STACK];
-   $wrapper .= "my $buf_hash = {\@_};"         if $map_keys;
-   $wrapper .= "\n#line 1 " .  $self->[FILENAME] . "\n";
-   $wrapper .= $code . ";return $faker;";
-   $wrapper .= '}';
-   # make this a capture sub if we're including
-   $wrapper .= '->()' if $inside_inc;
-
-   LOG( COMPILED => sprintf FRAGMENT_TMP, $self->_tidy($wrapper) )
-      if DEBUG() > 1;
-   #LOG( OUTPUT => $wrapper );
-   # reset
-   $self->[DEEP_RECURSION] = 0 if $self->[DEEP_RECURSION];
-   return $wrapper;
-}
-
-sub _add_stack {
-   my $self    = shift;
-   my $cs_name = shift || '<ANON TEMPLATE>';
-   my $stack   = $self->[STACK] || '';
-
-   return if lc($stack) eq 'off';
-
-   my $check   = ($stack eq '1' || $stack eq 'yes' || $stack eq 'on')
-               ? 'string'
-               : $stack
-               ;
-
-   my($type, $channel) = split /:/, $check;
-   $channel = ! $channel             ? 'warn'
-            :   $channel eq 'buffer' ? $self->[FAKER] . ' .= '
-            :                          'warn'
-            ;
-
-   foreach my $e ( $cs_name, $type, $channel ) {
-      $e =~ s{'}{\\'}xmsg;
-   }
-
-   return "$channel stack( { type => '$type', name => '$cs_name' } );";
-}
-
-sub _include_error {
-   my $self  = shift;
-   my $type  = shift;
-   my $title = '[ ' . $type . ' include error ]';
-   return $title;
-}
-
-sub _file_exists {
-   my $self = shift;
-   my $file = shift;
-
-   return $file if $self->_is_file( $file );
-
-   foreach my $path ( @{ $self->[INCLUDE_PATHS] } ) {
-      my $test = File::Spec->catfile( $path, $file );
-      return $test if $self->_is_file( $test );
-   }
-
-   return; # fail!
-}
-
-sub _include {
-   my $self       = shift;
-   my $type       = shift || '';
-   my $file       = shift;
-      $type       = lc $type;
-      $file       = trim $file;
-   my $is_static  = $type eq 'static';
-   my $is_dynamic = $type eq 'dynamic';
-   my $known      = $is_static || $is_dynamic;
-
-   croak "Unknown include type: $type" if not $known;
-
-   my $err    = $self->_include_error( $type );
-   my $exists = $self->_file_exists( $file );
-   my $interpolate;
-
-   if ( $exists ) {
-      $file        = $exists; # file path correction
-      $interpolate = 0;
-   }
-   else {
-      $interpolate = 1; # just guessing ...
-   }
-
-   if ( -d $file ) {
-      $file = escape '~' => $file;
-      return "q~$err '$file' is a directory~";
-   }
-
-   LOG( INCLUDE => "$type => '$file'" ) if DEBUG();
-
-   my $text;
-   if ( $interpolate ) {
-      my $rv = $self->_interpolate( $file, $type );
-      $self->[NEEDS_OBJECT]++;
-      LOG(INTERPOLATE_INC => "TYPE: $type; DATA: $file; RV: $rv") if DEBUG();
-      return $rv;
-   }
-   else {
-      eval { $text = $self->io->slurp($file) };
-      return "q~$err $@~" if $@;
-   }
-
-   return $self->_include_dynamic( $file, $text, $err) if $is_dynamic;
-   return $self->_include_static(  $file, $text, $err);
-}
-
-sub _mini_compiler {
-   # little dumb compiler for internal templates
-   my $self     = shift;
-   my $template = shift || croak "_mini_compiler(): missing the template";
-   my $param    = shift || croak "_mini_compiler(): missing the parameters";
-   my $opt      = shift || {};
-
-   croak "_mini_compiler(): options must be a hash"    if ! ref($opt)   eq 'HASH';
-   croak "_mini_compiler(): parameters must be a HASH" if ! ref($param) eq 'HASH';
-
-   foreach my $var ( keys %{ $param } ) {
-      $template =~ s[<%\Q$var\E%>][$param->{$var}]xmsg;
-   }
-
-   $template =~ s{\s+}{ }xmsg if $opt->{flatten}; # remove extra spaces
-   return $template;
-}
-
-sub _internal {
-   my $self = shift;
-   my $id   = shift            || croak "_internal(): id is missing";
-   my $rv   = $INTERNAL{ $id } || croak "_internal(): id is invalid";
-   return $rv;
-}
-
-sub _interpolate {
-   my $self   = shift;
-   my $file   = shift;
-   my $type   = shift;
-   my $etitle = $self->_include_error($type);
-   my $rv     = $self->_mini_compiler(
-                  $self->_internal('sub_include') => {
-                     OBJECT      => $self->[FAKER_SELF],
-                     INCLUDE     => escape( q{'} => $file   ),
-                     ERROR_TITLE => escape( q{'} => $etitle ),
-                     TYPE        => $type,
-                  } => {
-                     flatten => 1,
-                  }
-               );
-   return $rv;
-}
-
-sub _include_no_monolith {
-   # no monolith eh?
-   my $self = shift;
-   my $type = shift;
-   my $file = shift;
-   my $rv   =  $self->_mini_compiler(
-                  $self->_internal('no_monolith') => {
-                     OBJECT => $self->[FAKER_SELF],
-                     FILE   => escape('~' => $file),
-                     TYPE   => escape('~' => $type),
-                  } => {
-                     flatten => 1,
-                  }
-               );
-   ++$self->[NEEDS_OBJECT];
-   return $rv;
-}
-
-sub _include_static {
-   my($self, $file, $text, $err) = @_;
-   return $self->[MONOLITH]
-        ? 'q~' . escape('~' => $text) . '~;'
-        : $self->_include_no_monolith( static => $file )
-        ;
-}
-
-sub _include_dynamic {
-   my($self, $file, $text, $err) = @_;
-   my $rv   = '';
-
-   ++$self->[INSIDE_INCLUDE];
-   $self->[COUNTER_INCLUDE] ||= {};
-
-   # ++$self->[COUNTER_INCLUDE]{ $file } if $self->[TYPE_FILE] eq $file;
-
-   if ( ++$self->[COUNTER_INCLUDE]{ $file } >= MAX_RECURSION ) {
-      # failsafe
-      my $max   = MAX_RECURSION;
-      my $error = qq{$err Deep recursion (>=$max) detected in }
-                . qq{the included file: $file};
-      LOG( DEEP_RECURSION => $file ) if DEBUG;
-      $error = escape '~' => $error;
-      $self->[DEEP_RECURSION] = 1;
-      $rv .= "q~$error~";
-   }
-   else {
-      $rv .= $self->[MONOLITH]
-           ? $self->_parse( $text )
-           : $self->_include_no_monolith( dynamic => $file )
-           ;
-   }
-
-   --$self->[INSIDE_INCLUDE]; # critical: always adjust this
-   return $rv;
-}
-
-sub _resume {
-   my $self    = shift;
-   my $token   = shift           || return;
-   my $nostart = shift           || 0;
-   my $is_code = shift           || 0;
-   my $resume  = $self->[RESUME] || '';
-   my $start   = $nostart ? '' : $self->[FAKER];
-   my $void    = $nostart ? 0  : 1; # not a self-printing block
-
-   if ( $token && $resume && $token !~ RESUME_MY ) {
-      if (
-            $token !~ RESUME_CURLIES &&
-            $token !~ RESUME_ELSIF   &&
-            $token !~ RESUME_ELSE    &&
-            $token !~ RESUME_LOOP
-      ) {
-         LOG( RESUME_OK => $token ) if DEBUG() > 2;
-         my $rvar        = $self->_output_buffer_var('array');
-         my $resume_code = RESUME_TEMPLATE;
-         foreach my $replace (
-            [ RVAR  => $rvar             ],
-            [ TOKEN => $token            ],
-            [ PID   => $self->_parser_id ],
-            [ VOID  => $void             ],
-         ) {
-            $resume_code =~ s{ <% $replace->[0] %> }{$replace->[1]}xmsg;
-         }
-         return $start . $resume_code;
-      }
-   }
-
-   LOG( RESUME_NOT => $token ) if DEBUG() > 2;
-
-   return $is_code ? $token : "$start .= $token;"
 }
 
 sub DESTROY {
