@@ -2,6 +2,10 @@ Revision history for Perl extension Text::Template::Simple.
 
 Time zone is UTC+2.
 
+0.54_12 Mon Sep 22 00:37:43 2008
+   => Fixed template name access through $0.
+   => New placeholder test.
+
 0.54_11 Sat Sep 20 23:51:43 2008
    => Split Text::Template::Simple into smaller base classes.
    => Internal cleanup.

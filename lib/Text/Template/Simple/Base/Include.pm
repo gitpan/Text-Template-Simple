@@ -53,8 +53,9 @@ sub _include_dynamic {
       $rv .= "q~$error~";
    }
    else {
+      # do stuff is for file name access through $0 in templates
       $rv .= $self->[MONOLITH]
-           ? $self->_parse( $text )
+           ? do { local $self->[FILENAME] = $file; $self->_parse( $text ) }
            : $self->_include_no_monolith( dynamic => $file )
            ;
    }

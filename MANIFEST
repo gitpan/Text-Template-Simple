@@ -38,6 +38,7 @@ t/22-monolith.t
 t/23-change-delims.t
 t/24-include-paths.t
 t/25-chomp.t
+t/26-template-name-$0.t
 t/99-all-modules-have-the-same-version.t
 t/data/test.tts
 t/data/dynamic.tts
