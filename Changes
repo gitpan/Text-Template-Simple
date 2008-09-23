@@ -2,6 +2,11 @@ Revision history for Perl extension Text::Template::Simple.
 
 Time zone is UTC+2.
 
+0.54_13 Tue Sep 23 20:53:34 2008
+   => Renamed the test to "26-template-name-dollar-zero.t" as either the shell
+      or the test suite seem to expand $0 in the file name. Weird, but too lazy
+      to investigate the real cause.
+
 0.54_12 Mon Sep 22 00:37:43 2008
    => Fixed template name access through $0.
    => New placeholder test.
