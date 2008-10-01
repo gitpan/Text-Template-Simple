@@ -107,7 +107,7 @@ sub _parse {
 
    # fetch and walk the tree
    PARSER: foreach my $token ( @{ $toke->tokenize( $raw, $map_keys ) } ) {
-      my($id, $str, $chomp, undef) = @{ $token };
+      my($str, $id, $chomp, undef) = @{ $token };
       LOG( TOKEN => "$id => $str" ) if DEBUG() > 1;
       next PARSER if $id eq 'DISCARD';
       next PARSER if $id eq 'COMMENT';

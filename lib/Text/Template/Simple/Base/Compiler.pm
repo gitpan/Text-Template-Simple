@@ -119,8 +119,8 @@ sub _mini_compiler {
    my $param    = shift || croak "_mini_compiler(): missing the parameters";
    my $opt      = shift || {};
 
-   croak "_mini_compiler(): options must be a hash"    if ! ref($opt)   eq 'HASH';
-   croak "_mini_compiler(): parameters must be a HASH" if ! ref($param) eq 'HASH';
+   croak "_mini_compiler(): options must be a hash"    if ref($opt)   ne 'HASH';
+   croak "_mini_compiler(): parameters must be a HASH" if ref($param) ne 'HASH';
 
    foreach my $var ( keys %{ $param } ) {
       $template =~ s[<%\Q$var\E%>][$param->{$var}]xmsg;

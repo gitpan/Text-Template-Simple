@@ -2,6 +2,12 @@ Revision history for Perl extension Text::Template::Simple.
 
 Time zone is UTC+2.
 
+0.54_15 Wed Oct  1 21:12:00 2008
+   => Moved token indexes into ::Constants.
+   => Renamed some internal constants.
+   => Fixed and documented explicit type passing to compile().
+   => Changed token format (swapped id <-> str).
+
 0.54_14 Wed Oct  1 06:11:49 2008
    => Re-implemented the previous overcomplicated and buggy chomping interface.
       This is now solid.

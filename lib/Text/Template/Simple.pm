@@ -2,7 +2,7 @@ package Text::Template::Simple;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.54_14';
+$VERSION = '0.54_15';
 
 use Carp qw( croak );
 use File::Spec;
@@ -48,7 +48,7 @@ my %DEFAULT = ( # default object attributes
    include_paths  => [],    # list of template dirs
    pre_chomp      => CHOMP_NONE,
    post_chomp     => CHOMP_NONE,
-   # TODO: Consider removing these
+   # TODO: Consider removing this
    resume         =>  0,    # resume on error?
 );
 
@@ -562,8 +562,9 @@ a reference to a filehandle (C<GLOB>), a string or a file path
 
 =head3 First parameter (DATA)
 
-The first parameter can take three different values; a filehandle,
-a string or a file path. Distinguishing filehandles are easy, since
+The first parameter can take four different values; a filehandle,
+a string, a file path or explicit type definition via an ARRAY reference.
+Distinguishing filehandles are easy, since
 they'll be passed as a reference (but see the bareword issue below).
 So, the only problem is distinguishing strings and file paths. 
 C<compile> first checks if the string length is equal or less than
@@ -612,6 +613,17 @@ compatibility with older perl:
    $text = $template->compile($fh);
 
 Filehandles will B<not> be closed.
+
+=head4 Explicit Types
+
+Pass an arrayref containing the type and the parameter to disable guessing
+and forcinf the type:
+
+   $text = $template->compile( [ FILE   => '/path/to/my.tts'] );
+   $text = $template->compile( [ GLOB   => \*MYHANDLE] );
+   $text = $template->compile( [ STRING => 'I am running under <%= $] %>'] );
+
+Type can be one of these: C<FILE>, C<GLOB>, C<STRING>.
 
 =head3 FILL_IN_PARAM
 
@@ -789,7 +801,7 @@ You can use C<$0> to get the template path/name inside the template:
 
 =head1 ERROR HANDLING
 
-You may need to C<eval> your code blocks to trap exceptions. Some 
+You may need to C<eval> your code blocks to trap exceptions. Some recoverable
 failures are silently ignored, but you can display them as warnings 
 if you enable debugging.
 

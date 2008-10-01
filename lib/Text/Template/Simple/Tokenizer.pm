@@ -8,17 +8,6 @@ use constant CMD_CHAR             =>  0;
 use constant CMD_ID               =>  1;
 use constant CMD_CB               =>  2; # callback
 
-use constant TOKEN_ID             =>  0;
-use constant TOKEN_STR            =>  1;
-use constant TOKEN_CHOMP          =>  2;
-use constant TOKEN_TRIGGER        =>  3;
-
-use constant TOKEN_CHOMP_NEXT     =>  0;
-use constant TOKEN_CHOMP_PREV     =>  1;
-
-use constant LAST_TOKEN           => -1;
-use constant PREVIOUS_TOKEN       => -2;
-
 use constant ID_DS                =>  0;
 use constant ID_DE                =>  1;
 use constant ID_PRE_CHOMP         =>  2;
@@ -30,15 +19,15 @@ use constant SUBSTR_LENGTH        =>  1;
 
 use Carp qw( croak );
 use Text::Template::Simple::Util      qw( LOG );
-use Text::Template::Simple::Constants qw( :chomp :directive );
+use Text::Template::Simple::Constants qw( :chomp :directive :token );
 
 my @COMMANDS = (
    # cmd                      id        callback
-   [ DIRECTIVE_CAPTURE  , qw/ CAPTURE         / ],
-   [ DIRECTIVE_DYNAMIC  , qw/ DYNAMIC   trim  / ],
-   [ DIRECTIVE_STATIC   , qw/ STATIC    trim  / ],
-   [ DIRECTIVE_NOTADELIM, qw/ NOTADELIM       / ],
-   [ DIRECTIVE_COMMENT  , qw/ COMMENT         / ],
+   [ DIR_CAPTURE  , qw/ CAPTURE         / ],
+   [ DIR_DYNAMIC  , qw/ DYNAMIC   trim  / ],
+   [ DIR_STATIC   , qw/ STATIC    trim  / ],
+   [ DIR_NOTADELIM, qw/ NOTADELIM       / ],
+   [ DIR_COMMENT  , qw/ COMMENT         / ],
 );
 
 sub new {
@@ -65,7 +54,7 @@ sub tokenize {
    OUT_TOKEN: foreach my $i ( split /($qds)/, $tmp ) {
 
       if ( $i eq $ds ) {
-         push @tokens, [ DELIMSTART => $i, [], undef ];
+         push @tokens, [ $i, 'DELIMSTART', [], undef ];
          $inside = 1;
          next OUT_TOKEN;
       }
@@ -77,7 +66,7 @@ sub tokenize {
                $last->[TOKEN_STR] = $self->tilde( $last->[TOKEN_STR] . $de );
             }
             else {
-               push @tokens, [ DELIMEND => $j, [], undef ];
+               push @tokens, [ $j, 'DELIMEND', [], undef ];
             }
             $inside = 0;
             next IN_TOKEN;
@@ -170,8 +159,8 @@ sub _token_code {
             my $val = $cb       ? $self->$cb( $buf ) : $buf;
 
             return [
-                     $id,
                      $val,
+                     $id,
                      [CHOMP_NONE, CHOMP_NONE],
                      $needs_chomp ? $ctoken : undef # trigger
                    ];
@@ -188,8 +177,8 @@ sub _token_code {
       $self->_chomp_prev($tree, $ctoken) if $needs_chomp;
 
       return   [
-                  $map_keys ? 'MAPKEY' : 'CODE',
                   substr($str, $soff, $slen),
+                  $map_keys ? 'MAPKEY' : 'CODE',
                   [ CHOMP_NONE, CHOMP_NONE ],
                   $needs_chomp ? $ctoken : undef # trigger
                ];
@@ -199,8 +188,8 @@ sub _token_code {
             :                           undef
             ;
    return [
-            'RAW',
             $self->tilde( $str ),
+            'RAW',
             [ $trig, CHOMP_NONE ],
             undef
          ];
@@ -212,26 +201,26 @@ sub _chomp_token {
    my($pre, $post) = ( $self->[ID_PRE_CHOMP], $self->[ID_POST_CHOMP] );
    my $c      = CHOMP_NONE;
 
-   my $copen  = $open eq DIRECTIVE_CHOMP_NONE      ? -1
-              : $open eq DIRECTIVE_CHOMP_COLLAPSE  ? do{$c |=  COLLAPSE_LEFT; 1}
-              : $pre  &  COLLAPSE_ALL              ? do{$c |=  COLLAPSE_LEFT; 1}
-              : $pre  &  CHOMP_ALL                 ? do{$c |=     CHOMP_LEFT; 1}
-              : $open eq DIRECTIVE_CHOMP           ? do{$c |=     CHOMP_LEFT; 1}
-              :                                      0
+   my $copen  = $open  eq DIR_CHOMP_NONE ? -1
+              : $open  eq DIR_COLLAPSE   ? do { $c |=  COLLAPSE_LEFT; 1 }
+              : $pre   &  COLLAPSE_ALL   ? do { $c |=  COLLAPSE_LEFT; 1 }
+              : $pre   &  CHOMP_ALL      ? do { $c |=     CHOMP_LEFT; 1 }
+              : $open  eq DIR_CHOMP      ? do { $c |=     CHOMP_LEFT; 1 }
+              :                            0
               ;
 
-   my $cclose = $close eq DIRECTIVE_CHOMP_NONE     ? -1
-              : $close eq DIRECTIVE_CHOMP_COLLAPSE ? do{$c |= COLLAPSE_RIGHT; 1}
-              : $post  &  COLLAPSE_ALL             ? do{$c |= COLLAPSE_RIGHT; 1}
-              : $post  &  CHOMP_ALL                ? do{$c |=    CHOMP_RIGHT; 1}
-              : $close eq DIRECTIVE_CHOMP          ? do{$c |=    CHOMP_RIGHT; 1}
-              :                                      0
+   my $cclose = $close eq DIR_CHOMP_NONE ? -1
+              : $close eq DIR_COLLAPSE   ? do { $c |= COLLAPSE_RIGHT; 1 }
+              : $post  &  COLLAPSE_ALL   ? do { $c |= COLLAPSE_RIGHT; 1 }
+              : $post  &  CHOMP_ALL      ? do { $c |=    CHOMP_RIGHT; 1 }
+              : $close eq DIR_CHOMP      ? do { $c |=    CHOMP_RIGHT; 1 }
+              :                            0
               ;
 
    my $cboth  = $copen > 0 && $cclose > 0;
 
-   $c |= COLLAPSE_ALL if( ($c & COLLAPSE_LEFT) && ($c & COLLAPSE_RIGHT));
-   $c |= CHOMP_ALL    if( ($c & CHOMP_LEFT)    && ($c & CHOMP_RIGHT));
+   $c |= COLLAPSE_ALL if( ($c & COLLAPSE_LEFT) && ($c & COLLAPSE_RIGHT) );
+   $c |= CHOMP_ALL    if( ($c & CHOMP_LEFT   ) && ($c & CHOMP_RIGHT   ) );
 
    return $copen, $cclose, $c || CHOMP_NONE;
 }

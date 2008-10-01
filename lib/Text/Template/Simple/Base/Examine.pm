@@ -29,7 +29,11 @@ sub _examine {
       }
       else {
          # give it a last chance, before falling back to string
-         if ( my $e = $self->_file_exists( $thing ) ) {
+         my $e =  do {
+                     $type eq 'STRING' ? undef
+                                       : $self->_file_exists( $thing );
+                  };
+         if ( $e ) {
             $rv                = $self->io->slurp( $e );
             $self->[TYPE]      = 'FILE';
             $self->[TYPE_FILE] = $e;

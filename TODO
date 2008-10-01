@@ -1,32 +1,31 @@
 [TARGET: 0.60]
 
-* Implement & document:
-        o $t->compile( [ FILE   => $thing ] );
-        o $t->compile( [ GLOB   => $thing ] );
-        o $t->compile( [ STRING => $thing ] );
-* Remove code templates from ::Constants (into ::Simple)
-        o Tidy up ::Constants.
-* Implement variable sharing without monolith..?
-        o PROCESS -> no monolith ?
-* Move token string to the first row in tokens.
-* Replace token ids with hex or int.
-        o Remove long names
-        o Remove "eq"
-* ***LOW*** Move trim/tilde/quote from tokenizer & into the parser.
-* Cleanup ::Simple
-        o Update Pod
 * Improve unit test coverage.
-        o Implement placeholder tests (24-include-paths.t).
-        o Increase # of tests
+        o Implement placeholder tests
 
 [BEYOND]
 
+* Improve unit test coverage.
+        o Increase # of tests
+* Remove code templates from ::Constants (into ::Simple)
+        o Tidy up ::Constants.
+* Replace token ids with hex or int.
+        o Remove long names
+        o Remove "eq"
+* Implement variable sharing without monolith..?
+        o PROCESS -> no monolith ?
 * Keep the code clean & simple (no hacks?).
 * Improve error handling. Minimize uncontrolled die()s.
-*  ***LOW*** Consider trying PPI.
 * Improve safe compartment.
 * Improve cache.
+        o Improve the cache file format.
 * Test -T support.
+* Command line compiler?
+* Re-implement or remove resume interface
+        o Perhaps eval { sub { ... }; 1; } || "ERR: $@"
+* Check competitors for neat ideas (heh!).
+*  ***LOW*** Move trim/tilde/quote from tokenizer & into the parser.
+*  ***LOW*** Consider trying PPI.
 *  ***LOW*** Implement TTS plugins for major frameworks.
 *  ***LOW*** Consider building a tiny framework for template plugins.
         o Or just let the user define subs in ::Dummy.
@@ -36,5 +35,3 @@
                 - Seems to be tricky with interpolation in effect.
 *  ***LOW*** Benchmarks?
 *  ***LOW*** XS based tokenizer?
-* Command line compiler?
-* Check competitors for neat ideas (heh!).

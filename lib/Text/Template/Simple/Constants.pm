@@ -6,79 +6,91 @@ $VERSION = '0.54_14';
 
 # object fields
 BEGIN { $OID = -1 } # init object field id counter
-use constant DELIMITERS      => ++$OID;
-use constant AS_STRING       => ++$OID;
-use constant DELETE_WS       => ++$OID;
-use constant FAKER           => ++$OID;
-use constant FAKER_HASH      => ++$OID;
-use constant FAKER_SELF      => ++$OID;
-use constant MONOLITH        => ++$OID;
-use constant CACHE           => ++$OID;
-use constant CACHE_DIR       => ++$OID;
-use constant CACHE_OBJECT    => ++$OID;
-use constant IO_OBJECT       => ++$OID;
-use constant STRICT          => ++$OID;
-use constant SAFE            => ++$OID;
-use constant HEADER          => ++$OID;
-use constant ADD_ARGS        => ++$OID;
-use constant WARN_IDS        => ++$OID;
-use constant TYPE            => ++$OID;
-use constant TYPE_FILE       => ++$OID;
-use constant COUNTER         => ++$OID;
-use constant COUNTER_INCLUDE => ++$OID;
-use constant INSIDE_INCLUDE  => ++$OID;
-use constant NEEDS_OBJECT    => ++$OID;
-use constant CID             => ++$OID;
-use constant FILENAME        => ++$OID;
-use constant RESUME          => ++$OID;
-use constant IOLAYER         => ++$OID;
-use constant STACK           => ++$OID;
-use constant USER_THANDLER   => ++$OID;
-use constant DEEP_RECURSION  => ++$OID;
-use constant INCLUDE_PATHS   => ++$OID;
-use constant PRE_CHOMP       => ++$OID;
-use constant POST_CHOMP      => ++$OID;
-use constant MAXOBJFIELD     =>   $OID; # number of the last object field
+use constant DELIMITERS       => ++$OID;
+use constant AS_STRING        => ++$OID;
+use constant DELETE_WS        => ++$OID;
+use constant FAKER            => ++$OID;
+use constant FAKER_HASH       => ++$OID;
+use constant FAKER_SELF       => ++$OID;
+use constant MONOLITH         => ++$OID;
+use constant CACHE            => ++$OID;
+use constant CACHE_DIR        => ++$OID;
+use constant CACHE_OBJECT     => ++$OID;
+use constant IO_OBJECT        => ++$OID;
+use constant STRICT           => ++$OID;
+use constant SAFE             => ++$OID;
+use constant HEADER           => ++$OID;
+use constant ADD_ARGS         => ++$OID;
+use constant WARN_IDS         => ++$OID;
+use constant TYPE             => ++$OID;
+use constant TYPE_FILE        => ++$OID;
+use constant COUNTER          => ++$OID;
+use constant COUNTER_INCLUDE  => ++$OID;
+use constant INSIDE_INCLUDE   => ++$OID;
+use constant NEEDS_OBJECT     => ++$OID;
+use constant CID              => ++$OID;
+use constant FILENAME         => ++$OID;
+use constant RESUME           => ++$OID;
+use constant IOLAYER          => ++$OID;
+use constant STACK            => ++$OID;
+use constant USER_THANDLER    => ++$OID;
+use constant DEEP_RECURSION   => ++$OID;
+use constant INCLUDE_PATHS    => ++$OID;
+use constant PRE_CHOMP        => ++$OID;
+use constant POST_CHOMP       => ++$OID;
+use constant MAXOBJFIELD      =>   $OID; # number of the last object field
 
 # settings
-use constant MAX_RECURSION   => 50; # recursion limit for dynamic includes
-use constant PARENT          => 'Text::Template::Simple';
-use constant IS_WINDOWS      => $^O eq 'MSWin32' || $^O eq 'MSWin64';
-use constant DELIM_START     => 0; # field id
-use constant DELIM_END       => 1; # field id
-use constant RE_NONFILE      => qr{ [ \n \r < > \* \? ] }xmso;
-use constant RE_DUMP_ERROR   => qr{Can\'t locate object method "first" via package "B::SVOP"};
-use constant RESUME_NOSTART  => 1;                         # bool
-use constant COMPILER        => PARENT.'::Compiler';       # The compiler
-use constant COMPILER_SAFE   => PARENT.'::Compiler::Safe'; # Safe compiler
-use constant DUMMY_CLASS     => PARENT.'::Dummy';          # Dummy class
-use constant MAX_FL          => 120;                       # Maximum file name length
-use constant CACHE_EXT       => '.tts.cache';              # disk cache extension
-use constant STAT_SIZE       => 7;                         # for stat()
-use constant STAT_MTIME      => 9;                         # for stat()
-use constant DELIMS          => qw( <% %> );               # default delimiter pair
-use constant NEW_PERL        => $] >= 5.008;               # for I/O layer
-use constant IS_FLOCK        => IS_WINDOWS ? ( Win32::IsWin95() ? 0 : 1 ) : 1;
+use constant MAX_RECURSION    => 50; # recursion limit for dynamic includes
+use constant PARENT           => 'Text::Template::Simple';
+use constant IS_WINDOWS       => $^O eq 'MSWin32' || $^O eq 'MSWin64';
+use constant DELIM_START      => 0; # field id
+use constant DELIM_END        => 1; # field id
+use constant RE_NONFILE       => qr{ [ \n \r < > \* \? ] }xmso;
+use constant RE_DUMP_ERROR    => qr{Can\'t locate object method "first" via package "B::SVOP"};
+use constant RESUME_NOSTART   => 1;                   # bool
+use constant COMPILER         => PARENT.'::Compiler'; # The compiler
+use constant COMPILER_SAFE    => COMPILER.'::Safe';   # Safe compiler
+use constant DUMMY_CLASS      => PARENT.'::Dummy';    # Dummy class
+use constant MAX_FL           => 120;                 # Maximum file name length
+use constant CACHE_EXT        => '.tts.cache';        # disk cache extension
+use constant STAT_SIZE        => 7;                   # for stat()
+use constant STAT_MTIME       => 9;                   # for stat()
+use constant DELIMS           => qw( <% %> );         # default delimiter pair
+use constant NEW_PERL         => $] >= 5.008;         # for I/O layer
+use constant IS_FLOCK         => IS_WINDOWS ? ( Win32::IsWin95() ? 0 : 1 ) : 1;
 
-use constant CHOMP_NONE      => 0x000000;
-use constant COLLAPSE_NONE   => 0x000000;
-use constant CHOMP_ALL       => 0x000002;
-use constant CHOMP_LEFT      => 0x000004;
-use constant CHOMP_RIGHT     => 0x000008;
-use constant COLLAPSE_LEFT   => 0x000010;
-use constant COLLAPSE_RIGHT  => 0x000020;
-use constant COLLAPSE_ALL    => 0x000040;
+use constant CHOMP_NONE       => 0x000000;
+use constant COLLAPSE_NONE    => 0x000000;
+use constant CHOMP_ALL        => 0x000002;
+use constant CHOMP_LEFT       => 0x000004;
+use constant CHOMP_RIGHT      => 0x000008;
+use constant COLLAPSE_LEFT    => 0x000010;
+use constant COLLAPSE_RIGHT   => 0x000020;
+use constant COLLAPSE_ALL     => 0x000040;
 
 # first level directives
-use constant DIRECTIVE_CAPTURE        => '=';
-use constant DIRECTIVE_DYNAMIC        => '*';
-use constant DIRECTIVE_STATIC         => '+';
-use constant DIRECTIVE_NOTADELIM      => '!';
-use constant DIRECTIVE_COMMENT        => '#';
+use constant DIR_CAPTURE      => '=';
+use constant DIR_DYNAMIC      => '*';
+use constant DIR_STATIC       => '+';
+use constant DIR_NOTADELIM    => '!';
+use constant DIR_COMMENT      => '#';
 # second level directives
-use constant DIRECTIVE_CHOMP          => '-';
-use constant DIRECTIVE_CHOMP_COLLAPSE => '~';
-use constant DIRECTIVE_CHOMP_NONE     => '^';
+use constant DIR_CHOMP        => '-';
+use constant DIR_COLLAPSE     => '~';
+use constant DIR_CHOMP_NONE   => '^';
+
+# token related indexes
+use constant TOKEN_STR        =>  0;
+use constant TOKEN_ID         =>  1;
+use constant TOKEN_CHOMP      =>  2;
+use constant TOKEN_TRIGGER    =>  3;
+
+use constant TOKEN_CHOMP_NEXT =>  0; # sub-key for TOKEN_CHOMP
+use constant TOKEN_CHOMP_PREV =>  1; # sub-key for TOKEN_CHOMP
+
+use constant LAST_TOKEN       => -1;
+use constant PREVIOUS_TOKEN   => -2;
 
 # SHA seems to be more accurate, so we'll try them first.
 # Pure-Perl ones are slower, but they are fail-safes.
@@ -128,7 +140,9 @@ use constant DISK_CACHE_COMMENT => <<"TEMPLATE_CONSTANT";
 #
 TEMPLATE_CONSTANT
 
-use constant DISK_CACHE_MARKER => q{# This file is automatically generated by } . PARENT;
+use constant DISK_CACHE_MARKER => q{# This file is automatically generated by }
+                               .  PARENT
+                               ;
 
 use constant RESUME_TEMPLATE => sub {
    my $tmp = q~
@@ -263,15 +277,25 @@ BEGIN {
                         COLLAPSE_ALL
                      )],
       directive =>   [qw(
-                        DIRECTIVE_CHOMP
-                        DIRECTIVE_CHOMP_COLLAPSE
-                        DIRECTIVE_CHOMP_NONE
-                        DIRECTIVE_CAPTURE
-                        DIRECTIVE_DYNAMIC
-                        DIRECTIVE_STATIC
-                        DIRECTIVE_NOTADELIM
-                        DIRECTIVE_COMMENT
+                        DIR_CHOMP
+                        DIR_COLLAPSE
+                        DIR_CHOMP_NONE
+                        DIR_CAPTURE
+                        DIR_DYNAMIC
+                        DIR_STATIC
+                        DIR_NOTADELIM
+                        DIR_COMMENT
                      )],
+      token     =>   [qw(
+                        TOKEN_ID
+                        TOKEN_STR
+                        TOKEN_CHOMP
+                        TOKEN_TRIGGER
+                        TOKEN_CHOMP_NEXT
+                        TOKEN_CHOMP_PREV
+                        LAST_TOKEN
+                        PREVIOUS_TOKEN
+                      )],
       etc       =>   [qw(
                         DIGEST_MODS
                         STAT_MTIME
