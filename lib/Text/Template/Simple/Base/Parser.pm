@@ -5,7 +5,7 @@ use Carp qw( croak );
 use Text::Template::Simple::Util;
 use Text::Template::Simple::Constants;
 
-$VERSION = '0.54_11';
+$VERSION = '0.54_14';
 
 # internal code templates
 my %INTERNAL = (
@@ -106,9 +106,8 @@ sub _parse {
    $raw =~ s{\Q$ds}{$ds!}xmsg if $as_is;
 
    # fetch and walk the tree
-   my($id, $str);
    PARSER: foreach my $token ( @{ $toke->tokenize( $raw, $map_keys ) } ) {
-      ($id, $str) = @{ $token };
+      my($id, $str, $chomp, undef) = @{ $token };
       LOG( TOKEN => "$id => $str" ) if DEBUG() > 1;
       next PARSER if $id eq 'DISCARD';
       next PARSER if $id eq 'COMMENT';
@@ -117,7 +116,7 @@ sub _parse {
       if ( $id eq 'DELIMEND'   ) { $inside--; next PARSER; }
 
       if ( $id eq 'RAW' || $id eq 'NOTADELIM' ) {
-         $code .= $w_raw->($str);
+         $code .= $w_raw->( $self->_chomp( $str, $chomp ) );
       }
 
       elsif ( $id eq 'CODE' ) {
@@ -164,6 +163,36 @@ sub _parse {
    }
 
    return $self->_wrapper( $code, $cache_id, $faker, $map_keys );
+}
+
+sub _chomp {
+   # remove the unnecessary white space
+   my $self = shift;
+   my($str, $chomp) = @_;
+
+   # NEXT: discard: left;  right -> left
+   # PREV: discard: right; left  -> right
+   my($next, $prev) = @{ $chomp };
+   $next ||= CHOMP_NONE;
+   $prev ||= CHOMP_NONE;
+
+   my $left_collapse  = ( $next & COLLAPSE_ALL ) || ( $next & COLLAPSE_RIGHT);
+   my $left_chomp     = ( $next & CHOMP_ALL    ) || ( $next & CHOMP_RIGHT   );
+
+   my $right_collapse = ( $prev & COLLAPSE_ALL ) || ( $prev & COLLAPSE_LEFT );
+   my $right_chomp    = ( $prev & CHOMP_ALL    ) || ( $prev & CHOMP_LEFT    );
+
+   $str = $left_collapse  ? ltrim($str, ' ')
+        : $left_chomp     ? ltrim($str)
+        :                   $str
+        ;
+
+   $str = $right_collapse ? rtrim($str, ' ')
+        : $right_chomp    ? rtrim($str)
+        :                   $str
+        ;
+
+   return $str;
 }
 
 sub _wrapper {
@@ -307,6 +336,29 @@ Private module.
 =head1 DESCRIPTION
 
 Private module.
+
+=begin CHOMPING
+
+The tokenizer uses a cursor to mark the chomping around a RAW token. Only RAW
+tokens can be chomped. Basically, a RAW token can be imagined like this:
+
+    _________
+   |N|     |P|
+   |E| STR |R|
+   |X|     |E|
+   |T|     |V|
+    ---------
+
+It'll have two labels on sides and the content in the center. When a chomp
+directive is placed to the left delimiter, this affects the previous RAW token
+and when it is placed to the right delimiter, it'll affect the next RAW token.
+If the previous or next is not raw, nothing will happen. You need to swap sides
+when handling the chomping. i.e.: left chomping affects the right side of the
+RAW, and right chomping affects the left side of the RAW. _chomp() method in
+the parser swaps sides to handle chomping.
+See Text::Template::Simple::Tokenizer to see how pre-parsing happens.
+
+=end CHOMPING
 
 =head1 AUTHOR
 

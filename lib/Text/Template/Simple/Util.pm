@@ -4,7 +4,7 @@ use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
 use Text::Template::Simple::Constants qw( :info DIGEST_MODS );
 use Carp qw( croak );
 
-$VERSION = '0.54_11';
+$VERSION = '0.54_14';
 
 BEGIN {
    if ( IS_WINDOWS ) {
@@ -75,7 +75,7 @@ sub escape {
    my $s = shift;
    return $s if ! $s; # false or undef
    my $e = quotemeta $c;
-      $s =~ s{ $e }{\\$c}xmsg;
+      $s =~ s{$e}{\\$c}xmsg;
       $s;
 }
 

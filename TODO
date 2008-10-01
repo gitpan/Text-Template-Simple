@@ -8,12 +8,11 @@
         o Tidy up ::Constants.
 * Implement variable sharing without monolith..?
         o PROCESS -> no monolith ?
-* Move chomping action from tokenizer into $parent->_parse();
+* Move token string to the first row in tokens.
 * Replace token ids with hex or int.
         o Remove long names
         o Remove "eq"
-* Re-implement [l|r|]trim in Tokenizer (dupes!)
-* local $0; in templates seems to be buggy.
+* ***LOW*** Move trim/tilde/quote from tokenizer & into the parser.
 * Cleanup ::Simple
         o Update Pod
 * Improve unit test coverage.

@@ -2,7 +2,7 @@ package Text::Template::Simple::Constants;
 use strict;
 use vars qw($VERSION $OID @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
 
-$VERSION = '0.54_11';
+$VERSION = '0.54_14';
 
 # object fields
 BEGIN { $OID = -1 } # init object field id counter
@@ -60,16 +60,14 @@ use constant DELIMS          => qw( <% %> );               # default delimiter p
 use constant NEW_PERL        => $] >= 5.008;               # for I/O layer
 use constant IS_FLOCK        => IS_WINDOWS ? ( Win32::IsWin95() ? 0 : 1 ) : 1;
 
-use constant CHOMP_NONE               => 0x00000000;
-use constant CHOMP_ALL                => 0x00000001;
-use constant CHOMP_COLLAPSE           => 0x00000002;
-use constant CHOMP_COLLAPSE_PRE       => 0x00000003;
-use constant CHOMP_COLLAPSE_POST      => 0x00000004;
-
-use constant TOKEN_CHOMP_NONE         => 0x00000000;
-use constant TOKEN_CHOMP_OPEN         => 0x00000001;
-use constant TOKEN_CHOMP_CLOSE        => 0x00000002;
-use constant TOKEN_CHOMP_BOTH         => 0x00000003;
+use constant CHOMP_NONE      => 0x000000;
+use constant COLLAPSE_NONE   => 0x000000;
+use constant CHOMP_ALL       => 0x000002;
+use constant CHOMP_LEFT      => 0x000004;
+use constant CHOMP_RIGHT     => 0x000008;
+use constant COLLAPSE_LEFT   => 0x000010;
+use constant COLLAPSE_RIGHT  => 0x000020;
+use constant COLLAPSE_ALL    => 0x000040;
 
 # first level directives
 use constant DIRECTIVE_CAPTURE        => '=';
@@ -256,16 +254,13 @@ BEGIN {
                      )],
       chomp     =>   [qw(
                         CHOMP_NONE
+                        COLLAPSE_NONE
                         CHOMP_ALL
-                        CHOMP_COLLAPSE
-                        CHOMP_COLLAPSE_PRE
-                        CHOMP_COLLAPSE_POST
-                     )],
-      token     =>   [qw(
-                        TOKEN_CHOMP_NONE
-                        TOKEN_CHOMP_BOTH
-                        TOKEN_CHOMP_OPEN
-                        TOKEN_CHOMP_CLOSE
+                        CHOMP_LEFT
+                        CHOMP_RIGHT
+                        COLLAPSE_LEFT
+                        COLLAPSE_RIGHT
+                        COLLAPSE_ALL
                      )],
       directive =>   [qw(
                         DIRECTIVE_CHOMP

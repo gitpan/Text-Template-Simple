@@ -2,6 +2,13 @@ Revision history for Perl extension Text::Template::Simple.
 
 Time zone is UTC+2.
 
+0.54_14 Wed Oct  1 06:11:49 2008
+   => Re-implemented the previous overcomplicated and buggy chomping interface.
+      This is now solid.
+         * Removed buggy chomping tests.
+         * Also moved the chomping action into the parser.
+   => Improved token dumping.
+
 0.54_13 Tue Sep 23 20:53:34 2008
    => Renamed the test to "26-template-name-dollar-zero.t" as either the shell
       or the test suite seem to expand $0 in the file name. Weird, but too lazy

@@ -2,7 +2,7 @@ package Text::Template::Simple;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.54_13';
+$VERSION = '0.54_14';
 
 use Carp qw( croak );
 use File::Spec;
@@ -537,7 +537,7 @@ this parameter.
    use Text::Template::Simple::Constants qw( :chomp );
    $pre = CHOMP_NONE; # no chomp
    $pre = CHOMP_ALL;  # remove all whitespace
-   $pre = CHOMP_COLLAPSE; # replace all ws with a single space
+   $pre = COLLAPSE_ALL; # replace all ws with a single space
    $template = Text::Template::Simple->new(
       pre_chomp => $pre,
    );
@@ -547,7 +547,7 @@ this parameter.
    use Text::Template::Simple::Constants qw( :chomp );
    $post = CHOMP_NONE; # no chomp
    $post = CHOMP_ALL;  # remove all whitespace
-   $post = CHOMP_COLLAPSE; # replace all ws with a single space
+   $post = COLLAPSE_ALL; # replace all ws with a single space
    $template = Text::Template::Simple->new(
       post_chomp => $post,
    );
@@ -781,7 +781,11 @@ It is possible to import this function to your namespace:
 
 =head1 EXAMPLES
 
-TODO
+=head2 ACCESSING TEMPLATE NAMES
+
+You can use C<$0> to get the template path/name inside the template:
+
+   I am <%= $0 %>
 
 =head1 ERROR HANDLING
 

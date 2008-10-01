@@ -1,17 +1,23 @@
 package Text::Template::Simple::Tokenizer;
 use strict;
 use vars qw($VERSION);
+
+$VERSION = '0.54_14';
+
 use constant CMD_CHAR             =>  0;
 use constant CMD_ID               =>  1;
 use constant CMD_CB               =>  2; # callback
 
 use constant TOKEN_ID             =>  0;
 use constant TOKEN_STR            =>  1;
-use constant TOKEN_EXTRA          =>  2;
-use constant TOKEN_COLLAPSE       =>  3;
+use constant TOKEN_CHOMP          =>  2;
+use constant TOKEN_TRIGGER        =>  3;
+
+use constant TOKEN_CHOMP_NEXT     =>  0;
+use constant TOKEN_CHOMP_PREV     =>  1;
 
 use constant LAST_TOKEN           => -1;
-use constant PREVIOUS_TOKEN       => -3;
+use constant PREVIOUS_TOKEN       => -2;
 
 use constant ID_DS                =>  0;
 use constant ID_DE                =>  1;
@@ -23,10 +29,8 @@ use constant SUBSTR_OFFSET_SECOND =>  1;
 use constant SUBSTR_LENGTH        =>  1;
 
 use Carp qw( croak );
-use Text::Template::Simple::Util      qw();
-use Text::Template::Simple::Constants qw( :chomp :token :directive );
-
-$VERSION = '0.54_11';
+use Text::Template::Simple::Util      qw( LOG );
+use Text::Template::Simple::Constants qw( :chomp :directive );
 
 my @COMMANDS = (
    # cmd                      id        callback
@@ -55,45 +59,82 @@ sub tokenize {
    my $map_keys   = shift;
    my($ds, $de)   = ($self->[ID_DS], $self->[ID_DE]);
    my($qds, $qde) = map { quotemeta $_ } $ds, $de;
-   my(@tokens, $inside, $extra, $ecollapse);
+
+   my(@tokens, $inside, $last, $i, $j);
 
    OUT_TOKEN: foreach my $i ( split /($qds)/, $tmp ) {
 
       if ( $i eq $ds ) {
-         push @tokens, [ DELIMSTART => $i ];
+         push @tokens, [ DELIMSTART => $i, [], undef ];
          $inside = 1;
          next OUT_TOKEN;
       }
 
       IN_TOKEN: foreach my $j ( split /($qde)/, $i ) {
-
          if ( $j eq $de ) {
             my $last = $tokens[LAST_TOKEN];
             if ( $last->[TOKEN_ID] eq 'NOTADELIM' ) {
                $last->[TOKEN_STR] = $self->tilde( $last->[TOKEN_STR] . $de );
             }
             else {
-               # these will be reset in _chomp()
-               $extra     = $last->[TOKEN_EXTRA];
-               $ecollapse = $last->[TOKEN_COLLAPSE];
-               push @tokens, [ DELIMEND => $j ];
+               push @tokens, [ DELIMEND => $j, [], undef ];
             }
             $inside = 0;
             next IN_TOKEN;
          }
-
          push @tokens, $self->_token_code( $j, $inside, $map_keys, \@tokens );
-         $self->_chomp( \@tokens, \$extra, \$ecollapse );
       }
    }
 
-   if ( $self->can('DEBUG_TOKENS') ) {
-      require Data::Dumper;
-      my $struct = Data::Dumper->new( [ \@tokens ], [ '*TOKENS' ] );
-      Text::Template::Simple::Util::LOG( DEBUG => $struct->Dump );
-   }
+   $self->_debug_tokens( \@tokens ) if $self->can('DEBUG_TOKENS');
 
    return \@tokens;
+}
+
+sub tilde { shift; Text::Template::Simple::Util::escape( '~' => @_ ) }
+sub quote { shift; Text::Template::Simple::Util::escape( '"' => @_ ) }
+sub trim  { shift; Text::Template::Simple::Util::trim(          @_ ) }
+
+sub _debug_tokens {
+   my $self   = shift;
+   my $tokens = shift;
+   # TODO: heredocs look ugly
+   my $buf = <<'HEAD';
+
+---------------------------
+       TOKEN DUMP
+---------------------------
+HEAD
+
+   my $tmp = <<'DUMP';
+ID        : %s
+STRING    : %s
+CHOMP_PREV: %s
+CHOMP_PREV: %s
+TRIGGER   : %s
+---------------------------
+DUMP
+
+   foreach my $t ( @{ $tokens } ) {
+      my $s = $t->[TOKEN_STR];
+      $s =~ s{\r}{\\r}xmsg;
+      $s =~ s{\n}{\\n}xmsg;
+      $s =~ s{\f}{\\f}xmsg;
+      $s =~ s{\s}{\\s}xmsg;
+      my @v = (
+         scalar $self->_visualize_chomp( $t->[TOKEN_CHOMP][TOKEN_CHOMP_NEXT] ),
+         scalar $self->_visualize_chomp( $t->[TOKEN_CHOMP][TOKEN_CHOMP_PREV] ),
+         scalar $self->_visualize_chomp( $t->[TOKEN_TRIGGER]                 )
+      );
+      $buf .= sprintf $tmp, $t->[TOKEN_ID], $s, @v;
+   }
+   Text::Template::Simple::Util::LOG( DEBUG => $buf );
+}
+
+sub _user_commands {
+   my $self = shift;
+   return +() if ! $self->can('commands');
+   return $self->commands;
 }
 
 sub _token_code {
@@ -108,12 +149,10 @@ sub _token_code {
    my $last     = substr $str, length($str) - 1    , SUBSTR_LENGTH;
    my $len      = length($str);
 
-   TCODE: {
-      my($copen, $cclose, $ctoken, $cc) = $self->_chomp_token( $second, $last );
-
+   HANDLE_OUTSIDE: {
       foreach my $cmd ( @COMMANDS, $self->_user_commands ) {
-
          if ( $first eq $cmd->[CMD_CHAR] ) {
+            my($copen, $cclose, $ctoken) = $self->_chomp_token( $second, $last );
             my $cb   = $map_keys ? 'quote' : $cmd->[CMD_CB];
             my $soff = $copen ? 2 : 1;
             my $slen = $len - ($cclose ? $soff+1 : 1);
@@ -124,109 +163,137 @@ sub _token_code {
                $tree->[LAST_TOKEN][TOKEN_ID] = 'DISCARD';
             }
 
+            my $needs_chomp = defined($ctoken);
+            $self->_chomp_prev($tree, $ctoken) if $needs_chomp;
+
+            my $id  = $map_keys ? 'RAW'              : $cmd->[CMD_ID];
+            my $val = $cb       ? $self->$cb( $buf ) : $buf;
+
             return [
-                     $map_keys ? 'RAW'              : $cmd->[CMD_ID],
-                     $cb       ? $self->$cb( $buf ) : $buf,
-                     ($ctoken  ? ($ctoken, $cc )    : () ),
+                     $id,
+                     $val,
+                     [CHOMP_NONE, CHOMP_NONE],
+                     $needs_chomp ? $ctoken : undef # trigger
                    ];
          }
       }
    }
 
    if ( $inside ) {
-      my($copen, $cclose, $ctoken, $cc) = $self->_chomp_token( $first, $last );
+      my($copen, $cclose, $ctoken) = $self->_chomp_token( $first, $last );
       my $soff = $copen ? 1 : 0;
       my $slen = $len - ( $cclose ? $soff+1 : 0 );
+
+      my $needs_chomp = defined($ctoken);
+      $self->_chomp_prev($tree, $ctoken) if $needs_chomp;
 
       return   [
                   $map_keys ? 'MAPKEY' : 'CODE',
                   substr($str, $soff, $slen),
-                  ($ctoken ? ($ctoken, $cc) : () ),
+                  [ CHOMP_NONE, CHOMP_NONE ],
+                  $needs_chomp ? $ctoken : undef # trigger
                ];
    }
 
-   return [ RAW => $self->tilde( $str ) ];
+   my $trig = $tree->[PREVIOUS_TOKEN] ? $tree->[PREVIOUS_TOKEN][TOKEN_TRIGGER]
+            :                           undef
+            ;
+   return [
+            'RAW',
+            $self->tilde( $str ),
+            [ $trig, CHOMP_NONE ],
+            undef
+         ];
 }
 
-sub _chomp {
-   # optimize away the unnecessary white space before parsing happens
-   my $self      = shift;
-   my $tree_ref  = shift;
-   my $extra_ref = shift;
-   my $xc_ref    = shift;
-   my $is_close  = defined($$extra_ref) && (
-                        $$extra_ref & TOKEN_CHOMP_CLOSE ||
-                        $$extra_ref & TOKEN_CHOMP_BOTH
-                  );
-
-   my $last = $tree_ref->[LAST_TOKEN];
-
-   if ( $is_close ) {
-      my $collapse       = $last->[TOKEN_COLLAPSE] || $$xc_ref || CHOMP_NONE;
-      my $cc             = $collapse & CHOMP_COLLAPSE_POST ? ' ' : undef;
-      $last->[TOKEN_STR] = $self->ltrim( $last->[TOKEN_STR], $cc );
-      my $short_circuit  = $$extra_ref & TOKEN_CHOMP_CLOSE; # by-pass the code below?
-      $$extra_ref        = undef; # reset!
-      $$xc_ref           = undef; # reset
-      return if $short_circuit;
-   }
-
-   my $type = $last->[TOKEN_EXTRA] || return;
-
-   if ( $type & TOKEN_CHOMP_OPEN || $type & TOKEN_CHOMP_BOTH ) {
-      if ( @{ $tree_ref } >= 2 ) {
-         my $t  = $tree_ref->[PREVIOUS_TOKEN];
-         my $cc = $last->[TOKEN_COLLAPSE] & CHOMP_COLLAPSE_PRE ? ' ' : undef;
-         $t->[TOKEN_STR] = $self->rtrim( $t->[TOKEN_STR], $cc );
-      }
-   }
-
-   return;
-}
 
 sub _chomp_token {
    my($self, $open, $close) = @_;
    my($pre, $post) = ( $self->[ID_PRE_CHOMP], $self->[ID_POST_CHOMP] );
    my $c      = CHOMP_NONE;
 
-   my $copen  = $open eq DIRECTIVE_CHOMP_NONE     ? -1
-              : $open eq DIRECTIVE_CHOMP_COLLAPSE ? do{$c |= CHOMP_COLLAPSE_PRE; 1}
-              : $pre  &  CHOMP_COLLAPSE           ? do{$c |= CHOMP_COLLAPSE_PRE; 1}
-              : $pre  &  CHOMP_ALL                ? 1
-              : $open eq DIRECTIVE_CHOMP          ? 1
-              :                                     0
+   my $copen  = $open eq DIRECTIVE_CHOMP_NONE      ? -1
+              : $open eq DIRECTIVE_CHOMP_COLLAPSE  ? do{$c |=  COLLAPSE_LEFT; 1}
+              : $pre  &  COLLAPSE_ALL              ? do{$c |=  COLLAPSE_LEFT; 1}
+              : $pre  &  CHOMP_ALL                 ? do{$c |=     CHOMP_LEFT; 1}
+              : $open eq DIRECTIVE_CHOMP           ? do{$c |=     CHOMP_LEFT; 1}
+              :                                      0
               ;
 
    my $cclose = $close eq DIRECTIVE_CHOMP_NONE     ? -1
-              : $close eq DIRECTIVE_CHOMP_COLLAPSE ? do{$c |= CHOMP_COLLAPSE_POST;1}
-              : $post  &  CHOMP_COLLAPSE           ? do{$c |= CHOMP_COLLAPSE_POST;1}
-              : $post  &  CHOMP_ALL                ? 1
-              : $close eq DIRECTIVE_CHOMP          ? 1
+              : $close eq DIRECTIVE_CHOMP_COLLAPSE ? do{$c |= COLLAPSE_RIGHT; 1}
+              : $post  &  COLLAPSE_ALL             ? do{$c |= COLLAPSE_RIGHT; 1}
+              : $post  &  CHOMP_ALL                ? do{$c |=    CHOMP_RIGHT; 1}
+              : $close eq DIRECTIVE_CHOMP          ? do{$c |=    CHOMP_RIGHT; 1}
               :                                      0
               ;
 
    my $cboth  = $copen > 0 && $cclose > 0;
 
-   my $token = $cboth      ? TOKEN_CHOMP_BOTH
-             : $copen  > 0 ? TOKEN_CHOMP_OPEN
-             : $cclose > 0 ? TOKEN_CHOMP_CLOSE
-             :               TOKEN_CHOMP_NONE
-             ;
+   $c |= COLLAPSE_ALL if( ($c & COLLAPSE_LEFT) && ($c & COLLAPSE_RIGHT));
+   $c |= CHOMP_ALL    if( ($c & CHOMP_LEFT)    && ($c & CHOMP_RIGHT));
 
-   return $copen, $cclose, $token, $c;
+   return $copen, $cclose, $c || CHOMP_NONE;
 }
 
-sub _user_commands {
-   my $self = shift;
-   return +() if ! $self->can('commands');
-   return $self->commands;
+sub _chomp_prev {
+   my($self, $tree, $ctoken) = @_;
+   my $prev = $tree->[PREVIOUS_TOKEN] || return; # no previous if this is first
+   return if $prev->[TOKEN_ID] ne 'RAW'; # only RAWs can be chomped
+
+   my $tc_prev = $prev->[TOKEN_CHOMP][TOKEN_CHOMP_PREV];
+   my $tc_next = $prev->[TOKEN_CHOMP][TOKEN_CHOMP_NEXT];
+
+   $prev->[TOKEN_CHOMP] = [
+                           $tc_next ? $tc_next           : CHOMP_NONE,
+                           $tc_prev ? $tc_prev | $ctoken : $ctoken
+                           ];
+   return;
 }
 
-sub tilde { shift; Text::Template::Simple::Util::escape( '~' => @_ ) }
-sub quote { shift; Text::Template::Simple::Util::escape( '"' => @_ ) }
-sub trim  { shift; Text::Template::Simple::Util::trim(          @_ ) }
-sub rtrim { shift; Text::Template::Simple::Util::rtrim(         @_ ) }
-sub ltrim { shift; Text::Template::Simple::Util::ltrim(         @_ ) }
+sub _visualize_chomp {
+   my $self  = shift;
+   my $param = shift;
+   if ( ! defined $param ) {
+      return wantarray ? ("undef", "undef") : "undef";
+   }
+
+   my @types = (
+      [ COLLAPSE_ALL   => COLLAPSE_ALL   ],
+      [ COLLAPSE_LEFT  => COLLAPSE_LEFT  ],
+      [ COLLAPSE_RIGHT => COLLAPSE_RIGHT ],
+      [ CHOMP_ALL      => CHOMP_ALL      ],
+      [ CHOMP_LEFT     => CHOMP_LEFT     ],
+      [ CHOMP_RIGHT    => CHOMP_RIGHT    ],
+      [ CHOMP_NONE     => CHOMP_NONE     ],
+      [ COLLAPSE_NONE  => COLLAPSE_NONE  ],
+   );
+
+   my $which;
+   foreach my $type ( @types ) {
+       if ( $type->[1] & $param ) {
+           $which = $type->[0];
+           last;
+       }
+   }
+
+   $which ||= "undef";
+   return $which if ! wantarray;
+
+   # can be smaller?
+   my @test = (
+      sprintf( "COLLAPSE_ALL  : %s", $param & COLLAPSE_ALL   ? 1 : 0 ),
+      sprintf( "COLLAPSE_LEFT : %s", $param & COLLAPSE_LEFT  ? 1 : 0 ),
+      sprintf( "COLLAPSE_RIGHT: %s", $param & COLLAPSE_RIGHT ? 1 : 0 ),
+      sprintf( "CHOMP_ALL     : %s", $param & CHOMP_ALL      ? 1 : 0 ),
+      sprintf( "CHOMP_LEFT    : %s", $param & CHOMP_LEFT     ? 1 : 0 ),
+      sprintf( "CHOMP_RIGHT   : %s", $param & CHOMP_RIGHT    ? 1 : 0 ),
+      sprintf( "COLLAPSE_NONE : %s", $param & COLLAPSE_NONE  ? 1 : 0 ),
+      sprintf( "CHOMP_NONE    : %s", $param & CHOMP_NONE     ? 1 : 0 ),
+   );
+
+   return $which, join( "\n", @test );
+}
 
 1;
 

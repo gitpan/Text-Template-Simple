@@ -5,7 +5,7 @@ use Carp qw( croak );
 use Text::Template::Simple::Util;
 use Text::Template::Simple::Constants;
 
-$VERSION = '0.54_11';
+$VERSION = '0.54_14';
 
 sub _examine {
    my $self   = shift;
