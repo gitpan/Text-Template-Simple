@@ -5,6 +5,10 @@ use Text::Template::Simple;
 
 my $t = Text::Template::Simple->new();
 
-TODO: {
-    todo_skip("Test template file name access through \$0");
-}
+my $got      = $t->compile("t/data/tname_main.tts");
+my $expected = "t/data/tname_main.tts & t/data/tname_sub.tts";
+
+ok(
+   $got eq $expected,
+   "Template names are accessible via dollar zero: '$got' eq '$expected'"
+);

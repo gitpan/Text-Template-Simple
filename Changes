@@ -2,6 +2,9 @@ Revision history for Perl extension Text::Template::Simple.
 
 Time zone is UTC+2.
 
+0.54_17 Thu Oct  2 22:46:02 2008
+   => Implemented plaecholder tests except 22-monolith.t (TODO)
+
 0.54_16 Thu Oct  2 04:25:06 2008
    => Typo in token dumper.
    => Pod updates for new functionality.
