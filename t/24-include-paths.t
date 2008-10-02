@@ -2,6 +2,7 @@
 use strict;
 use Test::More qw( no_plan );
 use Text::Template::Simple;
+use File::Spec;
 
 my $t = Text::Template::Simple->new;
 my $i = Text::Template::Simple->new(
@@ -17,9 +18,12 @@ my $t_got_2 = $t->compile("test2.tts");
 my $tf_got_1 = eval { $t->compile([ FILE => "test1.tts"]); } || $@;
 my $tf_got_2 = eval { $t->compile([ FILE => "test2.tts"]); } || $@;
 
+my $canon = File::Spec->canonpath( "t/data/path2/test3.tts" );
+
 ok($i_got_1 eq 'test1: test1.tts', "Include path successful for test1");
-ok($i_got_2 eq 'test2: test2.tts - dynamic t\\data\\path2\\test3.tts - static '
-              .'<%= $0 %>', "Include path/dynamic/static successful for test1");
+ok($i_got_2 eq "test2: test2.tts - dynamic $canon - static "
+              .'<%= $0 %>', "Include path/dynamic/static successful for test1:"
+              ."'$i_got_2'");
 
 ok($t_got_1 eq 'test1.tts', "First test: Parameter interpreted as string");
 ok($t_got_2 eq 'test2.tts', "Second test: Parameter interpreted as string");
