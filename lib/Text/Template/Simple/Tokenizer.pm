@@ -98,7 +98,7 @@ HEAD
    my $tmp = <<'DUMP';
 ID        : %s
 STRING    : %s
-CHOMP_PREV: %s
+CHOMP_NEXT: %s
 CHOMP_PREV: %s
 TRIGGER   : %s
 ---------------------------

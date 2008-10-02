@@ -2,6 +2,10 @@
 
 * Improve unit test coverage.
         o Implement placeholder tests
+            - 22-monolith.t
+            - 24-include-paths.t
+            - 25-chomp.t
+            - 26-template-name-dollar-zero.t
 
 [BEYOND]
 

@@ -2,7 +2,7 @@ package Text::Template::Simple;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.54_15';
+$VERSION = '0.54_16';
 
 use Carp qw( croak );
 use File::Spec;
@@ -267,9 +267,36 @@ manager.
 =head1 SYNTAX
 
 Template syntax is very simple. There are few kinds of delimiters:
-code blocks (C<< <% %> >>), self-printing blocks (C<< <%= %> >>),
-escaped delimiters (C<< <%! %> >>), static include directives (C<< <%+ %> >>),
-and dynamic include directives (C<< <%* %> >>):
+
+=over 4
+
+=item *
+
+Code Blocks: C<< <% %> >>
+
+=item *
+
+Self-printing Blocks: C<< <%= %> >>
+
+=item *
+
+Escaped Delimiters: C<< <%! %> >>
+
+=item *
+
+Static Include Directives: C<< <%+ %> >>
+
+=item *
+
+Dynamic include directives C<< <%* %> >>
+
+=item *
+
+Comment Directives: C<< <%# %> >>
+
+=back
+
+A simple example:
 
    <%
       my @foo = qw(bar baz);
@@ -278,7 +305,7 @@ and dynamic include directives (C<< <%* %> >>):
    Element is <%= $x %>
    <% } %>
 
-do not directly use print() statements, since they'll break the code.
+Do not directly use print() statements, since they'll break the code.
 Use C<< <%= %> >> blocks. Delimiters can be altered:
 
    $template = Text::Template::Simple->new(
@@ -294,6 +321,25 @@ then you can use them inside templates:
    Element is <?perl= $x ?>
    <?perl } ?>
 
+If you need to remove a code temporarily without deleting, or need to add
+comments:
+
+    <%#
+    This
+    whole
+    block
+    will
+    be
+    ignored
+    %>
+
+If you put a space before the pound sign, the block will be a code block:
+
+   <%
+      # this is normal code not a comment directive
+      my $foo = 42;
+   %>
+
 If you want to include a text or html file, you can use the
 static include directive:
 
@@ -305,6 +351,99 @@ parsing for the included files, use the dynamic includes:
 
    <%* my_other.html %>
    <%* my_other.txt  %>
+
+Interpolation is also supported with both kind of includes, so the following
+is valid code:
+
+   <%+ "/path/to/" . $txt    %>
+   <%* "/path/to/" . $myfile %>
+
+=head2 Chomping
+
+Chomping is the removal of whitespace before and after your directives. This
+can be useful if you're generating plain text (instead of HTML which'll ignore
+spaces most of the time). You can either remove all space or replace multiple
+whitespace with a single space (collapse). Chomping can be enabled per directive
+or globally via options to the constructor. See L</pre_chomp> and L</post_chomp>
+options to L</new> to globally enable chomping.
+
+Chomping is enabled with second level commands for all directives. Here is
+a list of commands:
+
+   -   Chomp
+   ~   Collapse
+   ^   No chomp (override global)
+
+All directives can be chomped. Here are some examples:
+
+Chomp:
+
+   raw content
+   <%- my $foo = 42; -%>
+   raw content
+   <%=- $foo -%>
+   raw content
+   <%*- /mt/dynamic.tts  -%>
+   raw content
+
+Collapse:
+
+   raw content
+   <%~ my $foo = 42; ~%>
+   raw content
+   <%=~ $foo ~%>
+   raw content
+   <%*~ /mt/dynamic.tts  ~%>
+   raw content
+
+No chomp:
+
+   raw content
+   <%^ my $foo = 42; ^%>
+   raw content
+   <%=^ $foo ^%>
+   raw content
+   <%*^ /mt/dynamic.tts  ^%>
+   raw content
+
+It is also possible to mix the chomping types:
+
+   raw content
+   <%- my $foo = 42; ^%>
+   raw content
+   <%=^ $foo ~%>
+   raw content
+   <%*^ /mt/dynamic.tts  -%>
+   raw content
+
+For example this template:
+
+   Foo
+   <%- $prehistoric = $] < 5.008 -%>
+   Bar
+
+Will become:
+
+   FooBar
+
+And this one:
+
+   Foo
+   <%~ $prehistoric = $] < 5.008 -%>
+   Bar
+
+Will become:
+
+   Foo Bar
+
+Chomping is inspired by Template Toolkit (mostly the same functionality,
+although TT seems to miss collapse/no-chomp per directive option).
+
+=head2 ACCESSING TEMPLATE NAMES
+
+You can use C<$0> to get the template path/name inside the template:
+
+   I am <%= $0 %>
 
 =head2 Escaping Delimiters
 
@@ -617,7 +756,7 @@ Filehandles will B<not> be closed.
 =head4 Explicit Types
 
 Pass an arrayref containing the type and the parameter to disable guessing
-and forcinf the type:
+and forcing the type:
 
    $text = $template->compile( [ FILE   => '/path/to/my.tts'] );
    $text = $template->compile( [ GLOB   => \*MYHANDLE] );
@@ -793,11 +932,7 @@ It is possible to import this function to your namespace:
 
 =head1 EXAMPLES
 
-=head2 ACCESSING TEMPLATE NAMES
-
-You can use C<$0> to get the template path/name inside the template:
-
-   I am <%= $0 %>
+TODO
 
 =head1 ERROR HANDLING
 
