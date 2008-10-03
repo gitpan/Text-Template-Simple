@@ -1,6 +1,6 @@
 ---
 name: Text-Template-Simple
-version: 0.60
+version: 0.61
 author:
   - 'Burak Gursoy <burak@cpan.org>'
 abstract: Simple text template engine
@@ -26,7 +26,7 @@ recommends:
 provides:
   Text::Template::Simple:
     file: lib/Text/Template/Simple.pm
-    version: 0.60
+    version: 0.61
   Text::Template::Simple::Base::Compiler:
     file: lib/Text/Template/Simple/Base/Compiler.pm
     version: 0.60
@@ -69,7 +69,7 @@ provides:
   Text::Template::Simple::Util:
     file: lib/Text/Template/Simple/Util.pm
     version: 0.60
-generated_by: Module::Build version 0.2808
+generated_by: Module::Build version 0.3
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.2.html
   version: 1.2
