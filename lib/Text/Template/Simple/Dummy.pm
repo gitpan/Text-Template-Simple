@@ -9,7 +9,7 @@ use strict;
 use vars qw($VERSION);
 use Text::Template::Simple::Caller;
 
-$VERSION = '0.54_14';
+$VERSION = '0.60';
 
 sub stack { # just a wrapper
    my $opt = shift || {};

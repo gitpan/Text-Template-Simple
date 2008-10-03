@@ -2,11 +2,21 @@ Revision history for Perl extension Text::Template::Simple.
 
 Time zone is UTC+2.
 
+0.60 Fri Oct  3 17:42:14 2008
+   => Milestone! Highlights:
+        * Dynamic Includes (a.k.a processed includes)
+        * Interpolation in includes
+        * Chomping (global & per directive)
+        * Template name access through $0
+        * Explicit types to compile()
+   => Increased some PREREQ versions for prehistoric perls as the cache
+      tests are failing under 5.6.x.
+
 0.54_18 Fri Oct  3 01:15:09 2008
    => Fix for 24-include-paths.t.
 
 0.54_17 Thu Oct  2 22:46:02 2008
-   => Implemented plaecholder tests except 22-monolith.t (TODO)
+   => Implemented placeholder tests except 22-monolith.t (TODO)
 
 0.54_16 Thu Oct  2 04:25:06 2008
    => Typo in token dumper.

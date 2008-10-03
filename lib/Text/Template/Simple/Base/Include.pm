@@ -5,7 +5,7 @@ use Carp qw( croak );
 use Text::Template::Simple::Util;
 use Text::Template::Simple::Constants;
 
-$VERSION = '0.54_14';
+$VERSION = '0.60';
 
 sub _include_no_monolith {
    # no monolith eh?

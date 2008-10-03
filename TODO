@@ -1,3 +1,4 @@
+* Ban custom delimiters < 2 characters
 * Improve unit test coverage.
         o Increase # of tests
         o Implement placeholder tests

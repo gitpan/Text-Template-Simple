@@ -5,7 +5,7 @@ use Text::Template::Simple::Constants;
 use Text::Template::Simple::Util qw( DEBUG LOG ishref binary_mode );
 use Carp qw( croak );
 
-$VERSION = '0.54_14';
+$VERSION = '0.60';
 
 sub new {
    my $class = shift;

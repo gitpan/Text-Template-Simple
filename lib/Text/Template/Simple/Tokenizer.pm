@@ -2,7 +2,7 @@ package Text::Template::Simple::Tokenizer;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.54_14';
+$VERSION = '0.60';
 
 use constant CMD_CHAR             =>  0;
 use constant CMD_ID               =>  1;

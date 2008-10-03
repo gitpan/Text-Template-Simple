@@ -14,8 +14,8 @@ $MODULE = 'Text::Template::Simple';
     'Fcntl'        => '1.03',
     'Safe'         => '2.06',
     'Test::More'   => '0.40',
-    'File::Temp'   => '0',
-    'Digest::MD5'  => '0',
+    'File::Temp'   => '0.12',
+    'Digest::MD5'  => '1.00',
 );
 
 %RECOMMEND = (
