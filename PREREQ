@@ -6,16 +6,18 @@ $AUTHOR = 'Burak Gursoy <burak@cpan.org>';
 $MODULE = 'Text::Template::Simple';
 
 %PREREQ = (
-    'Data::Dumper' => '2.101',
-    'File::Spec'   => '0.6',
-    'File::Find'   => '0',
-    'IO::Handle'   => '1.1505',
-    'IO::File'     => '1.06021',
-    'Fcntl'        => '1.03',
-    'Safe'         => '2.06',
-    'Test::More'   => '0.40',
+    # ActiveState's build system seem to have issues with dual life ones
+    # that's really dumb though...
+    #'Data::Dumper' => '2.101',
+    #'Safe'         => '2.10',
+    #'File::Spec'   => '0.6',
+    #'File::Find'   => '0',
+    #'IO::Handle'   => '1.1505',
+    #'IO::File'     => '1.06021',
+    #'Fcntl'        => '1.03',
     'File::Temp'   => '0.12',
     'Digest::MD5'  => '1.00',
+    'Test::More'   => '0.40',
 );
 
 %RECOMMEND = (

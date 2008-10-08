@@ -8,12 +8,15 @@ package Text::Template::Simple::Dummy;
 use strict;
 use vars qw($VERSION);
 use Text::Template::Simple::Caller;
+use Text::Template::Simple::Util qw();
+use Carp qw( croak );
 
 $VERSION = '0.60';
 
 sub stack { # just a wrapper
    my $opt = shift || {};
-   die "Parameters to stack() must be a HASH" if ref($opt) ne 'HASH';
+   croak "Parameters to stack() must be a HASH"
+      if ! Text::Template::Simple::Util::ishref($opt);
    $opt->{frame} = 1;
    Text::Template::Simple::Caller->stack( $opt );
 }

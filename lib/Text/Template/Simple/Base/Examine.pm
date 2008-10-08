@@ -66,7 +66,7 @@ sub _examine_type {
    return ''   => $TMP if ! $ref;
    return GLOB => $TMP if   $ref eq 'GLOB';
 
-   if ( $ref eq 'ARRAY' ) {
+   if ( isaref( $TMP ) ) {
       my $ftype  = shift @{ $TMP } || croak "ARRAY does not contain the type";
       my $fthing = shift @{ $TMP } || croak "ARRAY does not contain the data";
       croak "ARRAY overflowed" if @{ $TMP } > 0;

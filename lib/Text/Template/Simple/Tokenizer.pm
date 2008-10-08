@@ -21,13 +21,13 @@ use Carp qw( croak );
 use Text::Template::Simple::Util      qw( LOG );
 use Text::Template::Simple::Constants qw( :chomp :directive :token );
 
-my @COMMANDS = (
-   # cmd                      id        callback
-   [ DIR_CAPTURE  , qw/ CAPTURE         / ],
-   [ DIR_DYNAMIC  , qw/ DYNAMIC   trim  / ],
-   [ DIR_STATIC   , qw/ STATIC    trim  / ],
-   [ DIR_NOTADELIM, qw/ NOTADELIM       / ],
-   [ DIR_COMMENT  , qw/ COMMENT         / ],
+my @COMMANDS = ( # default command list
+   # cmd            id           callback
+   [ DIR_CAPTURE  , T_CAPTURE             ],
+   [ DIR_DYNAMIC  , T_DYNAMIC,   'trim'   ],
+   [ DIR_STATIC   , T_STATIC,    'trim'   ],
+   [ DIR_NOTADELIM, T_NOTADELIM           ],
+   [ DIR_COMMENT  , T_COMMENT             ],
 );
 
 sub new {
@@ -54,7 +54,7 @@ sub tokenize {
    OUT_TOKEN: foreach my $i ( split /($qds)/, $tmp ) {
 
       if ( $i eq $ds ) {
-         push @tokens, [ $i, 'DELIMSTART', [], undef ];
+         push @tokens, [ $i, T_DELIMSTART, [], undef ];
          $inside = 1;
          next OUT_TOKEN;
       }
@@ -62,11 +62,11 @@ sub tokenize {
       IN_TOKEN: foreach my $j ( split /($qde)/, $i ) {
          if ( $j eq $de ) {
             my $last = $tokens[LAST_TOKEN];
-            if ( $last->[TOKEN_ID] eq 'NOTADELIM' ) {
+            if ( T_NOTADELIM == $last->[TOKEN_ID] ) {
                $last->[TOKEN_STR] = $self->tilde( $last->[TOKEN_STR] . $de );
             }
             else {
-               push @tokens, [ $j, 'DELIMEND', [], undef ];
+               push @tokens, [ $j, T_DELIMEND, [], undef ];
             }
             $inside = 0;
             next IN_TOKEN;
@@ -115,7 +115,8 @@ DUMP
          scalar $self->_visualize_chomp( $t->[TOKEN_CHOMP][TOKEN_CHOMP_PREV] ),
          scalar $self->_visualize_chomp( $t->[TOKEN_TRIGGER]                 )
       );
-      $buf .= sprintf $tmp, $t->[TOKEN_ID], $s, @v;
+      @v = map { $_ eq 'undef' ? '' : $_ } @v;
+      $buf .= sprintf $tmp, $self->_visualize_tid( $t->[TOKEN_ID] ), $s, @v;
    }
    Text::Template::Simple::Util::LOG( DEBUG => $buf );
 }
@@ -138,7 +139,7 @@ sub _token_code {
    my $last     = substr $str, length($str) - 1    , SUBSTR_LENGTH;
    my $len      = length($str);
 
-   HANDLE_OUTSIDE: {
+   HANDLE_COMMANDS: {
       foreach my $cmd ( @COMMANDS, $self->_user_commands ) {
          if ( $first eq $cmd->[CMD_CHAR] ) {
             my($copen, $cclose, $ctoken) = $self->_chomp_token( $second, $last );
@@ -147,15 +148,15 @@ sub _token_code {
             my $slen = $len - ($cclose ? $soff+1 : 1);
             my $buf  = substr $str, $soff, $slen;
 
-            if ( $cmd->[CMD_ID] eq 'NOTADELIM' && $inside ) {
+            if ( (T_NOTADELIM == $cmd->[CMD_ID]) && $inside ) {
                $buf = $self->[ID_DS] . $buf;
-               $tree->[LAST_TOKEN][TOKEN_ID] = 'DISCARD';
+               $tree->[LAST_TOKEN][TOKEN_ID] = T_DISCARD;
             }
 
             my $needs_chomp = defined($ctoken);
             $self->_chomp_prev($tree, $ctoken) if $needs_chomp;
 
-            my $id  = $map_keys ? 'RAW'              : $cmd->[CMD_ID];
+            my $id  = $map_keys ? T_RAW              : $cmd->[CMD_ID];
             my $val = $cb       ? $self->$cb( $buf ) : $buf;
 
             return [
@@ -178,7 +179,7 @@ sub _token_code {
 
       return   [
                   substr($str, $soff, $slen),
-                  $map_keys ? 'MAPKEY' : 'CODE',
+                  $map_keys ? T_MAPKEY : T_CODE,
                   [ CHOMP_NONE, CHOMP_NONE ],
                   $needs_chomp ? $ctoken : undef # trigger
                ];
@@ -189,9 +190,9 @@ sub _token_code {
             ;
    return [
             $self->tilde( $str ),
-            'RAW',
+            T_RAW,
             [ $trig, CHOMP_NONE ],
-            undef
+            undef # trigger
          ];
 }
 
@@ -228,7 +229,7 @@ sub _chomp_token {
 sub _chomp_prev {
    my($self, $tree, $ctoken) = @_;
    my $prev = $tree->[PREVIOUS_TOKEN] || return; # no previous if this is first
-   return if $prev->[TOKEN_ID] ne 'RAW'; # only RAWs can be chomped
+   return if T_RAW != $prev->[TOKEN_ID]; # only RAWs can be chomped
 
    my $tc_prev = $prev->[TOKEN_CHOMP][TOKEN_CHOMP_PREV];
    my $tc_next = $prev->[TOKEN_CHOMP][TOKEN_CHOMP_NEXT];
@@ -282,6 +283,27 @@ sub _visualize_chomp {
    );
 
    return $which, join( "\n", @test );
+}
+
+sub _visualize_tid {
+   my $self = shift;
+   my $id   = shift;
+   my @ids  = ( undef, qw(
+                  T_DELIMSTART
+                  T_DELIMEND
+                  T_DISCARD
+                  T_COMMENT
+                  T_RAW
+                  T_NOTADELIM
+                  T_CODE
+                  T_CAPTURE
+                  T_DYNAMIC
+                  T_STATIC
+                  T_MAPKEY
+                  )
+               );
+   my $rv = $ids[$id] || ( defined $id ? $id : 'undef' );
+   return $rv;
 }
 
 1;

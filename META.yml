@@ -1,6 +1,6 @@
 ---
 name: Text-Template-Simple
-version: 0.61
+version: 0.62_01
 author:
   - 'Burak Gursoy <burak@cpan.org>'
 abstract: Simple text template engine
@@ -8,16 +8,9 @@ license: perl
 resources:
   license: http://dev.perl.org/licenses/
 requires:
-  Data::Dumper: 2.101
   Digest::MD5: 1.00
-  Fcntl: 1.03
-  File::Find: 0
-  File::Spec: 0.6
   File::Temp: 0.12
-  IO::File: 1.06021
-  IO::Handle: 1.1505
   Module::Build: 0.2808
-  Safe: 2.06
   Test::More: 0.40
 recommends:
   Devel::Size: 0.64
@@ -26,7 +19,7 @@ recommends:
 provides:
   Text::Template::Simple:
     file: lib/Text/Template/Simple.pm
-    version: 0.61
+    version: 0.62_01
   Text::Template::Simple::Base::Compiler:
     file: lib/Text/Template/Simple/Base/Compiler.pm
     version: 0.60

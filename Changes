@@ -2,6 +2,17 @@ Revision history for Perl extension Text::Template::Simple.
 
 Time zone is UTC+2.
 
+0.62_01 Wed Oct  8 23:56:32 2008
+   => Token dumper fix.
+   => Changed internal token type handling from strings to constants.
+   => More internal cleanup.
+   => Updated memcache tests.
+   => Include improvements
+        o Implemented include parameters.
+        o Implemented include filters.
+        o Added new placeholder unit tests.
+        o No examples yet.
+
 0.61 Fri Oct  3 20:21:49 2008
    => Re-release with a fix for the brand-new world-writable files issue :p
 

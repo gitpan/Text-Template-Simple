@@ -1,6 +1,6 @@
 package Text::Template::Simple::Constants;
 use strict;
-use vars qw($VERSION $OID @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
+use vars qw($VERSION $OID $DID @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
 
 $VERSION = '0.60';
 
@@ -39,6 +39,21 @@ use constant INCLUDE_PATHS    => ++$OID;
 use constant PRE_CHOMP        => ++$OID;
 use constant POST_CHOMP       => ++$OID;
 use constant MAXOBJFIELD      =>   $OID; # number of the last object field
+
+# token type ids
+BEGIN { $DID = 0 }
+use constant T_DELIMSTART     => ++$DID;
+use constant T_DELIMEND       => ++$DID;
+use constant T_DISCARD        => ++$DID;
+use constant T_COMMENT        => ++$DID;
+use constant T_RAW            => ++$DID;
+use constant T_NOTADELIM      => ++$DID;
+use constant T_CODE           => ++$DID;
+use constant T_CAPTURE        => ++$DID;
+use constant T_DYNAMIC        => ++$DID;
+use constant T_STATIC         => ++$DID;
+use constant T_MAPKEY         => ++$DID;
+use constant T_MAXID          =>   $DID;
 
 # settings
 use constant MAX_RECURSION    => 50; # recursion limit for dynamic includes
@@ -295,6 +310,19 @@ BEGIN {
                         TOKEN_CHOMP_PREV
                         LAST_TOKEN
                         PREVIOUS_TOKEN
+
+                        T_DELIMSTART
+                        T_DELIMEND
+                        T_DISCARD
+                        T_COMMENT
+                        T_RAW
+                        T_NOTADELIM
+                        T_CODE
+                        T_CAPTURE
+                        T_DYNAMIC
+                        T_STATIC
+                        T_MAPKEY
+                        T_MAXID
                       )],
       etc       =>   [qw(
                         DIGEST_MODS

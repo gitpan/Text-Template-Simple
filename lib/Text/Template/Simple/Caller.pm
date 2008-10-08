@@ -12,6 +12,7 @@ use constant IS_REQUIRE => 7;
 use constant HINTS      => 8;
 use constant BITMASK    => 9;
 
+use Text::Template::Simple::Util qw( ishref );
 use Carp qw( croak );
 
 $VERSION = '0.60';
@@ -19,7 +20,7 @@ $VERSION = '0.60';
 sub stack {
    my $self    = shift;
    my $opt     = shift || {};
-   die "Parameters to stack() must be a HASH" if ref($opt) ne 'HASH';
+   croak "Parameters to stack() must be a HASH" if ! ishref($opt);
    my $frame   = $opt->{frame} || 0;
    my $type    = $opt->{type}  || '';
    my(@callers, $context);

@@ -54,6 +54,10 @@ my %ERROR = (
               ."Please upgrade this module!",
    PFORMAT  => "Parameters must be in 'param => value' format",
    INCACHE  => "I need an 'id' or a 'data' parameter for cache check!",
+   DSLEN    => "Start delimiter is smaller than 2 characters",
+   DELEN    => "End delimiter is smaller than 2 characters",
+   DSWS     => "Start delimiter contains whitespace",
+   DEWS     => "End delimiter contains whitespace",
 );
 
 my $DEBUG = 0;  # Disabled by default

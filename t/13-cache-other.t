@@ -69,8 +69,15 @@ sub run {
         ok( $size > 0, "We could call size( $size bytes )" );
 
         $t->cache->reset;
+
+        my $before = $size;
         $size = $t->cache->size;
-        ok( $size == 0, "Cache size is zero after reset" );
+        if ( $type eq 'MEMORY' ) {
+           ok( $size < $before / 2, "Cache size shrinked after reset: $size" );
+        }
+        else {
+           ok( $size == 0, "Cache size is zero after reset: $size" );
+        }
     }
 }
 

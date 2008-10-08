@@ -4,6 +4,7 @@ use vars qw($VERSION);
 use Carp qw( croak );
 use Text::Template::Simple::Util;
 use Text::Template::Simple::Constants;
+use constant RE_PIPE_SPLIT  => qr/ \| (?:\s+)? (PARAM|FILTER) : /xms;
 
 $VERSION = '0.60';
 
@@ -29,7 +30,7 @@ sub _include_static {
    my($self, $file, $text, $err) = @_;
    return $self->[MONOLITH]
         ? 'q~' . escape('~' => $text) . '~;'
-        : $self->_include_no_monolith( static => $file )
+        : $self->_include_no_monolith( T_STATIC, $file )
         ;
 }
 
@@ -53,10 +54,10 @@ sub _include_dynamic {
       $rv .= "q~$error~";
    }
    else {
-      # do stuff is for file name access through $0 in templates
+      # local stuff is for file name access through $0 in templates
       $rv .= $self->[MONOLITH]
            ? do { local $self->[FILENAME] = $file; $self->_parse( $text ) }
-           : $self->_include_no_monolith( dynamic => $file )
+           : $self->_include_no_monolith( T_DYNAMIC, $file )
            ;
    }
 
@@ -67,15 +68,15 @@ sub _include_dynamic {
 
 sub _include {
    my $self       = shift;
-   my $type       = shift || '';
+   my $type       = shift || 0;
    my $file       = shift;
-      $type       = lc $type;
-      $file       = trim $file;
-   my $is_static  = $type eq 'static';
-   my $is_dynamic = $type eq 'dynamic';
+   my $is_static  = T_STATIC  == $type ? 1 : 0;
+   my $is_dynamic = T_DYNAMIC == $type ? 1 : 0;
    my $known      = $is_static || $is_dynamic;
 
    croak "Unknown include type: $type" if not $known;
+
+   $file = trim $file;
 
    my $err    = $self->_include_error( $type );
    my $exists = $self->_file_exists( $file );
@@ -94,7 +95,11 @@ sub _include {
       return "q~$err '$file' is a directory~";
    }
 
-   LOG( INCLUDE => "$type => '$file'" ) if DEBUG();
+   if ( DEBUG ) {
+      require Text::Template::Simple::Tokenizer;
+      my $toke = Text::Template::Simple::Tokenizer->new;
+      LOG( INCLUDE => $toke->_visualize_tid($type) . " => '$file'" );
+   }
 
    my $text;
    if ( $interpolate ) {
@@ -117,23 +122,41 @@ sub _interpolate {
    my $file   = shift;
    my $type   = shift;
    my $etitle = $self->_include_error($type);
-   my $rv     = $self->_mini_compiler(
-                  $self->_internal('sub_include') => {
-                     OBJECT      => $self->[FAKER_SELF],
-                     INCLUDE     => escape( q{'} => $file   ),
-                     ERROR_TITLE => escape( q{'} => $etitle ),
-                     TYPE        => $type,
-                  } => {
-                     flatten => 1,
-                  }
-               );
+
+   # so that, you can pass parameters, apply filters etc.
+   my %inc = (INCLUDE => map { trim $_ } split RE_PIPE_SPLIT, $file );
+
+   if ( $self->_file_exists( $inc{INCLUDE} ) ) {
+      # well... constantly working around :p
+      $inc{INCLUDE} = qq{'$inc{INCLUDE}'};
+   }
+
+   # croak "You can not pass parameters to static includes"
+   #    if $inc{PARAM} && T_STATIC  == $type;
+
+   my $rv = $self->_mini_compiler(
+               $self->_internal('sub_include') => {
+                  OBJECT      => $self->[FAKER_SELF],
+                  INCLUDE     => escape( q{'} => $inc{INCLUDE} ),
+                  ERROR_TITLE => escape( q{'} => $etitle ),
+                  TYPE        => $type,
+                  PARAMS      => $inc{PARAM} ? qq{[$inc{PARAM}]} : 'undef',
+                  FILTER      => $inc{FILTER} ? escape( q{'} => $inc{FILTER} ) : '',
+               } => {
+                  flatten => 1,
+               }
+            );
    return $rv;
 }
 
 sub _include_error {
    my $self  = shift;
    my $type  = shift;
-   my $title = '[ ' . $type . ' include error ]';
+   my $val   = T_DYNAMIC == $type ? 'dynamic'
+             : T_STATIC  == $type ? 'static'
+             :                      'unknown'
+             ;
+   my $title = '[ ' . $val . ' include error ]';
    return $title;
 }
 

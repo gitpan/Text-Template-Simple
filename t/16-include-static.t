@@ -15,9 +15,9 @@ ok( $out eq $confirm, "Valid output from static inclusion: '$out' eq '$confirm'"
 
 sub confirm {
 <<'CONFIRMED';
-RAW 1: raw content
-RAW 2: raw content
-RAW 3: raw content
+RAW 1: raw content <%= $$ %>
+RAW 2: raw content <%= $$ %>
+RAW 3: raw content <%= $$ %>
 CONFIRMED
 }
 

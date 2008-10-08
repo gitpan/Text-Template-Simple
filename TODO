@@ -1,16 +1,13 @@
-* Ban custom delimiters < 2 characters
 * Improve unit test coverage.
         o Increase # of tests
         o Implement placeholder tests
-            - 22-monolith.t
+* Move all croak messages into fatal().
 * Remove code templates from ::Constants (into ::Simple)
         o Tidy up ::Constants.
-* Replace token ids with hex or int.
-        o Remove long names
-        o Remove "eq"
 * Implement variable sharing without monolith..?
         o PROCESS -> no monolith ?
-* Keep the code clean & simple (no hacks?).
+            - Interpolated includes does not respect monolith though :p
+              This needs fix.
 * Improve error handling. Minimize uncontrolled die()s.
 * Improve safe compartment.
 * Improve cache.
@@ -19,7 +16,6 @@
 * Command line compiler?
 * Re-implement or remove resume interface
         o Perhaps eval { sub { ... }; 1; } || "ERR: $@"
-* Check competitors for neat ideas (heh!).
 *  ***LOW*** Move trim/tilde/quote from tokenizer & into the parser.
 *  ***LOW*** Consider trying PPI.
 *  ***LOW*** Implement TTS plugins for major frameworks.
@@ -27,7 +23,7 @@
         o Or just let the user define subs in ::Dummy.
 *  ***LOW*** Consider implementing TT like filters
         o Block filters
-        o Include filters
-                - Seems to be tricky with interpolation in effect.
 *  ***LOW*** Benchmarks?
 *  ***LOW*** XS based tokenizer?
+* Keep the code clean & simple (no hacks?).
+* Check competitors for neat ideas (heh!).

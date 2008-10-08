@@ -10,5 +10,5 @@ my @delims  = qw/ <? ?> /;
 my $t       = Text::Template::Simple->new( delimiters => [ @delims ] );
 
 ok( $t->compile( $raw    )  eq 'Foo: 2008'  , "CODE/CAPTURE/COMMENT: Delimiters changed into @delims");
-ok( $t->compile( $static )  eq 'raw content', "STATIC: Delimiters changed into @delims");
+ok( $t->compile( $static )  eq 'raw content <%= $$ %>', "STATIC: Delimiters changed into @delims");
 ok( $t->compile( $dynamic ) eq 'Dynamic: 42', "DYNAMIC: Delimiters changed into @delims");

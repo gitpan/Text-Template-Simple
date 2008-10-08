@@ -2,7 +2,7 @@ package Text::Template::Simple;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.61';
+$VERSION = '0.62_01';
 
 use Carp qw( croak );
 use File::Spec;
@@ -61,7 +61,7 @@ sub import {
    my %ok     = map { $_, $_ } @EXPORT_OK;
 
    foreach my $name ( @args ) {
-      croak "$name isn't a valid import parameter for $class" if not $ok{$name};
+      croak "$name isn't a valid import parameter for $class" if ! $ok{$name};
       no strict qw( refs );
       croak "$name is not defined in $class"      if not defined &{ $name   };
       my $target = $caller . '::' . $name;
@@ -75,7 +75,7 @@ sub import {
 sub tts {
    my @args = @_;
    croak "Nothing to compile!" if ! @args;
-   my @new  = ref $args[0] eq 'HASH' ? @{ shift(@args) } : ();
+   my @new  = ishref($args[0]) ? @{ shift(@args) } : ();
    return __PACKAGE__->new( @new )->compile( @args );
 }
 
@@ -93,7 +93,9 @@ sub new {
       $fid = uc $field;
       next if not $class->can($fid);
       $fid = $class->$fid();
-      $self->[$fid] = defined $param{$field} ? $param{$field} : $DEFAULT{$field};
+      $self->[$fid] = defined $param{$field} ? $param{$field}
+                    :                          $DEFAULT{$field}
+                    ;
    }
 
    $self->_init;
@@ -128,8 +130,12 @@ sub _init {
    my $bogus_args = $self->[ADD_ARGS] && ! isaref($self->[ADD_ARGS]);
    my $ok_delim   = isaref( $d )      && $#{ $d } == 1;
 
-   croak fatal('ARGS')   if     $bogus_args;
+   croak fatal('ARGS')   if $bogus_args;
    croak fatal('DELIMS') if not $ok_delim;
+   croak fatal('DSLEN')  if length($d->[DELIM_START]) < 2;
+   croak fatal('DELEN')  if length($d->[DELIM_END])   < 2;
+   croak fatal('DSWS')   if $d->[DELIM_START] =~ m{\s}xms;
+   croak fatal('DEWS')   if $d->[DELIM_END]   =~ m{\s}xms;
 
    $self->[TYPE]           = '';
    $self->[COUNTER]        = 0;
@@ -147,7 +153,7 @@ sub _init {
 
    if ( $self->[INCLUDE_PATHS] ) {
       croak "include_paths parameter must be a ARRAY reference"
-         if ref($self->[INCLUDE_PATHS]) ne 'ARRAY';
+         if ! isaref($self->[INCLUDE_PATHS]);
    }
 
    $self->[IO_OBJECT] = $self->connector('IO')->new( $self->[IOLAYER] );
@@ -363,9 +369,9 @@ is valid code:
 Chomping is the removal of whitespace before and after your directives. This
 can be useful if you're generating plain text (instead of HTML which'll ignore
 spaces most of the time). You can either remove all space or replace multiple
-whitespace with a single space (collapse). Chomping can be enabled per directive
-or globally via options to the constructor. See L</pre_chomp> and L</post_chomp>
-options to L</new> to globally enable chomping.
+whitespace with a single space (collapse). Chomping can be enabled per
+directive or globally via options to the constructor. See L</pre_chomp> and
+L</post_chomp> options to L</new> to globally enable chomping.
 
 Chomping is enabled with second level commands for all directives. Here is
 a list of commands:
@@ -470,7 +476,7 @@ Alternatively, you can change the default delimiters to solve this issue.
 See the L</delimiters> option for L</new> for more information on how to
 do this.
 
-=head2 Template parameters
+=head2 TEMPLATE PARAMETERS
 
 You can fetch parameters (passed to compile) in the usual perl way:
 
@@ -479,6 +485,48 @@ You can fetch parameters (passed to compile) in the usual perl way:
       my %bar = @_;
    %>
    Baz is <%= $bar{baz} %>
+
+=head2 FILTERS
+
+=head3 INCLUDE FILTERS
+
+Use the include command C<FILTER:> (notice the colon in the command):
+
+   <%+ /path/to/static.tts  | FILTER: First, Second        %>
+   <%* /path/to/dynamic.tts | FILTER: Third, Fourth, Fifth %>
+
+=head4 IMPLEMENTING INCLUDE FILTERS
+
+Define the filter inside C<Text::Template::Simple::Dummy> with a C<filter_>
+prefix:
+
+   package Text::Template::Simple::Dummy;
+   sub filter_MyFilter {
+      # $tts is the current Text::Template::Simple object
+      # $output_ref is the scalar reference to the output of
+      #    the template.
+      my($tts, $output_ref) = @_;
+      $$output_ref .= "FILTER APPLIED"; # add to output
+      return;
+   }
+
+=head2 INCLUDE COMMANDS
+
+Include commands are separated by pipes in an include directive.
+Currently supported parameters are: C<PARAM:>, C<FILTER:>.
+
+   <%+ /path/to/static.tts  | FILTER: MyFilter | PARAM: test => 123 %>
+   <%* /path/to/dynamic.tts | FILTER: MyFilter | PARAM: test => 123 %>
+
+C<FILTER:> defines the list of filters to apply to the output of the include.
+See L</FILTERS>.
+
+=head3 INCLUDE PARAMETERS
+
+C<PARAM:> defines the parameter list to pass to the included file.
+
+Just pass the parameters as describe above and fetch them via C<@_> inside
+the included file.
 
 =head1 METHODS
 
@@ -736,7 +784,7 @@ file path and your code will probably C<die>:
    open MYHANDLE, '/path/to/foo.tts' or die "Error: $!";
    $text = $template->compile(\*MYHANDLE); # RIGHT.
    $text = $template->compile( *MYHANDLE); # WRONG. Recognized as a file path
-   $text = $template->compile(  MYHANDLE); # WRONG. Ditto. Will die under strict
+   $text = $template->compile(  MYHANDLE); # WRONG. Ditto. Dies under strict
 
 or use the standard C<IO::File> module:
 
@@ -946,18 +994,23 @@ How to add your own tokens into Text::Template::Simple?
 
    use strict;
    use Text::Template::Simple;
-   use constant MYTEMP => q{ Testing: <%$ PROCESS some.tts %> };
+   use Text::Template::Simple::Constants qw( T_MAXID );
+   use constant DIR_CMD     => '$';
+   use constant T_DIRECTIVE => T_MAXID + 1;
+   
    # first, register our handler for unknown tokens
    my $t = Text::Template::Simple->new( user_thandler => \&thandler );
-   print $t->compile( MYTEMP );
+   print $t->compile( q{ Testing: <%$ PROCESS some.tts %> } );
+   
    # then describe how to handle "our" commands
    sub Text::Template::Simple::Tokenizer::commands {
       my $self = shift;
       return(
-         #   cmd id        callback
-         [ qw/ $ DIRECTIVE trim  / ],
+         # cmd      id           callback
+         [ DIR_CMD, T_DIRECTIVE, 'trim'   ],
       );
    }
+   
    # we can now use some black magic
    sub thandler {
       my($self, $id ,$str, $h) = @_;

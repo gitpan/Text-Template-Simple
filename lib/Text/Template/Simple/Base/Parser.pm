@@ -28,9 +28,10 @@ my %INTERNAL = (
             }
             $rv;
          },
-         undef,
+         <%PARAMS%>,
          {
-            _sub_inc => '<%TYPE%>'
+            _sub_inc => '<%TYPE%>',
+            _filter  => '<%FILTER%>',
          }
       )
    ~,
@@ -108,33 +109,33 @@ sub _parse {
    # fetch and walk the tree
    PARSER: foreach my $token ( @{ $toke->tokenize( $raw, $map_keys ) } ) {
       my($str, $id, $chomp, undef) = @{ $token };
-      LOG( TOKEN => "$id => $str" ) if DEBUG() > 1;
-      next PARSER if $id eq 'DISCARD';
-      next PARSER if $id eq 'COMMENT';
+      LOG( TOKEN => $toke->_visualize_tid($id) . " => $str" ) if DEBUG() > 1;
+      next PARSER if T_DISCARD == $id;
+      next PARSER if T_COMMENT == $id;
 
-      if ( $id eq 'DELIMSTART' ) { $inside++; next PARSER; }
-      if ( $id eq 'DELIMEND'   ) { $inside--; next PARSER; }
+      if ( T_DELIMSTART == $id ) { $inside++; next PARSER; }
+      if ( T_DELIMEND   == $id ) { $inside--; next PARSER; }
 
-      if ( $id eq 'RAW' || $id eq 'NOTADELIM' ) {
+      if ( T_RAW == $id || T_NOTADELIM == $id ) {
          $code .= $w_raw->( $self->_chomp( $str, $chomp ) );
       }
 
-      elsif ( $id eq 'CODE' ) {
+      elsif ( T_CODE == $id ) {
          $code .= $resume ? $self->_resume($str, 0, 1) : $str;
       }
 
-      elsif ( $id eq 'CAPTURE' ) {
+      elsif ( T_CAPTURE == $id ) {
          $code .= $faker;
          $code .= $resume ? $self->_resume($str, RESUME_NOSTART)
                 :           " .= sub { $str }->();";
       }
 
-      elsif ( $id eq 'DYNAMIC' || $id eq 'STATIC' ) {
+      elsif ( T_DYNAMIC == $id || T_STATIC == $id ) {
          $self->[NEEDS_OBJECT]++;
          $code .= $w_cap->( $self->_include($id, $str) );
       }
 
-      elsif ( $id eq 'MAPKEY' ) {
+      elsif ( T_MAPKEY == $id ) {
          $code .= sprintf $mko, $mkc ? ( ($str) x 5 ) : $str;
       }
 

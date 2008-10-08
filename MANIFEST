@@ -39,6 +39,8 @@ t/23-change-delims.t
 t/24-include-paths.t
 t/25-chomp.t
 t/26-template-name-dollar-zero.t
+t/27-include-param.t
+t/28-include-filter.t
 t/99-all-modules-have-the-same-version.t
 t/data/test.tts
 t/data/dynamic.tts

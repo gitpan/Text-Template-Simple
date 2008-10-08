@@ -1,1 +1,1 @@
-raw content
+raw content <%= $$ %>

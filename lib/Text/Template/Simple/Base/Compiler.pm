@@ -4,6 +4,7 @@ use vars qw($VERSION);
 use Carp qw( croak );
 use Text::Template::Simple::Util;
 use Text::Template::Simple::Constants;
+use constant RE_FILTER_SPLIT => qr/ \, \s+ /xms;
 
 $VERSION = '0.60';
 
@@ -23,6 +24,7 @@ sub _compile {
    $opt->{map_keys} ||= 0;  # use normal behavior
    $opt->{chkmt}    ||= 0;  # check mtime of file template?
    $opt->{_sub_inc} ||= 0;  # are we called from a dynamic include op?
+   $opt->{_filter}  ||= ''; # any filters?
 
    my $tmp = $self->_examine( $tmpx );
    return $tmp if $self->[TYPE] eq 'ERROR';
@@ -30,11 +32,12 @@ sub _compile {
    if ( $opt->{_sub_inc} ) {
       # TODO:generate a single error handler for includes, merge with _include()
       # tmpx is a "file" included from an upper level compile()
-      my $etitle = $self->_include_error('dynamic');
+      my $etitle = $self->_include_error( T_DYNAMIC );
       my $exists = $self->_file_exists( $tmpx );
       return $etitle . " '$tmpx' is not a file" if not $exists;
       # TODO: remove this second call somehow, reduce  to a single call
       $tmp = $self->_examine( $exists ); # re-examine
+      $self->[NEEDS_OBJECT]++; # interpolated includes will need that
    }
 
    if ( $opt->{chkmt} ) {
@@ -53,7 +56,7 @@ sub _compile {
    my($CODE, $ok);
    my $cache_id = '';
 
-   my $as_is = $opt->{_sub_inc} && $opt->{_sub_inc} eq 'static';
+   my $as_is = $opt->{_sub_inc} && $opt->{_sub_inc} == T_STATIC;
 
    if ( $self->[CACHE] ) {
       my $method = $opt->{id};
@@ -86,7 +89,32 @@ sub _compile {
    push @args, $self if $self->[NEEDS_OBJECT];
    push @args, @{ $self->[ADD_ARGS] } if $self->[ADD_ARGS];
    push @args, @{ $param };
-   return $CODE->( @args );
+   my $out = $CODE->( @args );
+
+   if ( $opt->{_filter} ) {
+      $self->_call_filters( \$out, split RE_FILTER_SPLIT, $opt->{_filter} );
+   }
+
+   return $out;
+}
+
+sub _call_filters {
+   my $self    = shift;
+   my $oref    = shift;
+   my @filters = @_;
+   my $fname   = $self->[FILENAME];
+   my $fbase   = 'Text::Template::Simple::Dummy';
+
+   APPLY_FILTERS: foreach my $filter ( @filters ) {
+      my $fref = $fbase->can( "filter_" . $filter );
+      if ( ! $fref ) {
+         $$oref .= "\n[ filter warning ] Can not apply undefined filter $filter to $fname\n";
+         next;
+      }
+      $fref->( $self, $oref );
+   }
+
+   return;
 }
 
 sub _wrap_compile {
@@ -119,8 +147,8 @@ sub _mini_compiler {
    my $param    = shift || croak "_mini_compiler(): missing the parameters";
    my $opt      = shift || {};
 
-   croak "_mini_compiler(): options must be a hash"    if ref($opt)   ne 'HASH';
-   croak "_mini_compiler(): parameters must be a HASH" if ref($param) ne 'HASH';
+   croak "_mini_compiler(): options must be a hash"    if ! ishref($opt);
+   croak "_mini_compiler(): parameters must be a HASH" if ! ishref($param);
 
    foreach my $var ( keys %{ $param } ) {
       $template =~ s[<%\Q$var\E%>][$param->{$var}]xmsg;
