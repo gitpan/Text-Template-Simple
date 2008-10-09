@@ -134,38 +134,37 @@ sub _token_code {
    my $map_keys = shift;
    my $tree     = shift;
    # $first is the left-cmd, $last is the right-cmd. $second is the extra
-   my $first    = substr $str, SUBSTR_OFFSET_FIRST , SUBSTR_LENGTH;
-   my $second   = substr $str, SUBSTR_OFFSET_SECOND, SUBSTR_LENGTH;
-   my $last     = substr $str, length($str) - 1    , SUBSTR_LENGTH;
    my $len      = length($str);
+   my($first, $second, $last) = ('') x 3;
+   $first  = substr $str, SUBSTR_OFFSET_FIRST , SUBSTR_LENGTH if $str ne '';
+   $second = substr $str, SUBSTR_OFFSET_SECOND, SUBSTR_LENGTH if $str ne '';
+   $last   = substr $str, length($str) - 1    , SUBSTR_LENGTH if $str ne '';
 
-   HANDLE_COMMANDS: {
-      foreach my $cmd ( @COMMANDS, $self->_user_commands ) {
-         if ( $first eq $cmd->[CMD_CHAR] ) {
-            my($copen, $cclose, $ctoken) = $self->_chomp_token( $second, $last );
-            my $cb   = $map_keys ? 'quote' : $cmd->[CMD_CB];
-            my $soff = $copen ? 2 : 1;
-            my $slen = $len - ($cclose ? $soff+1 : 1);
-            my $buf  = substr $str, $soff, $slen;
+   foreach my $cmd ( @COMMANDS, $self->_user_commands ) {
+      if ( $first eq $cmd->[CMD_CHAR] ) {
+         my($copen, $cclose, $ctoken) = $self->_chomp_token( $second, $last );
+         my $cb   = $map_keys ? 'quote' : $cmd->[CMD_CB];
+         my $soff = $copen ? 2 : 1;
+         my $slen = $len - ($cclose ? $soff+1 : 1);
+         my $buf  = substr $str, $soff, $slen;
 
-            if ( (T_NOTADELIM == $cmd->[CMD_ID]) && $inside ) {
-               $buf = $self->[ID_DS] . $buf;
-               $tree->[LAST_TOKEN][TOKEN_ID] = T_DISCARD;
-            }
-
-            my $needs_chomp = defined($ctoken);
-            $self->_chomp_prev($tree, $ctoken) if $needs_chomp;
-
-            my $id  = $map_keys ? T_RAW              : $cmd->[CMD_ID];
-            my $val = $cb       ? $self->$cb( $buf ) : $buf;
-
-            return [
-                     $val,
-                     $id,
-                     [CHOMP_NONE, CHOMP_NONE],
-                     $needs_chomp ? $ctoken : undef # trigger
-                   ];
+         if ( (T_NOTADELIM == $cmd->[CMD_ID]) && $inside ) {
+            $buf = $self->[ID_DS] . $buf;
+            $tree->[LAST_TOKEN][TOKEN_ID] = T_DISCARD;
          }
+
+         my $needs_chomp = defined($ctoken);
+         $self->_chomp_prev($tree, $ctoken) if $needs_chomp;
+
+         my $id  = $map_keys ? T_RAW              : $cmd->[CMD_ID];
+         my $val = $cb       ? $self->$cb( $buf ) : $buf;
+
+         return [
+                  $val,
+                  $id,
+                  [CHOMP_NONE, CHOMP_NONE],
+                  $needs_chomp ? $ctoken : undef # trigger
+                ];
       }
    }
 
