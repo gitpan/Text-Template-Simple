@@ -4,7 +4,6 @@ use vars qw($VERSION);
 use Carp qw( croak );
 use Text::Template::Simple::Util;
 use Text::Template::Simple::Constants;
-use constant RE_PIPE_SPLIT  => qr/ \| (?:\s+)? (PARAM|FILTER) : /xms;
 
 $VERSION = '0.60';
 

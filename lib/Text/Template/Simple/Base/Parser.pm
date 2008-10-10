@@ -100,8 +100,9 @@ sub _parse {
 
    my $handler = $self->[USER_THANDLER];
 
-   my $w_raw = sub { ";$faker .= q~$_[0]~;" };
-   my $w_cap = sub { ";$faker .= sub {" . $_[0] . "}->();"; };
+   my $w_raw  = sub { ";$faker .= q~$_[0]~;" };
+   my $w_cap  = sub { ";$faker .= sub {" . $_[0] . "}->();"; };
+   my $w_code = sub { $_[0] . ';' };
 
    # little hack to convert delims into escaped delims for static inclusion
    $raw =~ s{\Q$ds}{$ds!}xmsg if $as_is;
@@ -121,7 +122,7 @@ sub _parse {
       }
 
       elsif ( T_CODE == $id ) {
-         $code .= $resume ? $self->_resume($str, 0, 1) : $str;
+         $code .= $w_code->($resume ? $self->_resume($str, 0, 1) : $str);
       }
 
       elsif ( T_CAPTURE == $id ) {
@@ -137,6 +138,23 @@ sub _parse {
 
       elsif ( T_MAPKEY == $id ) {
          $code .= sprintf $mko, $mkc ? ( ($str) x 5 ) : $str;
+      }
+
+      elsif ( T_COMMAND == $id ) {
+         my($head, $raw_block) = split /;/, $str, 2;
+         my @buf = split RE_PIPE_SPLIT, '|' . trim($head);
+         shift(@buf);
+         my %com = map { trim $_ } @buf;
+
+         if ( $com{FILTER} ) {
+            local $self->[FILENAME] = '<ANON BLOCK>';
+            $self->_call_filters(
+               \$raw_block,
+               split RE_FILTER_SPLIT, $com{FILTER}
+            );
+         }
+
+         $code .= $w_raw->($raw_block);
       }
 
       else {

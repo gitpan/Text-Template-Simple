@@ -1,7 +1,6 @@
 #!/usr/bin/env perl -w
 use strict;
 use Test::More qw( no_plan );
-
 use Text::Template::Simple;
 use Text::Template::Simple::Constants qw( :chomp );
 

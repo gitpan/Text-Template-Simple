@@ -2,7 +2,7 @@ package Text::Template::Simple;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.62_03';
+$VERSION = '0.62_04';
 
 use Carp qw( croak );
 use File::Spec;
@@ -300,6 +300,10 @@ Dynamic include directives C<< <%* %> >>
 
 Comment Directives: C<< <%# %> >>
 
+=item *
+
+Blocks with commands: C<< <%| %> >>.
+
 =back
 
 A simple example:
@@ -523,6 +527,26 @@ prefix:
 
 Just pass the parameters as describe above and fetch them via C<@_> inside
 the included file.
+
+=head2 BLOCKS
+
+A block consists of a header part and the content.
+
+   <%|
+   HEADER;
+   BODY
+   %>
+
+C<HEADER> includes the commands and terminated with a semicolon. C<BODY> is the
+actual block content.
+
+=head3 BLOCK FILTERS
+
+Identical to include filters, but works on blocks of text:
+
+   <%| FILTER: HTML, OtherFilter;
+      <p>&FooBar=42</p>
+   %>
 
 =head1 METHODS
 

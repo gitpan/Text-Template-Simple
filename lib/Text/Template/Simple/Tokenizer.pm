@@ -22,12 +22,13 @@ use Text::Template::Simple::Util      qw( LOG );
 use Text::Template::Simple::Constants qw( :chomp :directive :token );
 
 my @COMMANDS = ( # default command list
-   # cmd            id           callback
-   [ DIR_CAPTURE  , T_CAPTURE             ],
-   [ DIR_DYNAMIC  , T_DYNAMIC,   'trim'   ],
-   [ DIR_STATIC   , T_STATIC,    'trim'   ],
-   [ DIR_NOTADELIM, T_NOTADELIM           ],
-   [ DIR_COMMENT  , T_COMMENT             ],
+   # cmd            id
+   [ DIR_CAPTURE  , T_CAPTURE   ],
+   [ DIR_DYNAMIC  , T_DYNAMIC,  ],
+   [ DIR_STATIC   , T_STATIC,   ],
+   [ DIR_NOTADELIM, T_NOTADELIM ],
+   [ DIR_COMMENT  , T_COMMENT   ],
+   [ DIR_COMMAND  , T_COMMAND   ],
 );
 
 sub new {
@@ -82,7 +83,6 @@ sub tokenize {
 
 sub tilde { shift; Text::Template::Simple::Util::escape( '~' => @_ ) }
 sub quote { shift; Text::Template::Simple::Util::escape( '"' => @_ ) }
-sub trim  { shift; Text::Template::Simple::Util::trim(          @_ ) }
 
 sub _debug_tokens {
    my $self   = shift;
@@ -127,70 +127,81 @@ sub _user_commands {
    return $self->commands;
 }
 
-sub _token_code {
-   my $self     = shift;
-   my $str      = shift;
-   my $inside   = shift;
-   my $map_keys = shift;
-   my $tree     = shift;
-   # $first is the left-cmd, $last is the right-cmd. $second is the extra
-   my $len      = length($str);
+sub _token_for_command {
+   my($self, $tree, $map_keys, $str, $last, $second, $cmd, $inside) = @_;
+   my($copen, $cclose, $ctoken) = $self->_chomp_token( $second, $last );
+   my $len  = length($str);
+   my $cb   = $map_keys ? 'quote' : $cmd->[CMD_CB];
+   my $soff = $copen ? 2 : 1;
+   my $slen = $len - ($cclose ? $soff+1 : 1);
+   my $buf  = substr $str, $soff, $slen;
+
+   if ( (T_NOTADELIM == $cmd->[CMD_ID]) && $inside ) {
+      $buf = $self->[ID_DS] . $buf;
+      $tree->[LAST_TOKEN][TOKEN_ID] = T_DISCARD;
+   }
+
+   my $needs_chomp = defined($ctoken);
+   $self->_chomp_prev($tree, $ctoken) if $needs_chomp;
+
+   my $id  = $map_keys ? T_RAW              : $cmd->[CMD_ID];
+   my $val = $cb       ? $self->$cb( $buf ) : $buf;
+
+   return [
+            $val,
+            $id,
+            [CHOMP_NONE, CHOMP_NONE],
+            $needs_chomp ? $ctoken : undef # trigger
+          ];
+}
+
+sub _token_for_code {
+   my($self, $tree, $map_keys, $str, $last, $first) = @_;
+   my($copen, $cclose, $ctoken) = $self->_chomp_token( $first, $last );
+   my $len  = length($str);
+   my $soff = $copen ? 1 : 0;
+   my $slen = $len - ( $cclose ? $soff+1 : 0 );
+
+   my $needs_chomp = defined($ctoken);
+   $self->_chomp_prev($tree, $ctoken) if $needs_chomp;
+
+   return   [
+               substr($str, $soff, $slen),
+               $map_keys ? T_MAPKEY : T_CODE,
+               [ CHOMP_NONE, CHOMP_NONE ],
+               $needs_chomp ? $ctoken : undef # trigger
+            ];
+}
+
+sub _get_command_chars {
+   my($self, $str) = @_;
    my($first, $second, $last) = ('') x 3;
+   # $first is the left-cmd, $last is the right-cmd. $second is the extra
    $first  = substr $str, SUBSTR_OFFSET_FIRST , SUBSTR_LENGTH if $str ne '';
    $second = substr $str, SUBSTR_OFFSET_SECOND, SUBSTR_LENGTH if $str ne '';
    $last   = substr $str, length($str) - 1    , SUBSTR_LENGTH if $str ne '';
+   return $first, $second, $last;
+}
 
-   foreach my $cmd ( @COMMANDS, $self->_user_commands ) {
-      if ( $first eq $cmd->[CMD_CHAR] ) {
-         my($copen, $cclose, $ctoken) = $self->_chomp_token( $second, $last );
-         my $cb   = $map_keys ? 'quote' : $cmd->[CMD_CB];
-         my $soff = $copen ? 2 : 1;
-         my $slen = $len - ($cclose ? $soff+1 : 1);
-         my $buf  = substr $str, $soff, $slen;
-
-         if ( (T_NOTADELIM == $cmd->[CMD_ID]) && $inside ) {
-            $buf = $self->[ID_DS] . $buf;
-            $tree->[LAST_TOKEN][TOKEN_ID] = T_DISCARD;
-         }
-
-         my $needs_chomp = defined($ctoken);
-         $self->_chomp_prev($tree, $ctoken) if $needs_chomp;
-
-         my $id  = $map_keys ? T_RAW              : $cmd->[CMD_ID];
-         my $val = $cb       ? $self->$cb( $buf ) : $buf;
-
-         return [
-                  $val,
-                  $id,
-                  [CHOMP_NONE, CHOMP_NONE],
-                  $needs_chomp ? $ctoken : undef # trigger
-                ];
-      }
-   }
+sub _token_code {
+   my($self, $str, $inside, $map_keys, $tree) = @_;
+   my($first, $second, $last) = $self->_get_command_chars( $str );
 
    if ( $inside ) {
-      my($copen, $cclose, $ctoken) = $self->_chomp_token( $first, $last );
-      my $soff = $copen ? 1 : 0;
-      my $slen = $len - ( $cclose ? $soff+1 : 0 );
-
-      my $needs_chomp = defined($ctoken);
-      $self->_chomp_prev($tree, $ctoken) if $needs_chomp;
-
-      return   [
-                  substr($str, $soff, $slen),
-                  $map_keys ? T_MAPKEY : T_CODE,
-                  [ CHOMP_NONE, CHOMP_NONE ],
-                  $needs_chomp ? $ctoken : undef # trigger
-               ];
+      my @common = ($tree, $map_keys, $str, $last);
+      foreach my $cmd ( @COMMANDS, $self->_user_commands ) {
+         next if $first ne $cmd->[CMD_CHAR];
+         return $self->_token_for_command( @common, $second, $cmd, $inside );
+      }
+      return $self->_token_for_code( @common, $first );
    }
 
-   my $trig = $tree->[PREVIOUS_TOKEN] ? $tree->[PREVIOUS_TOKEN][TOKEN_TRIGGER]
-            :                           undef
-            ;
+   my $prev = $tree->[PREVIOUS_TOKEN];
+
    return [
             $self->tilde( $str ),
             T_RAW,
-            [ $trig, CHOMP_NONE ],
+            [ $prev ? $prev->[TOKEN_TRIGGER] : undef, CHOMP_NONE ],
             undef # trigger
          ];
 }
@@ -351,14 +362,6 @@ Escapes the tilde character.
 =head3 quote
 
 Escapes double quotes.
-
-=head3 trim
-
-=head3 rtrim
-
-=head3 ltrim
-
-See L<Text::Template::Simple::Util>.
 
 =head1 AUTHOR
 

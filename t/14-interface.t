@@ -145,7 +145,6 @@ can_ok( 'Text::Template::Simple::Tokenizer',
             _user_commands
             tilde
             quote
-            trim
         /
     );
 can_ok( 'Text::Template::Simple::Util',

@@ -41,7 +41,8 @@ t/25-chomp.t
 t/26-template-name-dollar-zero.t
 t/27-include-param.t
 t/28-include-filter.t
-t/29-toke-substr.t
+t/29-block-filter.t
+t/30-toke-substr.t
 t/99-all-modules-have-the-same-version.t
 t/data/test.tts
 t/data/dynamic.tts

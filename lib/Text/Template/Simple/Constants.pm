@@ -53,6 +53,7 @@ use constant T_CAPTURE        => ++$DID;
 use constant T_DYNAMIC        => ++$DID;
 use constant T_STATIC         => ++$DID;
 use constant T_MAPKEY         => ++$DID;
+use constant T_COMMAND        => ++$DID;
 use constant T_MAXID          =>   $DID;
 
 # settings
@@ -90,6 +91,7 @@ use constant DIR_DYNAMIC      => '*';
 use constant DIR_STATIC       => '+';
 use constant DIR_NOTADELIM    => '!';
 use constant DIR_COMMENT      => '#';
+use constant DIR_COMMAND      => '|';
 # second level directives
 use constant DIR_CHOMP        => '-';
 use constant DIR_COLLAPSE     => '~';
@@ -120,6 +122,9 @@ use constant DIGEST_MODS => qw(
    MD5
    Digest::Perl::MD5
 );
+
+use constant RE_PIPE_SPLIT   => qr/ \| (?:\s+)? (PARAM|FILTER) : /xms;
+use constant RE_FILTER_SPLIT => qr/ \, (?:\s+)? /xms;
 
 use constant FRAGMENT_TMP      => <<'TEMPLATE_CONSTANT';
 
@@ -300,6 +305,7 @@ BEGIN {
                         DIR_STATIC
                         DIR_NOTADELIM
                         DIR_COMMENT
+                        DIR_COMMAND
                      )],
       token     =>   [qw(
                         TOKEN_ID
@@ -322,14 +328,17 @@ BEGIN {
                         T_DYNAMIC
                         T_STATIC
                         T_MAPKEY
+                        T_COMMAND
                         T_MAXID
                       )],
       etc       =>   [qw(
                         DIGEST_MODS
                         STAT_MTIME
                         RE_DUMP_ERROR
-                        STAT_SIZE
+                        RE_PIPE_SPLIT
+                        RE_FILTER_SPLIT
                         RE_NONFILE
+                        STAT_SIZE
                         MAX_RECURSION
                      )],
    );

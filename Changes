@@ -2,6 +2,15 @@ Revision history for Perl extension Text::Template::Simple.
 
 Time zone is UTC+2.
 
+0.62_04 Fri Oct 10 22:20:58 2008
+   => Fixed a semicolon issue with code blocks.
+   => Removed cmd callbacks from the tokenizer. Also removed trim().
+   => Implemented block filters.
+   => Fixed filter split regex.
+   => New placeholder test.
+   => Fixed a long standing bug in the tokenizer.
+   => Internal cleanup.
+
 0.62_03 Fri Oct 10 19:53:49 2008
    => Fixed tts().
    => Pod fixes.

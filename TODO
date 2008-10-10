@@ -21,8 +21,6 @@
 *  ***LOW*** Implement TTS plugins for major frameworks.
 *  ***LOW*** Consider building a tiny framework for template plugins.
         o Or just let the user define subs in ::Dummy.
-*  ***LOW*** Consider implementing TT like filters
-        o Block filters
 *  ***LOW*** Benchmarks?
 *  ***LOW*** XS based tokenizer?
 * Keep the code clean & simple (no hacks?).
