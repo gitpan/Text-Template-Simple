@@ -2,6 +2,10 @@ Revision history for Perl extension Text::Template::Simple.
 
 Time zone is UTC+2.
 
+0.62_03 Fri Oct 10 19:53:49 2008
+   => Fixed tts().
+   => Pod fixes.
+
 0.62_02 Fri Oct 10 01:37:09 2008
    => Fixed a warning generated via an edge case in the tokenizer.
    => Internal cleanup.

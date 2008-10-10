@@ -2,7 +2,7 @@ package Text::Template::Simple;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.62_02';
+$VERSION = '0.62_03';
 
 use Carp qw( croak );
 use File::Spec;
@@ -75,7 +75,7 @@ sub import {
 sub tts {
    my @args = @_;
    croak "Nothing to compile!" if ! @args;
-   my @new  = ishref($args[0]) ? @{ shift(@args) } : ();
+   my @new  = ishref($args[0]) ? %{ shift(@args) } : ();
    return __PACKAGE__->new( @new )->compile( @args );
 }
 
@@ -486,7 +486,16 @@ You can fetch parameters (passed to compile) in the usual perl way:
    %>
    Baz is <%= $bar{baz} %>
 
-=head2 FILTERS
+=head2 INCLUDE COMMANDS
+
+Include commands are separated by pipes in an include directive.
+Currently supported parameters are: C<PARAM:>, C<FILTER:>.
+
+   <%+ /path/to/static.tts  | FILTER: MyFilter | PARAM: test => 123 %>
+   <%* /path/to/dynamic.tts | FILTER: MyFilter | PARAM: test => 123 %>
+
+C<FILTER:> defines the list of filters to apply to the output of the include.
+C<PARAM:> defines the parameter list to pass to the included file.
 
 =head3 INCLUDE FILTERS
 
@@ -510,20 +519,7 @@ prefix:
       return;
    }
 
-=head2 INCLUDE COMMANDS
-
-Include commands are separated by pipes in an include directive.
-Currently supported parameters are: C<PARAM:>, C<FILTER:>.
-
-   <%+ /path/to/static.tts  | FILTER: MyFilter | PARAM: test => 123 %>
-   <%* /path/to/dynamic.tts | FILTER: MyFilter | PARAM: test => 123 %>
-
-C<FILTER:> defines the list of filters to apply to the output of the include.
-See L</FILTERS>.
-
 =head3 INCLUDE PARAMETERS
-
-C<PARAM:> defines the parameter list to pass to the included file.
 
 Just pass the parameters as describe above and fetch them via C<@_> inside
 the included file.
