@@ -15,7 +15,7 @@ use constant BITMASK    => 9;
 use Text::Template::Simple::Util qw( ishref );
 use Carp qw( croak );
 
-$VERSION = '0.60';
+$VERSION = '0.62_05';
 
 sub stack {
    my $self    = shift;

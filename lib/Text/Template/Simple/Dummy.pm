@@ -11,7 +11,7 @@ use Text::Template::Simple::Caller;
 use Text::Template::Simple::Util qw();
 use Carp qw( croak );
 
-$VERSION = '0.60';
+$VERSION = '0.62_05';
 
 sub stack { # just a wrapper
    my $opt = shift || {};

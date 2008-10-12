@@ -5,7 +5,7 @@ use Carp qw( croak );
 use Text::Template::Simple::Util;
 use Text::Template::Simple::Constants;
 
-$VERSION = '0.60';
+$VERSION = '0.62_05';
 
 sub _compiler { shift->[SAFE] ? COMPILER_SAFE : COMPILER }
 

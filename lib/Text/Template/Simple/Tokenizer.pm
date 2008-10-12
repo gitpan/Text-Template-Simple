@@ -2,7 +2,7 @@ package Text::Template::Simple::Tokenizer;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.60';
+$VERSION = '0.62_05';
 
 use constant CMD_CHAR             =>  0;
 use constant CMD_ID               =>  1;
@@ -136,7 +136,7 @@ sub _token_for_command {
    my $slen = $len - ($cclose ? $soff+1 : 1);
    my $buf  = substr $str, $soff, $slen;
 
-   if ( (T_NOTADELIM == $cmd->[CMD_ID]) && $inside ) {
+   if ( T_NOTADELIM == $cmd->[CMD_ID] ) {
       $buf = $self->[ID_DS] . $buf;
       $tree->[LAST_TOKEN][TOKEN_ID] = T_DISCARD;
    }
@@ -205,7 +205,6 @@ sub _token_code {
             undef # trigger
          ];
 }
-
 
 sub _chomp_token {
    my($self, $open, $close) = @_;
@@ -298,18 +297,20 @@ sub _visualize_chomp {
 sub _visualize_tid {
    my $self = shift;
    my $id   = shift;
-   my @ids  = ( undef, qw(
-                  T_DELIMSTART
-                  T_DELIMEND
-                  T_DISCARD
-                  T_COMMENT
-                  T_RAW
-                  T_NOTADELIM
-                  T_CODE
-                  T_CAPTURE
-                  T_DYNAMIC
-                  T_STATIC
-                  T_MAPKEY
+   my @ids  = ( undef,
+                qw(
+                     T_DELIMSTART
+                     T_DELIMEND
+                     T_DISCARD
+                     T_COMMENT
+                     T_RAW
+                     T_NOTADELIM
+                     T_CODE
+                     T_CAPTURE
+                     T_DYNAMIC
+                     T_STATIC
+                     T_MAPKEY
+                     T_COMMAND
                   )
                );
    my $rv = $ids[$id] || ( defined $id ? $id : 'undef' );

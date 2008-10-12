@@ -2,7 +2,7 @@ package Text::Template::Simple;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.62_04';
+$VERSION = '0.62_05';
 
 use Carp qw( croak );
 use File::Spec;

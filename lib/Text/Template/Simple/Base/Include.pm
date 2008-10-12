@@ -5,7 +5,7 @@ use Carp qw( croak );
 use Text::Template::Simple::Util;
 use Text::Template::Simple::Constants;
 
-$VERSION = '0.60';
+$VERSION = '0.62_05';
 
 sub _include_no_monolith {
    # no monolith eh?
@@ -133,6 +133,8 @@ sub _interpolate {
    # croak "You can not pass parameters to static includes"
    #    if $inc{PARAM} && T_STATIC  == $type;
 
+   my $filter = $inc{FILTER} ? escape( q{'} => $inc{FILTER} ) : '';
+
    my $rv = $self->_mini_compiler(
                $self->_internal('sub_include') => {
                   OBJECT      => $self->[FAKER_SELF],
@@ -140,7 +142,7 @@ sub _interpolate {
                   ERROR_TITLE => escape( q{'} => $etitle ),
                   TYPE        => $type,
                   PARAMS      => $inc{PARAM} ? qq{[$inc{PARAM}]} : 'undef',
-                  FILTER      => $inc{FILTER} ? escape( q{'} => $inc{FILTER} ) : '',
+                  FILTER      => $filter,
                } => {
                   flatten => 1,
                }

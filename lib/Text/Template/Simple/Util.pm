@@ -4,7 +4,7 @@ use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
 use Text::Template::Simple::Constants qw( :info DIGEST_MODS );
 use Carp qw( croak );
 
-$VERSION = '0.60';
+$VERSION = '0.62_05';
 
 BEGIN {
    if ( IS_WINDOWS ) {

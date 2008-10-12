@@ -5,7 +5,7 @@ use Carp qw( croak );
 use Text::Template::Simple::Util;
 use Text::Template::Simple::Constants;
 
-$VERSION = '0.60';
+$VERSION = '0.62_05';
 
 # internal code templates
 my %INTERNAL = (
@@ -147,6 +147,7 @@ sub _parse {
          my %com = map { trim $_ } @buf;
 
          if ( $com{FILTER} ) {
+            # embed into the template & NEEDS_OBJECT++ ???
             local $self->[FILENAME] = '<ANON BLOCK>';
             $self->_call_filters(
                \$raw_block,
