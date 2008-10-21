@@ -5,7 +5,7 @@ use Text::Template::Simple::Constants;
 use Text::Template::Simple::Util qw( DEBUG LOG ishref binary_mode );
 use Carp qw( croak );
 
-$VERSION = '0.62_05';
+$VERSION = '0.62_06';
 
 sub new {
    my $class = shift;
@@ -114,6 +114,9 @@ Text::Template::Simple::IO - I/O methods
 TODO
 
 =head1 DESCRIPTION
+
+This document describes version 0.62_06 of Text::Template::Simple::IO
+released on 21 October 2008.
 
 TODO
 

@@ -6,7 +6,7 @@ use Text::Template::Simple::Constants;
 use Text::Template::Simple::Util qw( DEBUG LOG ishref );
 use Carp qw( croak );
 
-$VERSION = '0.62_05';
+$VERSION = '0.62_06';
 
 my $CACHE = {}; # in-memory template cache
 
@@ -42,7 +42,7 @@ sub reset {
 
       my $cdir = $parent->[CACHE_DIR];
       local  *CDIRH;
-      opendir CDIRH, $cdir or croak fatal( CDIROPEN => $cdir, $! );
+      opendir CDIRH, $cdir or croak fatal( 'tts.cache.opendir' => $cdir, $! );
       require File::Spec;
       my $ext = quotemeta CACHE_EXT;
       my $file;
@@ -119,7 +119,7 @@ sub _dump_structure {
    else {
       $d = Data::Dumper->new( [ $CACHE ], [ $VAR ]);
       if ( $deparse ) {
-         croak fatal(DUMPER => $Data::Dumper::VERSION) if !$d->can('Deparse');
+         croak fatal('tts.cache.dumper' => $Data::Dumper::VERSION) if !$d->can('Deparse');
          $d->Deparse(1);
       }
    }
@@ -228,13 +228,13 @@ sub has {
       return;
    }
 
-   croak fatal('PFORMAT') if @_ % 2;
+   croak fatal('tts.cache.pformat') if @_ % 2;
 
    my %opt = @_;
    my $id  = $parent->connector('Cache::ID')->new;
    my $cid = $opt{id}   ? $id->generate($opt{id}  , 'custom')
            : $opt{data} ? $id->generate($opt{data}          )
-           :              croak fatal('INCACHE');
+           :              croak fatal('tts.cache.incache');
 
    if ( my $cdir = $parent->[CACHE_DIR] ) {
       require File::Spec;
@@ -394,6 +394,9 @@ Text::Template::Simple::Cache - Cache manager
 TODO
 
 =head1 DESCRIPTION
+
+This document describes version 0.62_06 of Text::Template::Simple::Cache
+released on 21 October 2008.
 
 Cache manager for C<Text::Template::Simple>.
 

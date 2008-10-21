@@ -5,7 +5,7 @@ use Carp qw( croak );
 use Text::Template::Simple::Util;
 use Text::Template::Simple::Constants;
 
-$VERSION = '0.62_05';
+$VERSION = '0.62_06';
 
 sub _examine {
    my $self   = shift;
@@ -53,8 +53,8 @@ sub _examine_glob {
    my $self = shift;
    my $TMP  = shift;
    my $ref  = ref $TMP;
-   croak fatal(  NOTGLOB => $ref ) if $ref ne 'GLOB';
-   croak fatal( 'NOTFH'          ) if not  fileno $TMP;
+   croak fatal( 'tts.base.examine.notglob' => $ref ) if $ref ne 'GLOB';
+   croak fatal( 'tts.base.examine.notfh'           ) if not  fileno $TMP;
    return $self->io->slurp( $TMP );
 }
 
@@ -89,6 +89,9 @@ Text::Template::Simple::Base::Examine - Base class for Text::Template::Simple
 Private module.
 
 =head1 DESCRIPTION
+
+This document describes version 0.62_06 of Text::Template::Simple::Base::Examine
+released on 21 October 2008.
 
 Private module.
 

@@ -4,7 +4,7 @@ use strict;
 use vars qw($VERSION);
 use Text::Template::Simple::Dummy;
 
-$VERSION = '0.62_05';
+$VERSION = '0.62_06';
 
 sub _compile { shift; return __PACKAGE__->_object->reval(shift) }
 
@@ -43,6 +43,9 @@ Text::Template::Simple::Compiler::Safe - Safe compiler
 Private module.
 
 =head1 DESCRIPTION
+
+This document describes version 0.62_06 of Text::Template::Simple::Compiler::Safe
+released on 21 October 2008.
 
 Safe template compiler.
 

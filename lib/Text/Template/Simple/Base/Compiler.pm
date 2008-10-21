@@ -5,7 +5,7 @@ use Carp qw( croak );
 use Text::Template::Simple::Util;
 use Text::Template::Simple::Constants;
 
-$VERSION = '0.62_05';
+$VERSION = '0.62_06';
 
 sub _compiler { shift->[SAFE] ? COMPILER_SAFE : COMPILER }
 
@@ -170,6 +170,9 @@ Text::Template::Simple::Base::Compiler - Base class for Text::Template::Simple
 Private module.
 
 =head1 DESCRIPTION
+
+This document describes version 0.62_06 of Text::Template::Simple::Base::Compiler
+released on 21 October 2008.
 
 Private module.
 

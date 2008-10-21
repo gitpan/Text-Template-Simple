@@ -4,7 +4,7 @@ use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
 use Text::Template::Simple::Constants qw( :info DIGEST_MODS );
 use Carp qw( croak );
 
-$VERSION = '0.62_05';
+$VERSION = '0.62_06';
 
 BEGIN {
    if ( IS_WINDOWS ) {
@@ -16,7 +16,7 @@ BEGIN {
    if ( NEW_PERL ) {
       # older perl binmode() does not accept a second param
       eval q/
-         sub binary_mode { 
+         sub binary_mode {
             my($fh, $layer) = @_;
             binmode $fh, ':' . $layer;
          }
@@ -38,27 +38,24 @@ BEGIN {
 $EXPORT_TAGS{all} = \@EXPORT_OK;
 @EXPORT           =  @EXPORT_OK;
 
-my %ERROR = (
-   NOTGLOB  => "Unknown template parameter passed as %s reference! Supported "
-              ."types are GLOB, PATH and STRING.",
-   NOTFH    => "This GLOB is not a filehandle",
-   CDIR     => "Cache dir %s does not exist!",
-   ARGS     => "Malformed add_args parameter! 'add_args' must be an arrayref!",
-   DELIMS   => "Malformed delimiters parameter! 'delimiters' must be a two "
-              ."element arrayref!",
-   CDIROPEN => "Can not open cache dir (%s) for reading: %s",
-   DIGEST   => "Can not load a digest module. Disable cache or install one "
-              ."of these (%s or %s). Last error was: %s",
-   DUMPER   => "Can not dump in-memory cache! Your version of Data::Dumper "
-              ."(%s) does not implement the Deparse() method. "
-              ."Please upgrade this module!",
-   PFORMAT  => "Parameters must be in 'param => value' format",
-   INCACHE  => "I need an 'id' or a 'data' parameter for cache check!",
-   DSLEN    => "Start delimiter is smaller than 2 characters",
-   DELEN    => "End delimiter is smaller than 2 characters",
-   DSWS     => "Start delimiter contains whitespace",
-   DEWS     => "End delimiter contains whitespace",
-);
+my $lang = {
+   error => {
+      'tts.base.examine.notglob' => "Unknown template parameter passed as %s reference! Supported types are GLOB, PATH and STRING.",
+      'tts.base.examine.notfh'   => "This GLOB is not a filehandle",
+      'tts.main.cdir'            => "Cache dir %s does not exist!",
+      'tts.main.bogus_args'      => "Malformed add_args parameter! 'add_args' must be an arrayref!",
+      'tts.main.bogus_delims'    => "Malformed delimiters parameter! 'delimiters' must be a two element arrayref!",
+      'tts.cache.opendir'        => "Can not open cache dir (%s) for reading: %s",
+      'tts.util.digest'          => "Can not load a digest module. Disable cache or install one of these (%s or %s). Last error was: %s",
+      'tts.cache.dumper'         => "Can not dump in-memory cache! Your version of Data::Dumper (%s) does not implement the Deparse() method. Please upgrade this module!",
+      'tts.cache.pformat'        => "Parameters must be in 'param => value' format",
+      'tts.cache.incache'        => "I need an 'id' or a 'data' parameter for cache check!",
+      'tts.main.dslen'           => "Start delimiter is smaller than 2 characters",
+      'tts.main.delen'           => "End delimiter is smaller than 2 characters",
+      'tts.main.dsws'            => "Start delimiter contains whitespace",
+      'tts.main.dews'            => "End delimiter contains whitespace",
+   },
+};
 
 my $DEBUG = 0;  # Disabled by default
 my $DIGEST;     # Will hold digester class name.
@@ -69,7 +66,7 @@ sub ishref { $_[0] && ref($_[0]) && ref($_[0]) eq 'HASH'  };
 
 sub fatal  {
    my $ID  = shift;
-   my $str = $ERROR{$ID} || croak "$ID is not defined as an error";
+   my $str = $lang->{error}{$ID} || croak "$ID is not defined as an error";
    return $str if not @_;
    return sprintf $str, @_;
 }
@@ -138,7 +135,7 @@ sub DIGEST {
    if ( not $DIGEST ) {
       my @report = DIGEST_MODS;
       my $last   = pop @report;
-      croak fatal( DIGEST => join(', ', @report), $last, $@ );
+      croak fatal( 'tts.util.digest' => join(', ', @report), $last, $@ );
    }
 
    LOG( DIGESTER => $DIGEST ) if DEBUG();
@@ -177,6 +174,9 @@ Text::Template::Simple::Util - Utility functions
 TODO
 
 =head1 DESCRIPTION
+
+This document describes version 0.62_06 of Text::Template::Simple::Util
+released on 21 October 2008.
 
 Contains utility functions for Text::Template::Simple.
 

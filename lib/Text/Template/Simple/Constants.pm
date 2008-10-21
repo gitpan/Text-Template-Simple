@@ -2,7 +2,7 @@ package Text::Template::Simple::Constants;
 use strict;
 use vars qw($VERSION $OID $DID @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
 
-$VERSION = '0.62_05';
+$VERSION = '0.62_06';
 
 # object fields
 BEGIN { $OID = -1 } # init object field id counter
@@ -362,6 +362,9 @@ Text::Template::Simple::Constants - Constants
 TODO
 
 =head1 DESCRIPTION
+
+This document describes version 0.62_06 of Text::Template::Simple::Constants
+released on 21 October 2008.
 
 Constants for Text::Template::Simple.
 

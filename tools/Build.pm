@@ -5,9 +5,16 @@ use File::Find;
 use constant RE_VERSION_LINE => qr{
    \A \$VERSION \s+ = \s+ ["'] (.+?) ['"] ; (.+?) \z
 }xms;
-use constant VTEMP => q{$VERSION = '%s';};
+use constant RE_POD_LINE => qr{
+\A =head1 \s+ DESCRIPTION \s+ \z
+}xms;
+use constant VTEMP  => q{$VERSION = '%s';};
+use constant MONTHS => qw(
+   January February March     April   May      June
+   July    August   September October November December
+);
 
-$VERSION = '0.10';
+$VERSION = '0.20';
 
 sub ACTION_dist {
    my $self = shift;
@@ -35,6 +42,9 @@ sub _change_versions {
    my $files = shift;
    my $dver  = $self->dist_version;
 
+   my($mday, $mon, $year) = (localtime time)[3, 4, 5];
+   my $date = join ' ', $mday, [MONTHS]->[$mon], $year + 1900;
+
    warn "DISTRO Version: $dver\n";
 
    foreach my $mod ( @{ $files } ) {
@@ -42,17 +52,29 @@ sub _change_versions {
       my $new = $mod . '.new';
       open my $RO_FH, '<:raw', $mod or die "Can not open file($mod): $!";
       open my $W_FH , '>:raw', $new or die "Can not open file($new): $!";
-      my $changed;
-      while ( my $line = readline $RO_FH ) {
-         if ( ! $changed && ( $line =~ RE_VERSION_LINE ) ) {
-             my $oldv      = $1;
-             my $remainder = $2;
-             warn "CHANGED Version from $oldv to $dver\n";
-             printf $W_FH VTEMP . $remainder, $dver;
-             $changed++;
-             next;
+
+      CHANGE_VERSION: while ( my $line = readline $RO_FH ) {
+         if ( $line =~ RE_VERSION_LINE ) {
+            my $oldv      = $1;
+            my $remainder = $2;
+            warn "CHANGED Version from $oldv to $dver\n";
+            printf $W_FH VTEMP . $remainder, $dver;
+            last CHANGE_VERSION;
          }
          print $W_FH $line;
+      }
+
+      my $ns  = $mod;
+         $ns  =~ s{ [\\/]     }{::}xmsg;
+         $ns  =~ s{ \A lib :: }{}xms;
+         $ns  =~ s{ \. pm \z  }{}xms;
+      my $pod = "\nThis document describes version $dver of $ns\n"
+              . "released on $date.\n"
+              ;
+
+      CHANGE_POD: while ( my $line = readline $RO_FH ) {
+         print $W_FH $line;
+         print $W_FH $pod if $line =~ RE_POD_LINE;
       }
 
       close $RO_FH or die "Can not close file($mod): $!";

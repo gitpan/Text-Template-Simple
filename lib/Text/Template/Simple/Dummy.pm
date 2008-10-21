@@ -11,7 +11,7 @@ use Text::Template::Simple::Caller;
 use Text::Template::Simple::Util qw();
 use Carp qw( croak );
 
-$VERSION = '0.62_05';
+$VERSION = '0.62_06';
 
 sub stack { # just a wrapper
    my $opt = shift || {};
@@ -34,6 +34,9 @@ Text::Template::Simple::Dummy - Container class
 TODO
 
 =head1 DESCRIPTION
+
+This document describes version 0.62_06 of Text::Template::Simple::Dummy
+released on 21 October 2008.
 
 All templates are compiled into this class.
 

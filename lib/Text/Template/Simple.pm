@@ -2,7 +2,7 @@ package Text::Template::Simple;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.62_05';
+$VERSION = '0.62_06';
 
 use Carp qw( croak );
 use File::Spec;
@@ -130,12 +130,12 @@ sub _init {
    my $bogus_args = $self->[ADD_ARGS] && ! isaref($self->[ADD_ARGS]);
    my $ok_delim   = isaref( $d )      && $#{ $d } == 1;
 
-   croak fatal('ARGS')   if $bogus_args;
-   croak fatal('DELIMS') if not $ok_delim;
-   croak fatal('DSLEN')  if length($d->[DELIM_START]) < 2;
-   croak fatal('DELEN')  if length($d->[DELIM_END])   < 2;
-   croak fatal('DSWS')   if $d->[DELIM_START] =~ m{\s}xms;
-   croak fatal('DEWS')   if $d->[DELIM_END]   =~ m{\s}xms;
+   croak fatal('tts.main.bogus_args')   if $bogus_args;
+   croak fatal('tts.main.bogus_delims') if not $ok_delim;
+   croak fatal('tts.main.dslen')        if length($d->[DELIM_START]) < 2;
+   croak fatal('tts.main.delen')        if length($d->[DELIM_END])   < 2;
+   croak fatal('tts.main.dsws')         if $d->[DELIM_START] =~ m{\s}xms;
+   croak fatal('tts.main.dews')         if $d->[DELIM_END]   =~ m{\s}xms;
 
    $self->[TYPE]           = '';
    $self->[COUNTER]        = 0;
@@ -160,7 +160,7 @@ sub _init {
 
    if ( $self->[CACHE_DIR] ) {
       my $cdir = $self->io->validate( dir => $self->[CACHE_DIR] )
-                     or croak fatal( CDIR => $self->[CACHE_DIR] );
+                     or croak fatal( 'tts.main.cdir' => $self->[CACHE_DIR] );
       $self->[CACHE_DIR] = $cdir;
    }
 
@@ -264,6 +264,9 @@ Text::Template::Simple - Simple text template engine
    print $template->compile($tmp, [str => 'Time now']);
 
 =head1 DESCRIPTION
+
+This document describes version 0.62_06 of Text::Template::Simple
+released on 21 October 2008.
 
 This is a simple template module. There is no extra template 
 language. Instead, it uses Perl as a template language. Templates

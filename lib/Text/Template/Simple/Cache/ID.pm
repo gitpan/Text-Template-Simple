@@ -6,7 +6,7 @@ use Text::Template::Simple::Constants qw( MAX_FL );
 use Text::Template::Simple::Util      qw( DIGEST );
 use Carp qw( croak );
 
-$VERSION = '0.62_05';
+$VERSION = '0.62_06';
 
 my $RE_INVALID = qr{[^A-Za-z_0-9]};
 
@@ -54,6 +54,9 @@ Text::Template::Simple::Cache::ID - Cache ID generator
 TODO
 
 =head1 DESCRIPTION
+
+This document describes version 0.62_06 of Text::Template::Simple::Cache::ID
+released on 21 October 2008.
 
 TODO
 

@@ -2,7 +2,7 @@ package Text::Template::Simple::Tokenizer;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.62_05';
+$VERSION = '0.62_06';
 
 use constant CMD_CHAR             =>  0;
 use constant CMD_ID               =>  1;
@@ -339,6 +339,9 @@ Text::Template::Simple::Tokenizer - Tokenizer
    }
 
 =head1 DESCRIPTION
+
+This document describes version 0.62_06 of Text::Template::Simple::Tokenizer
+released on 21 October 2008.
 
 Tokenizes the input with the defined delimiter pair.
 
