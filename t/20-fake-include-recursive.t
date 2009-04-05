@@ -5,7 +5,7 @@ use Text::Template::Simple;
 use Text::Template::Simple::Constants qw(MAX_RECURSION);
 use constant TEMPLATE => q{<%* t/data/test_var.tts %>};
 
-my $t   = Text::Template::Simple->new();
+my $t = Text::Template::Simple->new();
 
 sub test {
     my $rv = $t->compile( TEMPLATE );

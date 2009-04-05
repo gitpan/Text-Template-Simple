@@ -3,16 +3,16 @@ use strict;
 use vars qw($VERSION);
 use constant CACHE_PARENT => 0;
 use Text::Template::Simple::Constants;
-use Text::Template::Simple::Util qw( DEBUG LOG ishref );
+use Text::Template::Simple::Util qw( DEBUG LOG ishref fatal );
 use Carp qw( croak );
 
-$VERSION = '0.62_06';
+$VERSION = '0.62_07';
 
 my $CACHE = {}; # in-memory template cache
 
 sub new {
    my $class  = shift;
-   my $parent = shift || croak "Parent object is missing";
+   my $parent = shift || fatal('tts.cache.new.parent');
    my $self   = [undef];
    bless $self, $class;
    $self->[CACHE_PARENT] = $parent;
@@ -42,7 +42,7 @@ sub reset {
 
       my $cdir = $parent->[CACHE_DIR];
       local  *CDIRH;
-      opendir CDIRH, $cdir or croak fatal( 'tts.cache.opendir' => $cdir, $! );
+      opendir CDIRH, $cdir or fatal( 'tts.cache.opendir' => $cdir, $! );
       require File::Spec;
       my $ext = quotemeta CACHE_EXT;
       my $file;
@@ -62,9 +62,9 @@ sub dumper {
    my $self  = shift;
    my $type  = shift || 'structure';
    my $param = shift || {};
-   croak "Parameters to dumper() must be a HASHref" if not ishref $param;
+   fatal('tts.cache.dumper.hash')        if not ishref $param;
    my %valid = map { $_, $_ } qw( ids structure );
-   croak "dumper type '$type' is not valid " if not $valid{ $type };
+   fatal('tts.cache.dumper.type', $type) if not $valid{ $type };
    my $method = '_dump_' . $type;
    return $self->$method( $param ); # TODO: modify the methods to accept HASH
 }
@@ -119,7 +119,7 @@ sub _dump_structure {
    else {
       $d = Data::Dumper->new( [ $CACHE ], [ $VAR ]);
       if ( $deparse ) {
-         croak fatal('tts.cache.dumper' => $Data::Dumper::VERSION) if !$d->can('Deparse');
+         fatal('tts.cache.dumper' => $Data::Dumper::VERSION) if !$d->can('Deparse');
          $d->Deparse(1);
       }
    }
@@ -208,7 +208,7 @@ sub size {
          LOG( DEBUG => "Devel::Size v$Devel::Size::VERSION is loaded." )
             if DEBUG();
          my $size = eval { Devel::Size::total_size( $CACHE ) };
-         die "Devel::Size::total_size(): $@" if $@;
+         fatal('tts.cache.develsize', $@) if $@;
          return $size;
       }
       else {
@@ -228,13 +228,13 @@ sub has {
       return;
    }
 
-   croak fatal('tts.cache.pformat') if @_ % 2;
+   fatal('tts.cache.pformat') if @_ % 2;
 
    my %opt = @_;
    my $id  = $parent->connector('Cache::ID')->new;
    my $cid = $opt{id}   ? $id->generate($opt{id}  , 'custom')
            : $opt{data} ? $id->generate($opt{data}          )
-           :              croak fatal('tts.cache.incache');
+           :              fatal('tts.cache.incache');
 
    if ( my $cdir = $parent->[CACHE_DIR] ) {
       require File::Spec;
@@ -262,7 +262,7 @@ sub hit {
          my %meta;
          if ( $disk_cache =~ m{ \A \#META: (.+?) \n }xms ) {
             %meta = $self->_get_meta( $1 );
-            croak "Can not get meta data: $@" if $@;
+            fatal('tts.cache.hit.meta', $@) if $@;
          }
          if ( my $mtime = $meta{CHKMT} ) {
             if ( $mtime != $chkmt ) {
@@ -276,7 +276,7 @@ sub hit {
          $parent->[NEEDS_OBJECT] = $meta{NEEDS_OBJECT} if $meta{NEEDS_OBJECT};
          $parent->[FAKER_SELF]   = $meta{FAKER_SELF}   if $meta{FAKER_SELF};
 
-         croak "Error loading from disk cache: $error" if $error;
+         fatal('tts.cache.hit.cache', $error) if $error;
          LOG( FILE_CACHE => '' ) if DEBUG();
          #$parent->[COUNTER]++;
          return $CODE;
@@ -321,7 +321,7 @@ sub populate {
 
          my $cache = File::Spec->catfile( $cdir, $cache_id . CACHE_EXT);
          my $fh    = IO::File->new;
-         $fh->open($cache, '>') or croak "Error writing disk-cache $cache : $!";
+         $fh->open($cache, '>') or fatal('tts.cache.populate.write', $cache, $!);
          flock $fh, Fcntl::LOCK_EX() if IS_FLOCK;
          $parent->io->layer($fh);
          print $fh '#META:' . $self->_set_meta(\%meta) . "\n",
@@ -395,8 +395,12 @@ TODO
 
 =head1 DESCRIPTION
 
-This document describes version 0.62_06 of Text::Template::Simple::Cache
-released on 21 October 2008.
+This document describes version C<0.62_07> of C<Text::Template::Simple::Cache>
+released on C<5 April 2009>.
+
+B<WARNING>: This version of the module is part of a
+developer (beta) release of the distribution and it is
+not suitable for production use.
 
 Cache manager for C<Text::Template::Simple>.
 

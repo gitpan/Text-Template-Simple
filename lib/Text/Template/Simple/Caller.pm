@@ -11,16 +11,14 @@ use constant EVALTEXT   => 6;
 use constant IS_REQUIRE => 7;
 use constant HINTS      => 8;
 use constant BITMASK    => 9;
+use Text::Template::Simple::Util qw( ishref fatal );
 
-use Text::Template::Simple::Util qw( ishref );
-use Carp qw( croak );
-
-$VERSION = '0.62_06';
+$VERSION = '0.62_07';
 
 sub stack {
    my $self    = shift;
    my $opt     = shift || {};
-   croak "Parameters to stack() must be a HASH" if ! ishref($opt);
+   fatal('tts.caller.stack.hash') if ! ishref($opt);
    my $frame   = $opt->{frame} || 0;
    my $type    = $opt->{type}  || '';
    my(@callers, $context);
@@ -59,7 +57,7 @@ sub stack {
       return $self->$method( $opt, \@callers );
    }
 
-   croak "Unknown caller stack type: $type";
+   fatal('tts.caller.stack.type', $type);
 }
 
 sub _string {
@@ -142,7 +140,7 @@ sub _text_table {
    my $opt     = shift;
    my $callers = shift;
    eval { require Text::Table; };
-   croak "Caller stack type 'text_table' requires Text::Table" if $@;
+   fatal('tts.caller._text_table.module', $@) if $@;
 
    my $table = Text::Table->new( qw(
                   | CONTEXT    | SUB      | LINE  | FILE    | HASARGS
@@ -199,8 +197,12 @@ Text::Template::Simple::Caller - Caller stack tracer
 
 =head1 DESCRIPTION
 
-This document describes version 0.62_06 of Text::Template::Simple::Caller
-released on 21 October 2008.
+This document describes version C<0.62_07> of C<Text::Template::Simple::Caller>
+released on C<5 April 2009>.
+
+B<WARNING>: This version of the module is part of a
+developer (beta) release of the distribution and it is
+not suitable for production use.
 
 Caller stack tracer for Text::Template::Simple. This module is not used
 directly inside templates. You must use the global template function

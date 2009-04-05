@@ -41,4 +41,4 @@ ok( $postc->compile("|  <%  %>  |")    eq "|   |" );
 ok( $both->compile( "| <%  %> |")      eq "||"    );
 ok( $bothc->compile("|  <%  %>  |")    eq "|  |"  );
 
-# TODO: this test currently does not cover all chomping interface
+# TODO: this test currently does not cover the full chomping interface

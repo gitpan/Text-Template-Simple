@@ -1,11 +1,10 @@
 package Text::Template::Simple::Base::Examine;
 use strict;
 use vars qw($VERSION);
-use Carp qw( croak );
 use Text::Template::Simple::Util;
 use Text::Template::Simple::Constants;
 
-$VERSION = '0.62_06';
+$VERSION = '0.62_07';
 
 sub _examine {
    my $self   = shift;
@@ -19,29 +18,19 @@ sub _examine {
    }
    elsif ( $type eq 'GLOB' ) {
       $rv           = $self->_examine_glob( $thing );
-      $self->[TYPE] = 'GLOB';
+      $self->[TYPE] = $type;
    }
    else {
-      if ( $type eq 'FILE' || $self->io->is_file( $thing ) ) {
-         $rv                = $self->io->slurp(   $thing );
+      if ( my $path = $self->_file_exists( $thing ) ) {
+         $rv                = $self->io->slurp( $path );
          $self->[TYPE]      = 'FILE';
-         $self->[TYPE_FILE] = $thing;
+         $self->[TYPE_FILE] = $path;
       }
       else {
-         # give it a last chance, before falling back to string
-         my $e =  do {
-                     $type eq 'STRING' ? undef
-                                       : $self->_file_exists( $thing );
-                  };
-         if ( $e ) {
-            $rv                = $self->io->slurp( $e );
-            $self->[TYPE]      = 'FILE';
-            $self->[TYPE_FILE] = $e;
-         }
-         else {
-            $rv                = $thing;
-            $self->[TYPE]      = 'STRING';
-         }
+         # just die if file is absent, but user forced the type as FILE
+         $self->io->slurp( $thing ) if $type eq 'FILE';
+         $rv           = $thing;
+         $self->[TYPE] = 'STRING';
       }
    }
 
@@ -53,8 +42,8 @@ sub _examine_glob {
    my $self = shift;
    my $TMP  = shift;
    my $ref  = ref $TMP;
-   croak fatal( 'tts.base.examine.notglob' => $ref ) if $ref ne 'GLOB';
-   croak fatal( 'tts.base.examine.notfh'           ) if not  fileno $TMP;
+   fatal( 'tts.base.examine.notglob' => $ref ) if $ref ne 'GLOB';
+   fatal( 'tts.base.examine.notfh'           ) if not  fileno $TMP;
    return $self->io->slurp( $TMP );
 }
 
@@ -67,13 +56,13 @@ sub _examine_type {
    return GLOB => $TMP if   $ref eq 'GLOB';
 
    if ( isaref( $TMP ) ) {
-      my $ftype  = shift @{ $TMP } || croak "ARRAY does not contain the type";
-      my $fthing = shift @{ $TMP } || croak "ARRAY does not contain the data";
-      croak "ARRAY overflowed" if @{ $TMP } > 0;
+      my $ftype  = shift @{ $TMP } || fatal('tts.base.examine._examine_type.ftype');
+      my $fthing = shift @{ $TMP } || fatal('tts.base.examine._examine_type.fthing');
+      fatal('tts.base.examine._examine_type.extra') if @{ $TMP } > 0;
       return uc $ftype, $fthing;
    }
 
-   croak "Unknown first argument of $ref type to compile()";
+   fatal('tts.base.examine._examine_type.unknown', $ref);
 }
 
 1;
@@ -90,8 +79,12 @@ Private module.
 
 =head1 DESCRIPTION
 
-This document describes version 0.62_06 of Text::Template::Simple::Base::Examine
-released on 21 October 2008.
+This document describes version C<0.62_07> of C<Text::Template::Simple::Base::Examine>
+released on C<5 April 2009>.
+
+B<WARNING>: This version of the module is part of a
+developer (beta) release of the distribution and it is
+not suitable for production use.
 
 Private module.
 

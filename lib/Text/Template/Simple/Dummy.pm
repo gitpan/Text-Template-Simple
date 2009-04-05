@@ -9,13 +9,12 @@ use strict;
 use vars qw($VERSION);
 use Text::Template::Simple::Caller;
 use Text::Template::Simple::Util qw();
-use Carp qw( croak );
 
-$VERSION = '0.62_06';
+$VERSION = '0.62_07';
 
 sub stack { # just a wrapper
    my $opt = shift || {};
-   croak "Parameters to stack() must be a HASH"
+   Text::Template::Simple::Util::fatal('tts.caller.stack.hash')
       if ! Text::Template::Simple::Util::ishref($opt);
    $opt->{frame} = 1;
    Text::Template::Simple::Caller->stack( $opt );
@@ -35,8 +34,12 @@ TODO
 
 =head1 DESCRIPTION
 
-This document describes version 0.62_06 of Text::Template::Simple::Dummy
-released on 21 October 2008.
+This document describes version C<0.62_07> of C<Text::Template::Simple::Dummy>
+released on C<5 April 2009>.
+
+B<WARNING>: This version of the module is part of a
+developer (beta) release of the distribution and it is
+not suitable for production use.
 
 All templates are compiled into this class.
 

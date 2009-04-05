@@ -2,6 +2,9 @@ Revision history for Perl extension Text::Template::Simple.
 
 Time zone is UTC+2.
 
+0.62_07 Sun Apr  5 04:05:28 2009
+   => Moved most error messages into fatal().
+
 0.62_06 Tue Oct 21 23:42:05 2008
    => Updated build tool to automatically change version numbers and update pod.
    => Renamed error ids in fatal().

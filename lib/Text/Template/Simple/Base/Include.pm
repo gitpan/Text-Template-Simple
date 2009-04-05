@@ -1,11 +1,10 @@
 package Text::Template::Simple::Base::Include;
 use strict;
 use vars qw($VERSION);
-use Carp qw( croak );
 use Text::Template::Simple::Util;
 use Text::Template::Simple::Constants;
 
-$VERSION = '0.62_06';
+$VERSION = '0.62_07';
 
 sub _include_no_monolith {
    # no monolith eh?
@@ -73,7 +72,7 @@ sub _include {
    my $is_dynamic = T_DYNAMIC == $type ? 1 : 0;
    my $known      = $is_static || $is_dynamic;
 
-   croak "Unknown include type: $type" if not $known;
+   fatal('tts.base.include._include.unknown', $type) if not $known;
 
    $file = trim $file;
 
@@ -130,7 +129,7 @@ sub _interpolate {
       $inc{INCLUDE} = qq{'$inc{INCLUDE}'};
    }
 
-   # croak "You can not pass parameters to static includes"
+   # die "You can not pass parameters to static includes"
    #    if $inc{PARAM} && T_STATIC  == $type;
 
    my $filter = $inc{FILTER} ? escape( q{'} => $inc{FILTER} ) : '';
@@ -175,8 +174,12 @@ Private module.
 
 =head1 DESCRIPTION
 
-This document describes version 0.62_06 of Text::Template::Simple::Base::Include
-released on 21 October 2008.
+This document describes version C<0.62_07> of C<Text::Template::Simple::Base::Include>
+released on C<5 April 2009>.
+
+B<WARNING>: This version of the module is part of a
+developer (beta) release of the distribution and it is
+not suitable for production use.
 
 Private module.
 

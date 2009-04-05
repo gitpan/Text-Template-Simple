@@ -3,10 +3,9 @@ use strict;
 use vars qw($VERSION);
 use overload q{""} => 'get';
 use Text::Template::Simple::Constants qw( MAX_FL );
-use Text::Template::Simple::Util      qw( DIGEST );
-use Carp qw( croak );
+use Text::Template::Simple::Util      qw( DIGEST fatal );
 
-$VERSION = '0.62_06';
+$VERSION = '0.62_07';
 
 my $RE_INVALID = qr{[^A-Za-z_0-9]};
 
@@ -19,7 +18,7 @@ sub set { my $self = shift; $$self = shift if defined $_[0]; return; }
 
 sub generate { # cache id generator
    my $self   = shift;
-   my $data   = shift or croak "Can't generate id without data!";
+   my $data   = shift or fatal('tts.cache.id.generate.data');
    my $custom = shift;
    my $regex  = shift;
    $self->set(
@@ -31,7 +30,7 @@ sub generate { # cache id generator
 
 sub _custom {
    my $self  = shift;
-   my $data  = shift or croak "Can't generate id without data!";
+   my $data  = shift or fatal('tts.cache.id._custom.data');
    my $regex = shift || $RE_INVALID;
       $data  =~ s{$regex}{_}xmsg; # remove bogus characters
    my $len   = length( $data );
@@ -55,8 +54,12 @@ TODO
 
 =head1 DESCRIPTION
 
-This document describes version 0.62_06 of Text::Template::Simple::Cache::ID
-released on 21 October 2008.
+This document describes version C<0.62_07> of C<Text::Template::Simple::Cache::ID>
+released on C<5 April 2009>.
+
+B<WARNING>: This version of the module is part of a
+developer (beta) release of the distribution and it is
+not suitable for production use.
 
 TODO
 

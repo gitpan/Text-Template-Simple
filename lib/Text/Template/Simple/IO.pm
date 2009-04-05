@@ -2,10 +2,9 @@ package Text::Template::Simple::IO;
 use strict;
 use vars qw($VERSION);
 use Text::Template::Simple::Constants;
-use Text::Template::Simple::Util qw( DEBUG LOG ishref binary_mode );
-use Carp qw( croak );
+use Text::Template::Simple::Util qw( DEBUG LOG ishref binary_mode fatal );
 
-$VERSION = '0.62_06';
+$VERSION = '0.62_07';
 
 sub new {
    my $class = shift;
@@ -17,8 +16,8 @@ sub new {
 
 sub validate {
    my $self = shift;
-   my $type = shift || croak "No type specified";
-   my $path = shift || croak "No path specified";
+   my $type = shift || fatal('tts.io.validate.type');
+   my $path = shift || fatal('tts.io.validate.path');
 
    if ( $type eq 'dir' ) {
       require File::Spec;
@@ -29,7 +28,7 @@ sub validate {
          $wdir = Win32::GetFullPathName( $path );
          if( Win32::GetLastError() ) {
             LOG( FAIL => "Win32::GetFullPathName( $path ): $^E" ) if DEBUG();
-            $wdir = ''; # croak "Win32::GetFullPathName: $^E";
+            $wdir = ''; # die "Win32::GetFullPathName: $^E";
          }
          else {
             my $ok = -e $wdir && -d _;
@@ -43,14 +42,14 @@ sub validate {
       return $path;
    }
 
-   croak "validate(file) is not yet implemented";
+   fatal('tts.io.validate.file');
 }
 
 sub layer {
    return if ! NEW_PERL;
    my $self   = shift;
-   my $fh     = shift || croak "layer(): Filehandle is absent";
-   my $layer  = $$self; # || croak "_iolayer(): I/O Layer is absent";
+   my $fh     = shift || fatal('tts.io.layer.fh');
+   my $layer  = $$self;
    binary_mode( $fh, $layer ) if $layer;
    return;
 }
@@ -69,7 +68,7 @@ sub slurp {
    }
    else {
       $fh = IO::File->new;
-      $fh->open($file, 'r') or croak "Error opening '$file' for reading: $!";
+      $fh->open($file, 'r') or fatal('tts.io.slurp.open', $file, $!);
    }
 
    flock $fh,    Fcntl::LOCK_SH()  if IS_FLOCK;
@@ -115,8 +114,12 @@ TODO
 
 =head1 DESCRIPTION
 
-This document describes version 0.62_06 of Text::Template::Simple::IO
-released on 21 October 2008.
+This document describes version C<0.62_07> of C<Text::Template::Simple::IO>
+released on C<5 April 2009>.
+
+B<WARNING>: This version of the module is part of a
+developer (beta) release of the distribution and it is
+not suitable for production use.
 
 TODO
 

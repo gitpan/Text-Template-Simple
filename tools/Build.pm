@@ -2,6 +2,7 @@ use strict;
 use vars qw( $VERSION );
 use warnings;
 use File::Find;
+use File::Spec;
 use constant RE_VERSION_LINE => qr{
    \A \$VERSION \s+ = \s+ ["'] (.+?) ['"] ; (.+?) \z
 }xms;
@@ -14,7 +15,7 @@ use constant MONTHS => qw(
    July    August   September October November December
 );
 
-$VERSION = '0.20';
+$VERSION = '0.21';
 
 sub ACTION_dist {
    my $self = shift;
@@ -28,6 +29,7 @@ sub ACTION_dist {
       wanted => sub {
          my $file = $_;
          return if $file !~ m{ \. pm \z }xms;
+         $file = File::Spec->catfile( $file );
          push @modules, $file;
          warn "FOUND Module: $file\n";
       },
@@ -68,9 +70,15 @@ sub _change_versions {
          $ns  =~ s{ [\\/]     }{::}xmsg;
          $ns  =~ s{ \A lib :: }{}xms;
          $ns  =~ s{ \. pm \z  }{}xms;
-      my $pod = "\nThis document describes version $dver of $ns\n"
-              . "released on $date.\n"
+      my $pod = "\nThis document describes version C<$dver> of C<$ns>\n"
+              . "released on C<$date>.\n"
               ;
+
+      if ( $dver =~ m{[_]}xms ) {
+         $pod .= "\nB<WARNING>: This version of the module is part of a\n"
+              .  "developer (beta) release of the distribution and it is\n"
+              .  "not suitable for production use.\n";
+      }
 
       CHANGE_POD: while ( my $line = readline $RO_FH ) {
          print $W_FH $line;
