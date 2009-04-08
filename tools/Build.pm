@@ -240,7 +240,7 @@ sub _build_monolith {
    open my $MANIFEST, '>>:raw', 'MANIFEST' or die "Can not open MANIFEST: $!";
    print $MANIFEST "$readmef\n";
    print $MANIFEST "$monof\tThe monolithic version of Text::Template::Simple",
-                   " to ease dropping into web servers\n";
+                   " to ease dropping into web servers. Generated automatically.\n";
    close $MANIFEST;
 }
 

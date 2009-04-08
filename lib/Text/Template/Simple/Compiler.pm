@@ -4,7 +4,7 @@ use strict;
 use vars qw($VERSION);
 use Text::Template::Simple::Dummy;
 
-$VERSION = '0.62_08';
+$VERSION = '0.62_09';
 
 sub _compile { shift; return eval shift }
 
@@ -22,7 +22,7 @@ Private module.
 
 =head1 DESCRIPTION
 
-This document describes version C<0.62_08> of C<Text::Template::Simple::Compiler>
+This document describes version C<0.62_09> of C<Text::Template::Simple::Compiler>
 released on C<8 April 2009>.
 
 B<WARNING>: This version of the module is part of a
