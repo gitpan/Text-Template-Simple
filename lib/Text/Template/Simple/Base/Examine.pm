@@ -1,10 +1,10 @@
 package Text::Template::Simple::Base::Examine;
 use strict;
 use vars qw($VERSION);
-use Text::Template::Simple::Util;
-use Text::Template::Simple::Constants;
+use Text::Template::Simple::Util qw(:all);
+use Text::Template::Simple::Constants qw(:all);
 
-$VERSION = '0.62_07';
+$VERSION = '0.62_08';
 
 sub _examine {
    my $self   = shift;
@@ -79,8 +79,8 @@ Private module.
 
 =head1 DESCRIPTION
 
-This document describes version C<0.62_07> of C<Text::Template::Simple::Base::Examine>
-released on C<5 April 2009>.
+This document describes version C<0.62_08> of C<Text::Template::Simple::Base::Examine>
+released on C<8 April 2009>.
 
 B<WARNING>: This version of the module is part of a
 developer (beta) release of the distribution and it is

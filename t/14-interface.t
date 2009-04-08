@@ -2,13 +2,13 @@
 use strict;
 use Test::More qw( no_plan );
 use Text::Template::Simple;
-use Text::Template::Simple::Constants;
+use Text::Template::Simple::Constants qw(:all);
 use Text::Template::Simple::Dummy;
 use Text::Template::Simple::Compiler;
 use Text::Template::Simple::Compiler::Safe;
 use Text::Template::Simple::Caller;
 use Text::Template::Simple::Tokenizer;
-use Text::Template::Simple::Util;
+use Text::Template::Simple::Util qw(:all);
 use Text::Template::Simple::Cache::ID;
 use Text::Template::Simple::Cache;
 use Text::Template::Simple::IO;

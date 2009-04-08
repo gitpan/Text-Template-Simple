@@ -2,16 +2,16 @@ package Text::Template::Simple;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.62_07';
+$VERSION = '0.62_08';
 
 use File::Spec;
-use Text::Template::Simple::Constants;
+use Text::Template::Simple::Constants qw(:all);
 use Text::Template::Simple::Dummy;
 use Text::Template::Simple::Compiler;
 use Text::Template::Simple::Compiler::Safe;
 use Text::Template::Simple::Caller;
 use Text::Template::Simple::Tokenizer;
-use Text::Template::Simple::Util;
+use Text::Template::Simple::Util qw(:all);
 use Text::Template::Simple::Cache::ID;
 use Text::Template::Simple::Cache;
 use Text::Template::Simple::IO;
@@ -123,12 +123,11 @@ sub compile {
 
 sub _init {
    my $self = shift;
-   my $d          = $self->[DELIMITERS];
+   my $d    = $self->[DELIMITERS];
    my $bogus_args = $self->[ADD_ARGS] && ! isaref($self->[ADD_ARGS]);
-   my $ok_delim   = isaref( $d )      && $#{ $d } == 1;
 
    fatal('tts.main.bogus_args')   if $bogus_args;
-   fatal('tts.main.bogus_delims') if not $ok_delim;
+   fatal('tts.main.bogus_delims') if ! isaref( $d ) || $#{ $d } != 1;
    fatal('tts.main.dslen')        if length($d->[DELIM_START]) < 2;
    fatal('tts.main.delen')        if length($d->[DELIM_END])   < 2;
    fatal('tts.main.dsws')         if $d->[DELIM_START] =~ m{\s}xms;
@@ -143,20 +142,17 @@ sub _init {
    $self->[NEEDS_OBJECT]   =  0; # does the template need $self ?
    $self->[DEEP_RECURSION] =  0; # recursion detector
 
-   if ( $self->[USER_THANDLER] && ref($self->[USER_THANDLER]) ne 'CODE' ) {
-      fatal('tts.main.init.thandler');
-   }
+   fatal('tts.main.init.thandler')
+      if $self->[USER_THANDLER] && ! iscref($self->[USER_THANDLER]);
 
-   if ( $self->[INCLUDE_PATHS] && ! isaref($self->[INCLUDE_PATHS]) ) {
-      fatal('tts.main.init.include');
-   }
+   fatal('tts.main.init.include')
+      if $self->[INCLUDE_PATHS] && ! isaref($self->[INCLUDE_PATHS]);
 
    $self->[IO_OBJECT] = $self->connector('IO')->new( $self->[IOLAYER] );
 
    if ( $self->[CACHE_DIR] ) {
-      my $cdir = $self->io->validate( dir => $self->[CACHE_DIR] )
-                     or fatal( 'tts.main.cdir' => $self->[CACHE_DIR] );
-      $self->[CACHE_DIR] = $cdir;
+      $self->[CACHE_DIR] = $self->io->validate( dir => $self->[CACHE_DIR] )
+                           or fatal( 'tts.main.cdir' => $self->[CACHE_DIR] );
    }
 
    $self->[CACHE_OBJECT] = $self->connector('Cache')->new($self);
@@ -229,7 +225,7 @@ sub _tidy {
 
 sub DESTROY {
    my $self = shift || return;
-   LOG( DESTROY => ref $self ) if DEBUG;
+   LOG( DESTROY => ref $self ) if DEBUG();
    undef $self->[CACHE_OBJECT];
    undef $self->[IO_OBJECT];
    @{ $self } = ();
@@ -260,8 +256,8 @@ Text::Template::Simple - Simple text template engine
 
 =head1 DESCRIPTION
 
-This document describes version C<0.62_07> of C<Text::Template::Simple>
-released on C<5 April 2009>.
+This document describes version C<0.62_08> of C<Text::Template::Simple>
+released on C<8 April 2009>.
 
 B<WARNING>: This version of the module is part of a
 developer (beta) release of the distribution and it is
@@ -1080,6 +1076,16 @@ Some methods/functionality of the module needs these optional modules:
 
 L<Apache::SimpleTemplate>, L<Text::Template>, L<Text::ScriptTemplate>,
 L<Safe>, L<Opcode>.
+
+=head2 MONOLITHIC VERSION
+
+C<Text::Template::Simple> consists of C<15+> separate modules. If you are
+after a single C<.pm> file to ease deployment, download the distribution
+from a C<CPAN> mirror near you to get a monolithic C<Text::Template::Simple>.
+It is automatically generated from the separate modules and distributed in
+the C<monolithic_version> directory.
+
+However, be aware that the monolithic version is B<not supported>.
 
 =head1 AUTHOR
 

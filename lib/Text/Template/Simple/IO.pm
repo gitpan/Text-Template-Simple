@@ -1,10 +1,10 @@
 package Text::Template::Simple::IO;
 use strict;
 use vars qw($VERSION);
-use Text::Template::Simple::Constants;
+use Text::Template::Simple::Constants qw(:all);
 use Text::Template::Simple::Util qw( DEBUG LOG ishref binary_mode fatal );
 
-$VERSION = '0.62_07';
+$VERSION = '0.62_08';
 
 sub new {
    my $class = shift;
@@ -60,7 +60,7 @@ sub slurp {
    my $self = shift;
    my $file = shift;
    my($fh, $seek);
-   LOG(IO_SLURP => $file) if DEBUG;
+   LOG(IO_SLURP => $file) if DEBUG();
 
    if ( fileno $file ) {
       $fh   = $file;
@@ -95,7 +95,7 @@ sub is_file {
 
 sub DESTROY {
    my $self = shift;
-   LOG( DESTROY => ref $self ) if DEBUG;
+   LOG( DESTROY => ref $self ) if DEBUG();
    $$self = undef;
    return;
 }
@@ -114,8 +114,8 @@ TODO
 
 =head1 DESCRIPTION
 
-This document describes version C<0.62_07> of C<Text::Template::Simple::IO>
-released on C<5 April 2009>.
+This document describes version C<0.62_08> of C<Text::Template::Simple::IO>
+released on C<8 April 2009>.
 
 B<WARNING>: This version of the module is part of a
 developer (beta) release of the distribution and it is

@@ -1,10 +1,10 @@
 package Text::Template::Simple::Base::Include;
 use strict;
 use vars qw($VERSION);
-use Text::Template::Simple::Util;
-use Text::Template::Simple::Constants;
+use Text::Template::Simple::Util qw(:all);
+use Text::Template::Simple::Constants qw(:all);
 
-$VERSION = '0.62_07';
+$VERSION = '0.62_08';
 
 sub _include_no_monolith {
    # no monolith eh?
@@ -46,8 +46,8 @@ sub _include_dynamic {
       my $max   = MAX_RECURSION;
       my $error = qq{$err Deep recursion (>=$max) detected in }
                 . qq{the included file: $file};
-      LOG( DEEP_RECURSION => $file ) if DEBUG;
-      $error = escape '~' => $error;
+      LOG( DEEP_RECURSION => $file ) if DEBUG();
+      $error = escape( '~' => $error );
       $self->[DEEP_RECURSION] = 1;
       $rv .= "q~$error~";
    }
@@ -88,31 +88,27 @@ sub _include {
       $interpolate = 1; # just guessing ...
    }
 
-   if ( -d $file ) {
-      $file = escape '~' => $file;
-      return "q~$err '$file' is a directory~";
-   }
+   return "q~$err '" . escape('~' => $file) . "' is a directory~" if -d $file;
 
-   if ( DEBUG ) {
+   if ( DEBUG() ) {
       require Text::Template::Simple::Tokenizer;
       my $toke = Text::Template::Simple::Tokenizer->new;
       LOG( INCLUDE => $toke->_visualize_tid($type) . " => '$file'" );
    }
 
-   my $text;
    if ( $interpolate ) {
       my $rv = $self->_interpolate( $file, $type );
       $self->[NEEDS_OBJECT]++;
       LOG(INTERPOLATE_INC => "TYPE: $type; DATA: $file; RV: $rv") if DEBUG();
       return $rv;
    }
-   else {
-      eval { $text = $self->io->slurp($file) };
-      return "q~$err $@~" if $@;
-   }
 
-   return $self->_include_dynamic( $file, $text, $err) if $is_dynamic;
-   return $self->_include_static(  $file, $text, $err);
+   my $text;
+   eval { $text = $self->io->slurp($file); };
+   return "q~$err $@~" if $@;
+
+   my $meth = '_include_' . ($is_dynamic ? 'dynamic' : 'static');
+   return $self->$meth( $file, $text, $err);
 }
 
 sub _interpolate {
@@ -174,8 +170,8 @@ Private module.
 
 =head1 DESCRIPTION
 
-This document describes version C<0.62_07> of C<Text::Template::Simple::Base::Include>
-released on C<5 April 2009>.
+This document describes version C<0.62_08> of C<Text::Template::Simple::Base::Include>
+released on C<8 April 2009>.
 
 B<WARNING>: This version of the module is part of a
 developer (beta) release of the distribution and it is

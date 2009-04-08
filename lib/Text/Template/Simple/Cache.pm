@@ -2,11 +2,11 @@ package Text::Template::Simple::Cache;
 use strict;
 use vars qw($VERSION);
 use constant CACHE_PARENT => 0;
-use Text::Template::Simple::Constants;
+use Text::Template::Simple::Constants qw(:all);
 use Text::Template::Simple::Util qw( DEBUG LOG ishref fatal );
 use Carp qw( croak );
 
-$VERSION = '0.62_07';
+$VERSION = '0.62_08';
 
 my $CACHE = {}; # in-memory template cache
 
@@ -375,7 +375,7 @@ sub _set_meta {
 
 sub DESTROY {
    my $self = shift;
-   LOG( DESTROY => ref $self ) if DEBUG;
+   LOG( DESTROY => ref $self ) if DEBUG();
    $self->[CACHE_PARENT] = undef;
    @{$self} = ();
    return;
@@ -395,8 +395,8 @@ TODO
 
 =head1 DESCRIPTION
 
-This document describes version C<0.62_07> of C<Text::Template::Simple::Cache>
-released on C<5 April 2009>.
+This document describes version C<0.62_08> of C<Text::Template::Simple::Cache>
+released on C<8 April 2009>.
 
 B<WARNING>: This version of the module is part of a
 developer (beta) release of the distribution and it is

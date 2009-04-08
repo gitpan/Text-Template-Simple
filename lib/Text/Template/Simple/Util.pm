@@ -4,7 +4,7 @@ use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
 use Text::Template::Simple::Constants qw( :info DIGEST_MODS );
 use Carp qw( croak );
 
-$VERSION = '0.62_07';
+$VERSION = '0.62_08';
 
 BEGIN {
    if ( IS_WINDOWS ) {
@@ -27,65 +27,66 @@ BEGIN {
    else {
       *binary_mode = sub { binmode $_[0] };
    }
+   @ISA         = qw( Exporter );
+   %EXPORT_TAGS = (
+      macro => [qw( isaref      ishref iscref                  )],
+      util  => [qw( binary_mode DIGEST trim rtrim ltrim escape )],
+      debug => [qw( fatal       DEBUG  LOG                     )],
+   );
+   @EXPORT_OK        = map { @{ $EXPORT_TAGS{$_} } } keys %EXPORT_TAGS;
+   $EXPORT_TAGS{all} = \@EXPORT_OK;
+   @EXPORT           =  @EXPORT_OK;
 }
 
-@ISA         = qw( Exporter );
-%EXPORT_TAGS = (
-   macro => [qw( isaref      ishref      )],
-   util  => [qw( binary_mode DIGEST trim rtrim ltrim escape )],
-   debug => [qw( fatal       DEBUG  LOG  )],
-);
-@EXPORT_OK        = map { @{ $EXPORT_TAGS{$_} } } keys %EXPORT_TAGS;
-$EXPORT_TAGS{all} = \@EXPORT_OK;
-@EXPORT           =  @EXPORT_OK;
+BEGIN { require Exporter; }
 
 my $lang = {
    error => {
-      'tts.base.examine.notglob'      => "Unknown template parameter passed as %s reference! Supported types are GLOB, PATH and STRING.",
-      'tts.base.examine.notfh'        => "This GLOB is not a filehandle",
-      'tts.main.cdir'                 => "Cache dir %s does not exist!",
-      'tts.main.bogus_args'           => "Malformed add_args parameter! 'add_args' must be an arrayref!",
-      'tts.main.bogus_delims'         => "Malformed delimiters parameter! 'delimiters' must be a two element arrayref!",
-      'tts.cache.opendir'             => "Can not open cache dir (%s) for reading: %s",
-      'tts.util.digest'               => "Can not load a digest module. Disable cache or install one of these (%s or %s). Last error was: %s",
-      'tts.cache.dumper'              => "Can not dump in-memory cache! Your version of Data::Dumper (%s) does not implement the Deparse() method. Please upgrade this module!",
-      'tts.cache.pformat'             => "Parameters must be in 'param => value' format",
-      'tts.cache.incache'             => "I need an 'id' or a 'data' parameter for cache check!",
-      'tts.main.dslen'                => 'Start delimiter is smaller than 2 characters',
-      'tts.main.delen'                => 'End delimiter is smaller than 2 characters',
-      'tts.main.dsws'                 => 'Start delimiter contains whitespace',
-      'tts.main.dews'                 => 'End delimiter contains whitespace',
-      'tts.main.import.invalid'       => "%s isn't a valid import parameter for %s",
-      'tts.main.import.undef'         => '%s is not defined in %s',
-      'tts.main.import.redefine'      => '%s is already defined in %s',
-      'tts.main.tts.args'             => 'Nothing to compile!',
-      'tts.main.connector.args'       => 'connector(): id is missing',
-      'tts.main.connector.invalid'    => 'connector(): invalid id: %s',
-      'tts.main.init.thandler'        => 'user_thandler parameter must be a CODE reference',
-      'tts.main.init.include'         => 'include_paths parameter must be a ARRAY reference',
-      'tts.util.escape'               => 'Missing the character to escape',
-      'tts.util.fatal'                => '%s is not defined as an error',
-      'tts.tokenizer.new.ds'          => 'Start delimiter is missing',
-      'tts.tokenizer.new.de'          => 'End delimiter is missing',
-      'tts.tokenizer.tokenize.tmp'    => 'Template string is missing',
-      'tts.io.validate.type'          => 'No type specified',
-      'tts.io.validate.path'          => 'No path specified',
-      'tts.io.validate.file'          => 'validate(file) is not yet implemented',
-      'tts.io.layer.fh'               => 'Filehandle is absent',
-      'tts.io.slurp.open'             => "Error opening '%s' for reading: %s",
-      'tts.caller.stack.hash'         => 'Parameters to stack() must be a HASH',
-      'tts.caller.stack.type'         => 'Unknown caller stack type: %s',
-      'tts.caller._text_table.module' => "Caller stack type 'text_table' requires Text::Table: %s",
-      'tts.cache.new.parent'          => 'Parent object is missing',
-      'tts.cache.dumper.hash'         => 'Parameters to dumper() must be a HASHref',
-      'tts.cache.dumper.type'         => "Dumper type '%s' is not valid",
-      'tts.cache.develsize'              => 'Devel::Size::total_size(): %s',
-      'tts.cache.hit.meta'               => 'Can not get meta data: %s',
-      'tts.cache.hit.cache'              => 'Error loading from disk cache: %s',
-      'tts.cache.populate.write'         => 'Error writing disk-cache %s : %s',
-      'tts.base.compiler._compile.notmp' => 'No template specified',
-      'tts.base.compiler._compile.param' => 'params must be an arrayref!',
-      'tts.base.compiler._compile.opt'   => 'opts must be a hashref!',
+      'tts.base.examine.notglob'                 => "Unknown template parameter passed as %s reference! Supported types are GLOB, PATH and STRING.",
+      'tts.base.examine.notfh'                   => "This GLOB is not a filehandle",
+      'tts.main.cdir'                            => "Cache dir %s does not exist!",
+      'tts.main.bogus_args'                      => "Malformed add_args parameter! 'add_args' must be an arrayref!",
+      'tts.main.bogus_delims'                    => "Malformed delimiters parameter! 'delimiters' must be a two element arrayref!",
+      'tts.cache.opendir'                        => "Can not open cache dir (%s) for reading: %s",
+      'tts.util.digest'                          => "Can not load a digest module. Disable cache or install one of these (%s or %s). Last error was: %s",
+      'tts.cache.dumper'                         => "Can not dump in-memory cache! Your version of Data::Dumper (%s) does not implement the Deparse() method. Please upgrade this module!",
+      'tts.cache.pformat'                        => "Parameters must be in 'param => value' format",
+      'tts.cache.incache'                        => "I need an 'id' or a 'data' parameter for cache check!",
+      'tts.main.dslen'                           => 'Start delimiter is smaller than 2 characters',
+      'tts.main.delen'                           => 'End delimiter is smaller than 2 characters',
+      'tts.main.dsws'                            => 'Start delimiter contains whitespace',
+      'tts.main.dews'                            => 'End delimiter contains whitespace',
+      'tts.main.import.invalid'                  => "%s isn't a valid import parameter for %s",
+      'tts.main.import.undef'                    => '%s is not defined in %s',
+      'tts.main.import.redefine'                 => '%s is already defined in %s',
+      'tts.main.tts.args'                        => 'Nothing to compile!',
+      'tts.main.connector.args'                  => 'connector(): id is missing',
+      'tts.main.connector.invalid'               => 'connector(): invalid id: %s',
+      'tts.main.init.thandler'                   => 'user_thandler parameter must be a CODE reference',
+      'tts.main.init.include'                    => 'include_paths parameter must be a ARRAY reference',
+      'tts.util.escape'                          => 'Missing the character to escape',
+      'tts.util.fatal'                           => '%s is not defined as an error',
+      'tts.tokenizer.new.ds'                     => 'Start delimiter is missing',
+      'tts.tokenizer.new.de'                     => 'End delimiter is missing',
+      'tts.tokenizer.tokenize.tmp'               => 'Template string is missing',
+      'tts.io.validate.type'                     => 'No type specified',
+      'tts.io.validate.path'                     => 'No path specified',
+      'tts.io.validate.file'                     => 'validate(file) is not yet implemented',
+      'tts.io.layer.fh'                          => 'Filehandle is absent',
+      'tts.io.slurp.open'                        => "Error opening '%s' for reading: %s",
+      'tts.caller.stack.hash'                    => 'Parameters to stack() must be a HASH',
+      'tts.caller.stack.type'                    => 'Unknown caller stack type: %s',
+      'tts.caller._text_table.module'            => "Caller stack type 'text_table' requires Text::Table: %s",
+      'tts.cache.new.parent'                     => 'Parent object is missing',
+      'tts.cache.dumper.hash'                    => 'Parameters to dumper() must be a HASHref',
+      'tts.cache.dumper.type'                    => "Dumper type '%s' is not valid",
+      'tts.cache.develsize'                      => 'Devel::Size::total_size(): %s',
+      'tts.cache.hit.meta'                       => 'Can not get meta data: %s',
+      'tts.cache.hit.cache'                      => 'Error loading from disk cache: %s',
+      'tts.cache.populate.write'                 => 'Error writing disk-cache %s : %s',
+      'tts.base.compiler._compile.notmp'         => 'No template specified',
+      'tts.base.compiler._compile.param'         => 'params must be an arrayref!',
+      'tts.base.compiler._compile.opt'           => 'opts must be a hashref!',
       'tts.base.compiler._wrap_compile.parsed'   => 'nothing to compile',
       'tts.base.compiler._mini_compiler.notmp'   => '_mini_compiler(): missing the template',
       'tts.base.compiler._mini_compiler.noparam' => '_mini_compiler(): missing the parameters',
@@ -108,8 +109,8 @@ my $DEBUG = 0;  # Disabled by default
 my $DIGEST;     # Will hold digester class name.
 
 sub isaref { $_[0] && ref($_[0]) && ref($_[0]) eq 'ARRAY' };
-
 sub ishref { $_[0] && ref($_[0]) && ref($_[0]) eq 'HASH'  };
+sub iscref { $_[0] && ref($_[0]) && ref($_[0]) eq 'CODE'  };
 
 sub fatal  {
    my $ID  = shift;
@@ -223,8 +224,8 @@ TODO
 
 =head1 DESCRIPTION
 
-This document describes version C<0.62_07> of C<Text::Template::Simple::Util>
-released on C<5 April 2009>.
+This document describes version C<0.62_08> of C<Text::Template::Simple::Util>
+released on C<8 April 2009>.
 
 B<WARNING>: This version of the module is part of a
 developer (beta) release of the distribution and it is
@@ -257,6 +258,10 @@ Returns true if C<THING> is an ARRAY.
 =head2 ishref THING
 
 Returns true if C<THING> is a HASH.
+
+=head2 iscref THING
+
+Returns true if C<THING> is a CODE.
 
 =head2 trim STRING
 

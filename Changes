@@ -2,6 +2,10 @@ Revision history for Perl extension Text::Template::Simple.
 
 Time zone is UTC+2.
 
+0.62_08 Wed Apr  8 03:15:35 2009
+   => There is now a monolithic version of the module, bundled with the
+      distributon. Find it in ./monolitic_version/.
+
 0.62_07 Sun Apr  5 04:05:28 2009
    => Moved most error messages into fatal().
 
