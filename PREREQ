@@ -21,7 +21,7 @@ $MODULE = 'Text::Template::Simple';
 );
 
 %RECOMMEND = (
-    'Devel::Size'  => '0.64',
+    'Devel::Size'  => '0.72',
     'Text::Table'  => '1.107',
     'Perl::Tidy'   => '0',
 );

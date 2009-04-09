@@ -21,6 +21,12 @@ my $mb = $class->new(
     recommends  => \%RECOMMEND,
     sign        => 0,
     dist_author => $AUTHOR,
+    no_index => {
+        directory => [
+            'monolithic_version',
+            'tools',
+        ]
+    },
 );
 
 $mb->create_build_script;

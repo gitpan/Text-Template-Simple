@@ -54,10 +54,10 @@ sub run {
         skip("Cache is disabled") if $type eq 'OFF';
 
         if ( $type eq 'MEMORY' ) {
-            skip(
-                 "Disable below tests for memcache until someone "
-                ."fixes RT#14849 for Devel::Size"
-            );
+            eval { require Devel::Size; };
+            # RT#14849 was fixed in this *unofficial* release
+            skip("Your Devel::Size is too old and has a known *serious* bug")
+                if Devel::Size->VERSION < 0.72;
         }
 
         my $size = $t->cache->size;

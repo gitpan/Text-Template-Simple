@@ -71,6 +71,5 @@ PREREQ
 README
 META.yml
 TODO
-MANIFEST.SKIP
 monolithic_version/README
 monolithic_version/Text/Template/Simple.pm	The monolithic version of Text::Template::Simple to ease dropping into web servers. Generated automatically.

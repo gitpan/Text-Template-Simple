@@ -4,7 +4,7 @@ use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
 use Text::Template::Simple::Constants qw( :info DIGEST_MODS );
 use Carp qw( croak );
 
-$VERSION = '0.62_10';
+$VERSION = '0.62_11';
 
 BEGIN {
    if ( IS_WINDOWS ) {
@@ -80,7 +80,8 @@ my $lang = {
       'tts.cache.new.parent'                     => 'Parent object is missing',
       'tts.cache.dumper.hash'                    => 'Parameters to dumper() must be a HASHref',
       'tts.cache.dumper.type'                    => "Dumper type '%s' is not valid",
-      'tts.cache.develsize'                      => 'Devel::Size::total_size(): %s',
+      'tts.cache.develsize.buggy'                => 'Your Devel::Size version (%s) has a known bug. Upgrade Devel::Size to 0.72 or newer or do not use the size() method',
+      'tts.cache.develsize.total'                => 'Devel::Size::total_size(): %s',
       'tts.cache.hit.meta'                       => 'Can not get meta data: %s',
       'tts.cache.hit.cache'                      => 'Error loading from disk cache: %s',
       'tts.cache.populate.write'                 => 'Error writing disk-cache %s : %s',
@@ -224,7 +225,7 @@ TODO
 
 =head1 DESCRIPTION
 
-This document describes version C<0.62_10> of C<Text::Template::Simple::Util>
+This document describes version C<0.62_11> of C<Text::Template::Simple::Util>
 released on C<9 April 2009>.
 
 B<WARNING>: This version of the module is part of a

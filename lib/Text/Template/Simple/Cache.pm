@@ -6,7 +6,7 @@ use Text::Template::Simple::Constants qw(:all);
 use Text::Template::Simple::Util qw( DEBUG LOG ishref fatal );
 use Carp qw( croak );
 
-$VERSION = '0.62_10';
+$VERSION = '0.62_11';
 
 my $CACHE = {}; # in-memory template cache
 
@@ -205,10 +205,12 @@ sub size {
 
       local $SIG{__DIE__};
       if ( eval { require Devel::Size; 1; } ) {
-         LOG( DEBUG => "Devel::Size v$Devel::Size::VERSION is loaded." )
+         my $dsv = Devel::Size->VERSION;
+         LOG( DEBUG => "Devel::Size v$dsv is loaded." )
             if DEBUG();
+         fatal('tts.cache.develsize.buggy', $dsv) if $dsv < 0.72;
          my $size = eval { Devel::Size::total_size( $CACHE ) };
-         fatal('tts.cache.develsize', $@) if $@;
+         fatal('tts.cache.develsize.total', $@) if $@;
          return $size;
       }
       else {
@@ -395,7 +397,7 @@ TODO
 
 =head1 DESCRIPTION
 
-This document describes version C<0.62_10> of C<Text::Template::Simple::Cache>
+This document describes version C<0.62_11> of C<Text::Template::Simple::Cache>
 released on C<9 April 2009>.
 
 B<WARNING>: This version of the module is part of a

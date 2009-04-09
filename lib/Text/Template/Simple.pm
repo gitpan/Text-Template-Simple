@@ -2,7 +2,7 @@ package Text::Template::Simple;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.62_10';
+$VERSION = '0.62_11';
 
 use File::Spec;
 use Text::Template::Simple::Constants qw(:all);
@@ -256,7 +256,7 @@ Text::Template::Simple - Simple text template engine
 
 =head1 DESCRIPTION
 
-This document describes version C<0.62_10> of C<Text::Template::Simple>
+This document describes version C<0.62_11> of C<Text::Template::Simple>
 released on C<9 April 2009>.
 
 B<WARNING>: This version of the module is part of a

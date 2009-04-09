@@ -17,7 +17,7 @@ use constant MONTHS => qw(
 );
 use constant EXPORTER => 'BEGIN { require Exporter; }';
 
-$VERSION = '0.30';
+$VERSION = '0.40';
 
 sub ACTION_dist {
    my $self = shift;

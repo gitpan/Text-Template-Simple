@@ -33,7 +33,7 @@ package Text::Template::Simple::Constants;
 use strict;
 use vars qw($VERSION $OID $DID @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
 
-$VERSION = '0.62_10';
+$VERSION = '0.62_11';
 
 # object fields
 BEGIN { $OID = -1 } # init object field id counter
@@ -385,7 +385,7 @@ use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
 use Text::Template::Simple::Constants qw( :info DIGEST_MODS );
 use Carp qw( croak );
 
-$VERSION = '0.62_10';
+$VERSION = '0.62_11';
 
 BEGIN {
    if ( IS_WINDOWS ) {
@@ -461,7 +461,8 @@ my $lang = {
       'tts.cache.new.parent'                     => 'Parent object is missing',
       'tts.cache.dumper.hash'                    => 'Parameters to dumper() must be a HASHref',
       'tts.cache.dumper.type'                    => "Dumper type '%s' is not valid",
-      'tts.cache.develsize'                      => 'Devel::Size::total_size(): %s',
+      'tts.cache.develsize.buggy'                => 'Your Devel::Size version (%s) has a known bug. Upgrade Devel::Size to 0.72 or newer or do not use the size() method',
+      'tts.cache.develsize.total'                => 'Devel::Size::total_size(): %s',
       'tts.cache.hit.meta'                       => 'Can not get meta data: %s',
       'tts.cache.hit.cache'                      => 'Error loading from disk cache: %s',
       'tts.cache.populate.write'                 => 'Error writing disk-cache %s : %s',
@@ -597,7 +598,7 @@ use strict;
 use vars qw($VERSION);
 use Text::Template::Simple::Dummy;
 
-$VERSION = '0.62_10';
+$VERSION = '0.62_11';
 
 sub _compile { shift; return __PACKAGE__->_object->reval(shift) }
 
@@ -630,7 +631,7 @@ use overload q{""} => 'get';
 use Text::Template::Simple::Constants qw( MAX_FL );
 use Text::Template::Simple::Util      qw( DIGEST fatal );
 
-$VERSION = '0.62_10';
+$VERSION = '0.62_11';
 
 my $RE_INVALID = qr{[^A-Za-z_0-9]};
 
@@ -671,7 +672,7 @@ use vars qw($VERSION);
 use Text::Template::Simple::Util qw(:all);
 use Text::Template::Simple::Constants qw(:all);
 
-$VERSION = '0.62_10';
+$VERSION = '0.62_11';
 
 # internal code templates
 my %INTERNAL = (
@@ -1014,7 +1015,7 @@ use vars qw($VERSION);
 use Text::Template::Simple::Util qw(:all);
 use Text::Template::Simple::Constants qw(:all);
 
-$VERSION = '0.62_10';
+$VERSION = '0.62_11';
 
 sub _include_no_monolith {
    # no monolith eh?
@@ -1172,7 +1173,7 @@ use vars qw($VERSION);
 use Text::Template::Simple::Util qw(:all);
 use Text::Template::Simple::Constants qw(:all);
 
-$VERSION = '0.62_10';
+$VERSION = '0.62_11';
 
 sub _examine {
    my $self   = shift;
@@ -1239,7 +1240,7 @@ use vars qw($VERSION);
 use Text::Template::Simple::Util qw(:all);
 use Text::Template::Simple::Constants qw(:all);
 
-$VERSION = '0.62_10';
+$VERSION = '0.62_11';
 
 sub _compiler { shift->[SAFE] ? COMPILER_SAFE : COMPILER }
 
@@ -1395,7 +1396,7 @@ package Text::Template::Simple::Tokenizer;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.62_10';
+$VERSION = '0.62_11';
 
 use constant CMD_CHAR             =>  0;
 use constant CMD_ID               =>  1;
@@ -1712,7 +1713,7 @@ use vars qw($VERSION);
 use Text::Template::Simple::Constants qw(:all);
 use Text::Template::Simple::Util qw( DEBUG LOG ishref binary_mode fatal );
 
-$VERSION = '0.62_10';
+$VERSION = '0.62_11';
 
 sub new {
    my $class = shift;
@@ -1820,7 +1821,7 @@ use vars qw($VERSION);
 use Text::Template::Simple::Caller;
 use Text::Template::Simple::Util qw();
 
-$VERSION = '0.62_10';
+$VERSION = '0.62_11';
 
 sub stack { # just a wrapper
    my $opt = shift || {};
@@ -1836,7 +1837,7 @@ use strict;
 use vars qw($VERSION);
 use Text::Template::Simple::Dummy;
 
-$VERSION = '0.62_10';
+$VERSION = '0.62_11';
 
 sub _compile { shift; return eval shift }
 
@@ -1855,7 +1856,7 @@ use constant HINTS      => 8;
 use constant BITMASK    => 9;
 use Text::Template::Simple::Util qw( ishref fatal );
 
-$VERSION = '0.62_10';
+$VERSION = '0.62_11';
 
 sub stack {
    my $self    = shift;
@@ -2028,7 +2029,7 @@ use Text::Template::Simple::Constants qw(:all);
 use Text::Template::Simple::Util qw( DEBUG LOG ishref fatal );
 use Carp qw( croak );
 
-$VERSION = '0.62_10';
+$VERSION = '0.62_11';
 
 my $CACHE = {}; # in-memory template cache
 
@@ -2227,10 +2228,12 @@ sub size {
 
       local $SIG{__DIE__};
       if ( eval { require Devel::Size; 1; } ) {
-         LOG( DEBUG => "Devel::Size v$Devel::Size::VERSION is loaded." )
+         my $dsv = Devel::Size->VERSION;
+         LOG( DEBUG => "Devel::Size v$dsv is loaded." )
             if DEBUG();
+         fatal('tts.cache.develsize.buggy', $dsv) if $dsv < 0.72;
          my $size = eval { Devel::Size::total_size( $CACHE ) };
-         fatal('tts.cache.develsize', $@) if $@;
+         fatal('tts.cache.develsize.total', $@) if $@;
          return $size;
       }
       else {
@@ -2407,7 +2410,7 @@ package Text::Template::Simple;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.62_10';
+$VERSION = '0.62_11';
 
 use File::Spec;
 use Text::Template::Simple::Constants qw(:all);
@@ -2666,7 +2669,7 @@ generated with an automatic build tool. If you experience problems
 with this version, please install and use the supported standard
 version. This version is B<NOT SUPPORTED>.
 
-This document describes version C<0.62_10> of C<Text::Template::Simple>
+This document describes version C<0.62_11> of C<Text::Template::Simple>
 released on C<9 April 2009>.
 
 B<WARNING>: This version of the module is part of a
