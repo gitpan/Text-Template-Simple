@@ -2,6 +2,10 @@ Revision history for Perl extension Text::Template::Simple.
 
 Time zone is UTC+2.
 
+0.62_12 Fri Apr 10 06:24:09 2009
+   => Build tool update.
+   => Added LICENSE.
+
 0.62_11 Thu Apr  9 02:35:30 2009
    => Fix Devel::Size support.
    => Removed MANIFEST.SKIP & added no_index to M::B. Thanks to Graham Barr.

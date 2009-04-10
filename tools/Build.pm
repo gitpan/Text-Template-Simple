@@ -15,7 +15,8 @@ use constant MONTHS => qw(
    January February March     April   May      June
    July    August   September October November December
 );
-use constant EXPORTER => 'BEGIN { require Exporter; }';
+use constant MONOLITH_TEST_FAIL =>
+   "\nFAILED! Building the monolithic version failed during unit testing\n\n";
 
 $VERSION = '0.40';
 
@@ -39,7 +40,19 @@ sub ACTION_dist {
    }, "lib";
    $self->_change_versions( \@modules );
    $self->_build_monolith(  \@modules );
+   $self->_add_license;
    $self->SUPER::ACTION_dist( @_ );
+}
+
+sub _add_license {
+   my $self = shift;
+   require Software::License::Perl_5;
+   my $license =  Software::License::Perl_5->new({
+                     holder => 'Burak Gursoy',
+                  });
+   warn "ADDING LICENSE\n";
+   $self->_tts_save( '>' , 'LICENSE' , $license->fulltext );
+   $self->_tts_save( '>>', 'MANIFEST', "LICENSE\tThe License Agreement\n" );
 }
 
 sub _change_versions {
@@ -201,47 +214,70 @@ sub _build_monolith {
 
    if ( $POD ) {
       open my $MONOX, '>>:raw', $mono or die "Can not open file($mono): $!";
-      my $pod = "\nB<WARNING>! This is the monolithic version of Text::Template::Simple\n"
-               ."generated with an automatic build tool. If you experience problems\n"
-               ."with this version, please install and use the supported standard\n"
-               ."version. This version is B<NOT SUPPORTED>.\n"
-              ;
       foreach my $line ( split /\n/, $POD ) {
          print $MONOX $line, "\n";
-         print $MONOX $pod if "$line\n" =~ RE_POD_LINE;
+         print $MONOX $self->_monolith_pod_warning if "$line\n" =~ RE_POD_LINE;
       }
       close $MONOX;
    }
 
    unlink $buffer or die "Can not delete $buffer $!";
    unlink $copy   or die "Can not delete $copy $!";
+
    print "\t";
-   system( perl => '-wc', $mono ) && die "$mono does not compile!\n";
+   system( $^X, '-wc', $mono ) && die "$mono does not compile!\n";
 
    PROVE: {
       warn "\tTESTING MONOLITH\n";
       local $ENV{TTS_TESTING_MONOLITH_BUILD} = 1;
       my @output = qx(prove -Isingle);
       print "\t$_" for @output;
-      chomp(my $result = $output[-1]);
-      if ( $result ne 'Result: PASS' ) {
-         die "\nFAILED! Building the monolithic version failed during unit testing\n\n";
-      }
+      chomp(my $result = pop @output);
+      die MONOLITH_TEST_FAIL if $result ne 'Result: PASS';
    }
 
    warn "\tADD README\n";
-   open my $README, '>:raw', $readme or die "Can not open file($readme): $!";
-   print $README "This monolithic version is NOT SUPPORTED!\n";
-   close $README;
+   $self->_tts_save('>', $readme, $self->_monolith_readme);
 
    warn "\tADD TO MANIFEST\n";
    (my $monof   = $mono  ) =~ s{\\}{/}xmsg;
    (my $readmef = $readme) =~ s{\\}{/}xmsg;
-   open my $MANIFEST, '>>:raw', 'MANIFEST' or die "Can not open MANIFEST: $!";
-   print $MANIFEST "$readmef\n";
-   print $MANIFEST "$monof\tThe monolithic version of Text::Template::Simple",
-                   " to ease dropping into web servers. Generated automatically.\n";
-   close $MANIFEST;
+   $self->_tts_save( '>>', 'MANIFEST',
+      "$readmef\n",
+      "$monof\tThe monolithic version of Text::Template::Simple",
+      " to ease dropping into web servers. Generated automatically.\n"
+   );
+}
+
+sub _tts_save {
+   my $self = shift;
+   my $mode = shift;
+   my $file = shift;
+   my @data = @_;
+   $mode = $mode . ':raw';
+   open my $FH, $mode, $file or die "Can not open file($file): $!";
+   foreach my $content ( @data ) {
+      print $FH $content;
+   }
+   close $FH;
+}
+
+sub _monolith_readme {
+   my $self = shift;
+   my $pod  = $self->_monolith_pod_warning;
+   $pod =~ s{B<(.+?)>}{$1}xmsg;
+   return $pod;
+}
+
+sub _monolith_pod_warning {
+   my $self = shift;
+   return <<'MONOLITH_POD_WARNING';
+
+B<WARNING>! This is the monolithic version of Text::Template::Simple
+generated with an automatic build tool. If you experience problems
+with this version, please install and use the supported standard
+version. This version is B<NOT SUPPORTED>.
+MONOLITH_POD_WARNING
 }
 
 1;
