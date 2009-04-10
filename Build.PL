@@ -15,17 +15,23 @@ my $class = Module::Build->subclass(
             );
 
 my $mb = $class->new(
-    module_name => $MODULE,
-    license     => 'perl',
-    requires    => \%PREREQ,
-    recommends  => \%RECOMMEND,
-    sign        => 0,
-    dist_author => $AUTHOR,
-    no_index => {
+    module_name    => $MODULE,
+    license        => 'perl',
+    requires       => \%PREREQ,
+    recommends     => \%RECOMMEND,
+    sign           => 0,
+    dist_author    => $AUTHOR,
+    create_license => 1,
+    no_index       => {
         directory => [
             'monolithic_version',
             'tools',
         ]
+    },
+    meta_merge => {
+        resources => {
+            repository => 'http://bitbucket.org/burak/cpan-text-template-simple/',
+        },
     },
 );
 

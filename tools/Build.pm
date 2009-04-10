@@ -40,19 +40,7 @@ sub ACTION_dist {
    }, "lib";
    $self->_change_versions( \@modules );
    $self->_build_monolith(  \@modules );
-   $self->_add_license;
    $self->SUPER::ACTION_dist( @_ );
-}
-
-sub _add_license {
-   my $self = shift;
-   require Software::License::Perl_5;
-   my $license =  Software::License::Perl_5->new({
-                     holder => 'Burak Gursoy',
-                  });
-   warn "ADDING LICENSE\n";
-   $self->_tts_save( '>' , 'LICENSE' , $license->fulltext );
-   $self->_tts_save( '>>', 'MANIFEST', "LICENSE\tThe License Agreement\n" );
 }
 
 sub _change_versions {

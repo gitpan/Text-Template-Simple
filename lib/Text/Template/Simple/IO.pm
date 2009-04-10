@@ -4,7 +4,7 @@ use vars qw($VERSION);
 use Text::Template::Simple::Constants qw(:all);
 use Text::Template::Simple::Util qw( DEBUG LOG ishref binary_mode fatal );
 
-$VERSION = '0.62_12';
+$VERSION = '0.62_13';
 
 sub new {
    my $class = shift;
@@ -114,7 +114,7 @@ TODO
 
 =head1 DESCRIPTION
 
-This document describes version C<0.62_12> of C<Text::Template::Simple::IO>
+This document describes version C<0.62_13> of C<Text::Template::Simple::IO>
 released on C<10 April 2009>.
 
 B<WARNING>: This version of the module is part of a
