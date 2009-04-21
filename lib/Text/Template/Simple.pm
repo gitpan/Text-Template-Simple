@@ -2,7 +2,7 @@ package Text::Template::Simple;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.62_13';
+$VERSION = '0.62_14';
 
 use File::Spec;
 use Text::Template::Simple::Constants qw(:all);
@@ -258,8 +258,8 @@ Where C<hello.tts> has this content:
 
 =head1 DESCRIPTION
 
-This document describes version C<0.62_13> of C<Text::Template::Simple>
-released on C<10 April 2009>.
+This document describes version C<0.62_14> of C<Text::Template::Simple>
+released on C<21 April 2009>.
 
 B<WARNING>: This version of the module is part of a
 developer (beta) release of the distribution and it is

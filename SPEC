@@ -1,0 +1,19 @@
+module_name    => 'Text::Template::Simple',
+requires       => {
+    'File::Temp'   => '0.12',
+    'Digest::MD5'  => '1.00',
+},
+build_requires => {
+    'Test::More'   => '0.40',
+},
+recommends     => {
+    'Devel::Size'  => '0.72',
+    'Text::Table'  => '1.107',
+    'Perl::Tidy'   => '0',
+},
+dist_author    => 'Burak Gursoy <burak@cpan.org>',
+meta_merge     => {
+    resources => {
+        repository => 'http://bitbucket.org/burak/cpan-text-template-simple/',
+    },
+},
