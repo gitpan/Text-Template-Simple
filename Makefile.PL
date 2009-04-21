@@ -1,25 +1,18 @@
 #!/usr/bin/env perl
 use strict;
 use ExtUtils::MakeMaker;
+use lib qw( builder );
+use Build::Spec qw( mm_spec );
 
-my %opt  = do 'SPEC' or die "Can not include PREREQ: $@";
-my $info = "\nRecommended Modules:\n\n";
-
-foreach my $m ( sort keys %{ $opt{recommends} } ) {
-    $info .= sprintf "    %s\tv%s\n", $m, $opt{recommends}->{$m};
-}
-
-print "$info\n";
-
-(my $FILE = $opt{module_name}) =~ s{::}{/}g;
+my %spec = mm_spec;
 
 WriteMakefile(
-    NAME         => $opt{module_name},
-    VERSION_FROM => "lib/$FILE.pm",
-    PREREQ_PM    => { %{ $opt{requires} }, %{ $opt{build_requires} } },
+    NAME         => $spec{module_name},
+    VERSION_FROM => $spec{VERSION_FROM},
+    PREREQ_PM    => $spec{PREREQ_PM},
     PL_FILES     => {},
     ($] >= 5.005 ? (
-    AUTHOR       => $opt{dist_author},
-    ABSTRACT     => 'Simple text template engine',
+    AUTHOR       => $spec{dist_author},
+    ABSTRACT     => $spec{ABSTRACT},
     ) : ()),
 );

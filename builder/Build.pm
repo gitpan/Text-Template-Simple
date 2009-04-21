@@ -3,11 +3,12 @@ use strict;
 use vars qw( $VERSION );
 use warnings;
 
-$VERSION = '0.40';
+$VERSION = '0.50';
 
 use File::Find;
 use File::Spec;
 use File::Path;
+use Build::Spec;
 use base qw( Module::Build );
 use constant RE_VERSION_LINE => qr{
    \A \$VERSION \s+ = \s+ ["'] (.+?) ['"] ; (.+?) \z
@@ -32,11 +33,12 @@ use constant DEFAULTS => qw(
 
 __PACKAGE__->add_property( build_monolith      => 0  );
 __PACKAGE__->add_property( change_versions     => 0  );
+__PACKAGE__->add_property( vanilla_makefile_pl => 1  );
 __PACKAGE__->add_property( monolith_add_to_top => [] );
 
 sub new {
    my $class = shift;
-   my %opt   = @_;
+   my %opt   = spec;
    my %def   = DEFAULTS;
    foreach my $key ( keys %def ) {
       $opt{ $key } = $def{ $key } if ! defined $opt{ $key };
@@ -45,6 +47,12 @@ sub new {
    $opt{no_index}{directory} ||= [];
    push @{ $opt{no_index}{directory} }, NO_INDEX;
    return $class->SUPER::new( %opt );
+}
+
+sub create_build_script {
+   my $self = shift;
+   $self->_add_vanilla_makefile_pl if $self->vanilla_makefile_pl;
+   return $self->SUPER::create_build_script( @_ );
 }
 
 sub ACTION_dist {
@@ -301,13 +309,46 @@ sub _monolith_readme {
 sub _monolith_pod_warning {
    my $self = shift;
    my $name = $self->module_name;
-   return <<'MONOLITH_POD_WARNING';
+   return <<"MONOLITH_POD_WARNING";
 
 B<WARNING>! This is the monolithic version of $name
 generated with an automatic build tool. If you experience problems
 with this version, please install and use the supported standard
 version. This version is B<NOT SUPPORTED>.
 MONOLITH_POD_WARNING
+}
+
+sub _add_vanilla_makefile_pl {
+   my $self = shift;
+   my $file = 'Makefile.PL';
+   return if -e $file; # do not overwrite
+   $self->_write_file(  '>', $file, $self->_vanilla_makefile_pl );
+   $self->_write_file( '>>', 'MANIFEST', "$file\tGenerated automatically\n");
+   warn "ADDED VANILLA $file\n";
+   return;
+}
+
+sub _vanilla_makefile_pl {
+   <<'VANILLA_MAKEFILE_PL';
+#!/usr/bin/env perl
+use strict;
+use ExtUtils::MakeMaker;
+use lib qw( builder );
+use Build::Spec qw( mm_spec );
+
+my %spec = mm_spec;
+
+WriteMakefile(
+    NAME         => $spec{module_name},
+    VERSION_FROM => $spec{VERSION_FROM},
+    PREREQ_PM    => $spec{PREREQ_PM},
+    PL_FILES     => {},
+    ($] >= 5.005 ? (
+    AUTHOR       => $spec{dist_author},
+    ABSTRACT     => $spec{ABSTRACT},
+    ) : ()),
+);
+VANILLA_MAKEFILE_PL
 }
 
 1;
