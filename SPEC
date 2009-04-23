@@ -12,7 +12,6 @@
         'Text::Table'  => '1.107',
         'Perl::Tidy'   => '0',
     },
-    dist_author    => 'Burak Gursoy <burak@cpan.org>',
     meta_merge     => {
         resources => {
             repository => 'http://bitbucket.org/burak/cpan-text-template-simple/',

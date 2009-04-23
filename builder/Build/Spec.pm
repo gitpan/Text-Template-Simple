@@ -3,6 +3,8 @@ use strict;
 use vars qw( $VERSION @ISA @EXPORT @EXPORT_OK );
 use Exporter ();
 use Carp qw( croak );
+use constant DEFAULT_AUTHOR => 'Burak Gursoy <burak@cpan.org>';
+use constant OS_ERROR       => qr{OS \s+ unsupported}xms;
 
 $VERSION   = '0.50';
 @ISA       = qw( Exporter );
@@ -12,14 +14,25 @@ $VERSION   = '0.50';
 sub spec () {
     my $file = 'SPEC';
     my $spec = do $file;
-      $@                     ? croak "Couldn't parse $file: $@"
+
+    my %rv   =
+      $@                     ? do { croak $@ =~ OS_ERROR ? $@ : "Couldn't parse $file: $@" }
     : ! defined $spec && $!  ? croak "Couldn't do $file: $!"
     : ! $spec                ? croak "$file did not return a true value"
     : ref($spec) ne 'HASH'   ? croak "Return type of $file is not HASH"
     : ! $spec->{module_name} ? croak "The specification returned from $file does"
                                     ." not have the mandatory 'module_name' key"
-    : return %{ $spec };
+    : %{ $spec };
     ;
+
+    # these needs to be set here
+    $rv{dist_author} ||= DEFAULT_AUTHOR;
+    $rv{recommends}  ||= {};
+    $rv{requires}    ||= {};
+    my $breq = $rv{build_requires} ||= {};
+    $breq->{'Test::More'} = '0.40' if ! exists $breq->{'Test::More'};
+
+    return %rv;
 }
 
 sub trim {

@@ -2,6 +2,9 @@ Revision history for Perl extension Text::Template::Simple.
 
 Time zone is UTC+2.
 
+0.62_16 Thu Apr 23 19:52:29 2009
+   => Update builder.
+
 0.62_15 Tue Apr 21 22:52:14 2009
    => Updating distro tools.
 
