@@ -4,7 +4,7 @@ use vars qw($VERSION);
 use Text::Template::Simple::Util qw(:all);
 use Text::Template::Simple::Constants qw(:all);
 
-$VERSION = '0.62_16';
+$VERSION = '0.62_17';
 
 sub _compiler { shift->[SAFE] ? COMPILER_SAFE : COMPILER }
 
@@ -31,7 +31,7 @@ sub _compile {
       # TODO:generate a single error handler for includes, merge with _include()
       # tmpx is a "file" included from an upper level compile()
       my $etitle = $self->_include_error( T_DYNAMIC );
-      my $exists = $self->_file_exists( $tmpx );
+      my $exists = $self->io->file_exists( $tmpx );
       return $etitle . " '$tmpx' is not a file" if not $exists;
       # TODO: remove this second call somehow, reduce  to a single call
       $tmp = $self->_examine( $exists ); # re-examine
@@ -170,8 +170,8 @@ Private module.
 
 =head1 DESCRIPTION
 
-This document describes version C<0.62_16> of C<Text::Template::Simple::Base::Compiler>
-released on C<23 April 2009>.
+This document describes version C<0.62_17> of C<Text::Template::Simple::Base::Compiler>
+released on C<26 April 2009>.
 
 B<WARNING>: This version of the module is part of a
 developer (beta) release of the distribution and it is

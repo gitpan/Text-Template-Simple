@@ -1,12 +1,16 @@
 * Improve unit test coverage.
         o Increase # of tests
         o Implement placeholder tests
+            - 022-monolith
+            - 029-block-filter.t
+* Consider re-implementing BLOCKs with filters. Make them dynamic.
 * Remove code templates from ::Constants (into ::Simple)
         o Tidy up ::Constants.
 * Implement variable sharing without monolith..?
         o PROCESS -> no monolith ?
             - Interpolated includes do not respect monolith though :p
             - This needs fix.
+            - Add SHARE: command?
 * Improve error handling. Minimize uncontrolled die()s.
 * Improve safe compartment.
 * Improve cache.

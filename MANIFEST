@@ -13,6 +13,7 @@ lib/Text/Template/Simple/Caller.pm
 lib/Text/Template/Simple/Constants.pm
 lib/Text/Template/Simple/Tokenizer.pm
 lib/Text/Template/Simple/Util.pm
+lib/Text/Template/Simple/API.pod
 t/003-simple.t
 t/004-extend.t
 t/005-safe.t
@@ -41,6 +42,7 @@ t/027-include-param.t
 t/028-include-filter.t
 t/029-block-filter.t
 t/030-toke-substr.t
+t/031-capture-warnings.t
 t/data/test.tts
 t/data/dynamic.tts
 t/data/dynamic_delim.tts
@@ -56,6 +58,9 @@ t/data/path1/test1.tts
 t/data/path1/test4.tts
 t/data/path2/test2.tts
 t/data/path2/test3.tts
+t/data/027-dynamic.tts
+t/data/027-dynamic-inc.tts
+t/data/028-dynamic.tts
 t/lib/My.pm
 builder/Build.pm
 eg/precompile.pl

@@ -4,7 +4,7 @@ use vars qw($VERSION);
 use Text::Template::Simple::Util qw(:all);
 use Text::Template::Simple::Constants qw(:all);
 
-$VERSION = '0.62_16';
+$VERSION = '0.62_17';
 
 # internal code templates
 my %INTERNAL = (
@@ -63,6 +63,22 @@ my %INTERNAL = (
    map_keys_default => q(
       <%BUF%> .= <%HASH%>->{"<%KEY%>"};
    ),
+
+   add_sigwarn => q(
+      my <%BUF%>;
+      local $SIG{__WARN__} = sub {
+         push @{ <%BUF%> }, $_[0];
+      };
+   ),
+   dump_sigwarn => q(
+      join("\n",
+            map {
+               s{ \A \s+    }{}xms;
+               s{    \s+ \z }{}xms;
+               "[warning] $_\n"
+            } @{ <%BUF%> }
+         );
+   ),
 );
 
 sub _internal {
@@ -97,11 +113,13 @@ sub _parse {
 
    LOG( RAW => $raw ) if ( DEBUG() > 3 );
 
-   my $handler = $self->[USER_THANDLER];
+   my $uthandler = $self->[USER_THANDLER];
 
-   my $w_raw  = sub { ";$faker .= q~$_[0]~;" };
-   my $w_cap  = sub { ";$faker .= sub {" . $_[0] . "}->();"; };
-   my $w_code = sub { $_[0] . ';' };
+   my $h = {
+      raw     => sub { ";$faker .= q~$_[0]~;" },
+      capture => sub { ";$faker .= sub {" . $_[0] . "}->();"; },
+      code    => sub { $_[0] . ';' },
+   };
 
    # little hack to convert delims into escaped delims for static inclusion
    $raw =~ s{\Q$ds}{$ds!}xmsg if $as_is;
@@ -117,11 +135,11 @@ sub _parse {
       if ( T_DELIMEND   == $id ) { $inside--; next PARSER; }
 
       if ( T_RAW == $id || T_NOTADELIM == $id ) {
-         $code .= $w_raw->( $self->_chomp( $str, $chomp ) );
+         $code .= $h->{raw}->( $self->_chomp( $str, $chomp ) );
       }
 
       elsif ( T_CODE == $id ) {
-         $code .= $w_code->($resume ? $self->_resume($str, 0, 1) : $str);
+         $code .= $h->{code}->($resume ? $self->_resume($str, 0, 1) : $str);
       }
 
       elsif ( T_CAPTURE == $id ) {
@@ -132,7 +150,7 @@ sub _parse {
 
       elsif ( T_DYNAMIC == $id || T_STATIC == $id ) {
          $self->[NEEDS_OBJECT]++;
-         $code .= $w_cap->( $self->_include($id, $str) );
+         $code .= $h->{capture}->( $self->_include($id, $str) );
       }
 
       elsif ( T_MAPKEY == $id ) {
@@ -154,20 +172,18 @@ sub _parse {
             );
          }
 
-         $code .= $w_raw->($raw_block);
+         $code .= $h->{raw}->($raw_block);
       }
 
       else {
-         if ( $handler ) {
+         if ( $uthandler ) {
             LOG( USER_THANDLER => "$id") if DEBUG();
-            $code .= $handler->(
-                        $self, $id ,$str, { capture => $w_cap, raw => $w_raw }
-                     );
+            $code .= $uthandler->( $self, $id ,$str, $h );
          }
          else {
             LOG( UNKNOWN_TOKEN => "Adding unknown token as RAW: $id($str)")
                if DEBUG();
-            $code .= $w_raw->($str);
+            $code .= $h->{raw}->($str);
          }
       }
 
@@ -182,7 +198,7 @@ sub _parse {
          $self->[FILENAME]
    ) if $inside;
 
-   return $self->_wrapper( $code, $cache_id, $faker, $map_keys );
+   return $self->_wrapper( $code, $cache_id, $faker, $map_keys, $h );
 }
 
 sub _chomp {
@@ -222,6 +238,7 @@ sub _wrapper {
    my $cache_id = shift;
    my $faker    = shift;
    my $map_keys = shift;
+   my $h        = shift;
    my $buf_hash = $self->[FAKER_HASH];
 
    my $wrapper    = '';
@@ -243,8 +260,11 @@ sub _wrapper {
    $wrapper .= "my $faker = '';";
    $wrapper .= $self->_add_stack( $cache_id )  if $self->[STACK];
    $wrapper .= "my $buf_hash = {\@_};"         if $map_keys;
+   $wrapper .= $self->_add_sigwarn if $self->[CAPTURE_WARNINGS];
    $wrapper .= "\n#line 1 " .  $self->[FILENAME] . "\n";
-   $wrapper .= $code . ";return $faker;";
+   $wrapper .= $code . ";";
+   $wrapper .= $self->_dump_sigwarn($h) if $self->[CAPTURE_WARNINGS];
+   $wrapper .= "return $faker;";
    $wrapper .= '}';
    # make this a capture sub if we're including
    $wrapper .= '->()' if $inside_inc;
@@ -277,6 +297,30 @@ sub _parse_mapkeys {
                }
             );
    return $mko, $mkc;
+}
+
+sub _add_sigwarn {
+   my $self = shift;
+   $self->[FAKER_WARN] = $self->_output_buffer_var('array');
+   my $rv = $self->_mini_compiler(
+               $self->_internal('add_sigwarn'),
+               { BUF     => $self->[FAKER_WARN] },
+               { flatten => 1                   }
+            );
+   return $rv;
+}
+
+sub _dump_sigwarn {
+   my $self = shift;
+   my $h    = shift;
+   my $rv = $h->{capture}->(
+               $self->_mini_compiler(
+                  $self->_internal('dump_sigwarn'),
+                  { BUF     => $self->[FAKER_WARN] },
+                  { flatten => 1                   }
+               )
+            );
+   return $rv;
 }
 
 sub _add_stack {
@@ -355,8 +399,8 @@ Private module.
 
 =head1 DESCRIPTION
 
-This document describes version C<0.62_16> of C<Text::Template::Simple::Base::Parser>
-released on C<23 April 2009>.
+This document describes version C<0.62_17> of C<Text::Template::Simple::Base::Parser>
+released on C<26 April 2009>.
 
 B<WARNING>: This version of the module is part of a
 developer (beta) release of the distribution and it is

@@ -255,7 +255,7 @@ sub _build_monolith {
    PROVE: {
       warn "\tTESTING MONOLITH\n";
       local $ENV{AUTHOR_TESTING_MONOLITH_BUILD} = 1;
-      my @output = qx(prove -Isingle);
+      my @output = qx(prove -Imonolithic_version);
       print "\t$_" for @output;
       chomp(my $result = pop @output);
       die MONOLITH_TEST_FAIL if $result ne 'Result: PASS';

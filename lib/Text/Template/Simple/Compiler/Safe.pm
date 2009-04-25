@@ -4,7 +4,7 @@ use strict;
 use vars qw($VERSION);
 use Text::Template::Simple::Dummy;
 
-$VERSION = '0.62_16';
+$VERSION = '0.62_17';
 
 sub _compile { shift; return __PACKAGE__->_object->reval(shift) }
 
@@ -44,8 +44,8 @@ Private module.
 
 =head1 DESCRIPTION
 
-This document describes version C<0.62_16> of C<Text::Template::Simple::Compiler::Safe>
-released on C<23 April 2009>.
+This document describes version C<0.62_17> of C<Text::Template::Simple::Compiler::Safe>
+released on C<26 April 2009>.
 
 B<WARNING>: This version of the module is part of a
 developer (beta) release of the distribution and it is

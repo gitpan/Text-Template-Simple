@@ -2,7 +2,7 @@ package Text::Template::Simple::Constants;
 use strict;
 use vars qw($VERSION $OID $DID @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
 
-$VERSION = '0.62_16';
+$VERSION = '0.62_17';
 
 # object fields
 BEGIN { $OID = -1 } # init object field id counter
@@ -12,6 +12,7 @@ use constant DELETE_WS        => ++$OID;
 use constant FAKER            => ++$OID;
 use constant FAKER_HASH       => ++$OID;
 use constant FAKER_SELF       => ++$OID;
+use constant FAKER_WARN       => ++$OID;
 use constant MONOLITH         => ++$OID;
 use constant CACHE            => ++$OID;
 use constant CACHE_DIR        => ++$OID;
@@ -21,6 +22,7 @@ use constant STRICT           => ++$OID;
 use constant SAFE             => ++$OID;
 use constant HEADER           => ++$OID;
 use constant ADD_ARGS         => ++$OID;
+use constant CAPTURE_WARNINGS => ++$OID;
 use constant WARN_IDS         => ++$OID;
 use constant TYPE             => ++$OID;
 use constant TYPE_FILE        => ++$OID;
@@ -38,6 +40,7 @@ use constant DEEP_RECURSION   => ++$OID;
 use constant INCLUDE_PATHS    => ++$OID;
 use constant PRE_CHOMP        => ++$OID;
 use constant POST_CHOMP       => ++$OID;
+use constant VERBOSE_ERRORS   => ++$OID;
 use constant MAXOBJFIELD      =>   $OID; # number of the last object field
 
 # token type ids
@@ -246,6 +249,7 @@ BEGIN {
                         FAKER
                         FAKER_HASH
                         FAKER_SELF
+                        FAKER_WARN
                         CACHE
                         CACHE_DIR
                         CACHE_OBJECT
@@ -256,6 +260,7 @@ BEGIN {
                         HEADER
                         ADD_ARGS
                         WARN_IDS
+                        CAPTURE_WARNINGS
                         TYPE
                         TYPE_FILE
                         COUNTER
@@ -272,6 +277,7 @@ BEGIN {
                         INCLUDE_PATHS
                         PRE_CHOMP
                         POST_CHOMP
+                        VERBOSE_ERRORS
                         MAXOBJFIELD
                      )],
       resume    =>   [qw(
@@ -362,8 +368,8 @@ TODO
 
 =head1 DESCRIPTION
 
-This document describes version C<0.62_16> of C<Text::Template::Simple::Constants>
-released on C<23 April 2009>.
+This document describes version C<0.62_17> of C<Text::Template::Simple::Constants>
+released on C<26 April 2009>.
 
 B<WARNING>: This version of the module is part of a
 developer (beta) release of the distribution and it is

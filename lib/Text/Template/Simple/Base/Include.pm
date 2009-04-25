@@ -4,7 +4,7 @@ use vars qw($VERSION);
 use Text::Template::Simple::Util qw(:all);
 use Text::Template::Simple::Constants qw(:all);
 
-$VERSION = '0.62_16';
+$VERSION = '0.62_17';
 
 sub _include_no_monolith {
    # no monolith eh?
@@ -77,7 +77,7 @@ sub _include {
    $file = trim $file;
 
    my $err    = $self->_include_error( $type );
-   my $exists = $self->_file_exists( $file );
+   my $exists = $self->io->file_exists( $file );
    my $interpolate;
 
    if ( $exists ) {
@@ -88,11 +88,16 @@ sub _include {
       $interpolate = 1; # just guessing ...
    }
 
-   return "q~$err '" . escape('~' => $file) . "' is a directory~" if -d $file;
+   return "q~$err '" . escape('~' => $file) . "' is a directory~"
+      if $self->io->is_dir( $file );
 
    if ( DEBUG() ) {
       require Text::Template::Simple::Tokenizer;
-      my $toke = Text::Template::Simple::Tokenizer->new;
+      my $toke =  Text::Template::Simple::Tokenizer->new(
+                     @{ $self->[DELIMITERS] },
+                     $self->[PRE_CHOMP],
+                     $self->[POST_CHOMP]
+                  );
       LOG( INCLUDE => $toke->_visualize_tid($type) . " => '$file'" );
    }
 
@@ -120,7 +125,7 @@ sub _interpolate {
    # so that, you can pass parameters, apply filters etc.
    my %inc = (INCLUDE => map { trim $_ } split RE_PIPE_SPLIT, $file );
 
-   if ( $self->_file_exists( $inc{INCLUDE} ) ) {
+   if ( $self->io->file_exists( $inc{INCLUDE} ) ) {
       # well... constantly working around :p
       $inc{INCLUDE} = qq{'$inc{INCLUDE}'};
    }
@@ -170,8 +175,8 @@ Private module.
 
 =head1 DESCRIPTION
 
-This document describes version C<0.62_16> of C<Text::Template::Simple::Base::Include>
-released on C<23 April 2009>.
+This document describes version C<0.62_17> of C<Text::Template::Simple::Base::Include>
+released on C<26 April 2009>.
 
 B<WARNING>: This version of the module is part of a
 developer (beta) release of the distribution and it is

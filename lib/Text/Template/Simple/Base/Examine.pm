@@ -4,7 +4,7 @@ use vars qw($VERSION);
 use Text::Template::Simple::Util qw(:all);
 use Text::Template::Simple::Constants qw(:all);
 
-$VERSION = '0.62_16';
+$VERSION = '0.62_17';
 
 sub _examine {
    my $self   = shift;
@@ -21,7 +21,7 @@ sub _examine {
       $self->[TYPE] = $type;
    }
    else {
-      if ( my $path = $self->_file_exists( $thing ) ) {
+      if ( my $path = $self->io->file_exists( $thing ) ) {
          $rv                = $self->io->slurp( $path );
          $self->[TYPE]      = 'FILE';
          $self->[TYPE_FILE] = $path;
@@ -79,8 +79,8 @@ Private module.
 
 =head1 DESCRIPTION
 
-This document describes version C<0.62_16> of C<Text::Template::Simple::Base::Examine>
-released on C<23 April 2009>.
+This document describes version C<0.62_17> of C<Text::Template::Simple::Base::Examine>
+released on C<26 April 2009>.
 
 B<WARNING>: This version of the module is part of a
 developer (beta) release of the distribution and it is

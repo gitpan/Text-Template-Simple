@@ -2,7 +2,7 @@ package Text::Template::Simple;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.62_16';
+$VERSION = '0.62_17';
 
 use File::Spec;
 use Text::Template::Simple::Constants qw(:all);
@@ -31,23 +31,25 @@ my %CONNECTOR = ( # Default classes list
 );
 
 my %DEFAULT = ( # default object attributes
-   delimiters     => [ DELIMS ], # default delimiters
-   cache          =>  0,    # use cache or not
-   cache_dir      => '',    # will use hdd intead of memory for caching...
-   strict         =>  1,    # set to false for toleration to un-declared vars
-   safe           =>  0,    # use safe compartment?
-   header         =>  0,    # template header. i.e. global codes.
-   add_args       => '',    # will unshift template argument list. ARRAYref.
-   warn_ids       =>  0,    # warn template ids?
-   iolayer        => '',    # I/O layer for filehandles
-   stack          => '',    # dump caller stack?
-   user_thandler  => undef, # user token handler callback
-   monolith       =>  0,    # use monolithic template & cache ?
-   include_paths  => [],    # list of template dirs
-   pre_chomp      => CHOMP_NONE,
-   post_chomp     => CHOMP_NONE,
+   delimiters       => [ DELIMS ], # default delimiters
+   cache            =>  0,    # use cache or not
+   cache_dir        => '',    # will use hdd intead of memory for caching...
+   strict           =>  1,    # set to false for toleration to un-declared vars
+   safe             =>  0,    # use safe compartment?
+   header           =>  0,    # template header. i.e. global codes.
+   add_args         => '',    # will unshift template argument list. ARRAYref.
+   warn_ids         =>  0,    # warn template ids?
+   capture_warnings =>  0,    # bool
+   iolayer          => '',    # I/O layer for filehandles
+   stack            => '',    # dump caller stack?
+   user_thandler    => undef, # user token handler callback
+   monolith         =>  0,    # use monolithic template & cache ?
+   include_paths    => [],    # list of template dirs
+   verbose_errors   =>  0,    # bool
+   pre_chomp        => CHOMP_NONE,
+   post_chomp       => CHOMP_NONE,
    # TODO: Consider removing this
-   resume         =>  0,    # resume on error?
+   resume           =>  0,    # resume on error?
 );
 
 my @EXPORT_OK = qw( tts );
@@ -86,14 +88,17 @@ sub new {
    LOG( CONSTRUCT => $self->_class_id . " @ ".(scalar localtime time) )
       if DEBUG();
 
-   my $fid;
-   foreach my $field ( keys %DEFAULT ) {
+   my($fid, $fval);
+   INITIALIZE: foreach my $field ( keys %DEFAULT ) {
       $fid = uc $field;
-      next if not $class->can($fid);
-      $fid = $class->$fid();
-      $self->[$fid] = defined $param{$field} ? $param{$field}
-                    :                          $DEFAULT{$field}
-                    ;
+      next INITIALIZE if ! $class->can($fid);
+      $fid  = $class->$fid();
+      $fval = delete $param{$field};
+      $self->[$fid] = defined $fval ? $fval : $DEFAULT{$field};
+   }
+
+   foreach my $bogus ( keys %param ) {
+      warn "'$bogus' is not a known parameter. Did you make a typo?";
    }
 
    $self->_init;
@@ -148,7 +153,10 @@ sub _init {
    fatal('tts.main.init.include')
       if $self->[INCLUDE_PATHS] && ! isaref($self->[INCLUDE_PATHS]);
 
-   $self->[IO_OBJECT] = $self->connector('IO')->new( $self->[IOLAYER] );
+   $self->[IO_OBJECT] = $self->connector('IO')->new(
+                           $self->[IOLAYER],
+                           $self->[INCLUDE_PATHS]
+                        );
 
    if ( $self->[CACHE_DIR] ) {
       $self->[CACHE_DIR] = $self->io->validate( dir => $self->[CACHE_DIR] )
@@ -172,21 +180,6 @@ sub _output_buffer_var {
    $id  =~ tr/a-zA-Z_0-9//cd;
    $id  =~ s{SCALAR}{SELF}xms if $type eq 'self';
    return '$' . $id;
-}
-
-sub _file_exists {
-   # TODO: pass INCLUDE_PATHS to ::IO to move this there
-   my $self = shift;
-   my $file = shift;
-
-   return $file if $self->io->is_file( $file );
-
-   foreach my $path ( @{ $self->[INCLUDE_PATHS] } ) {
-      my $test = File::Spec->catfile( $path, $file );
-      return $test if $self->io->is_file( $test );
-   }
-
-   return; # fail!
 }
 
 sub _class_id {
@@ -244,6 +237,8 @@ Text::Template::Simple - Simple text template engine
 
    use Text::Template::Simple;
    my $tts = Text::Template::Simple->new();
+   print $tts->compile( $FILEHANDLE );
+   print $tts->compile('Hello, your perl is at <%= $^X %>');
    print $tts->compile(
             'hello.tts', # the template file
             [ name => 'Burak', location => 'Istanbul' ]
@@ -258,8 +253,8 @@ Where C<hello.tts> has this content:
 
 =head1 DESCRIPTION
 
-This document describes version C<0.62_16> of C<Text::Template::Simple>
-released on C<23 April 2009>.
+This document describes version C<0.62_17> of C<Text::Template::Simple>
+released on C<26 April 2009>.
 
 B<WARNING>: This version of the module is part of a
 developer (beta) release of the distribution and it is
@@ -374,8 +369,10 @@ Chomping is the removal of whitespace before and after your directives. This
 can be useful if you're generating plain text (instead of HTML which'll ignore
 spaces most of the time). You can either remove all space or replace multiple
 whitespace with a single space (collapse). Chomping can be enabled per
-directive or globally via options to the constructor. See L</pre_chomp> and
-L</post_chomp> options to L</new> to globally enable chomping.
+directive or globally via options to the constructor.
+See L<Text::Template::Simple::API/pre_chomp> and
+L<Text::Template::Simple::API/post_chomp> options to
+L<Text::Template::Simple::API/new> to globally enable chomping.
 
 Chomping is enabled with second level commands for all directives. Here is
 a list of commands:
@@ -477,7 +474,8 @@ Those will be compiled as:
    Test: <%abc%>
 
 Alternatively, you can change the default delimiters to solve this issue.
-See the L</delimiters> option for L</new> for more information on how to
+See the L<Text::Template::Simple::API/delimiters> option for
+L<Text::Template::Simple::API/new> for more information on how to
 do this.
 
 =head2 Template Parameters
@@ -493,9 +491,21 @@ You can fetch parameters (passed to compile) in the usual perl way:
 =head2 INCLUDE COMMANDS
 
 Include commands are separated by pipes in an include directive.
-Currently supported parameters are: C<PARAM:>, C<FILTER:>.
+Currently supported parameters are:
 
-   <%+ /path/to/static.tts  | FILTER: MyFilter | PARAM: test => 123 %>
+=over 4
+
+=item *
+
+PARAM
+
+=item *
+
+FILTER
+
+=back
+
+   <%+ /path/to/static.tts  | FILTER: MyFilter %>
    <%* /path/to/dynamic.tts | FILTER: MyFilter | PARAM: test => 123 %>
 
 C<FILTER:> defines the list of filters to apply to the output of the include.
@@ -525,7 +535,7 @@ prefix:
 
 =head3 INCLUDE PARAMETERS
 
-Just pass the parameters as describe above and fetch them via C<@_> inside
+Just pass the parameters as described above and fetch them via C<@_> inside
 the included file.
 
 =head2 BLOCKS
@@ -547,455 +557,23 @@ Identical to include filters, but works on blocks of text:
       <p>&FooBar=42</p>
    %>
 
-=head1 METHODS
+Note that you can not use any variables in these blocks. They are static.
+
+=head1 METHODS & FUNCTIONS
 
 =head2 new
 
-Creates a new template object and can take several parameters.
-
-=head3 delimiters
-
-Must be an array ref containing the two delimiter values: 
-the opening delimiter and the closing delimiter:
-
-   $tts = Text::Template::Simple->new(
-      delimiters => ['<?perl', '?>'],
-   );
-
-Default values are C<< <% >> and C<< %> >>. 
-
-=head3 cache
-
-Pass this with a true value if you want the cache feature.
-In-memory cache will be used unless you also pass a L</cache_dir>
-parameter.
-
-=head3 cache_dir
-
-If you want disk-based cache, set this parameter to a valid
-directory path. You must also set L</cache> to a true value.
-
-=head3 resume
-
-If has a true value, the C<die()>able code fragments will not terminate
-the compilation of remaining parts, the compiler will simply resume 
-it's job. However, enabling this may result with a performance penalty
-if cache is not enabled. If cache is enabled, the performance penalty
-will show itself after every compilation process (upto C<2x> slower).
-
-This option is currently experimental and uses more resources.
-Only enable it for debugging.
-
-CAVEAT: C<< <% use MODULE %> >> directives won't resume.
-
-=head3 strict
-
-If has a true value, the template will be compiled under strict.
-Enabled by default.
-
-=head3 safe
-
-Set this to a true value if you want to execute the template
-code in a safe compartment. Disabled by default and highly 
-experimental. This option can also disable some template 
-features.
-
-If you want to enable some unsafe conditions, you have to define 
-C<Text::Template::Simple::Compiler::Safe::permit> sub in
-your controller code and return a list of permitted opcodes
-inside that sub:
-
-   sub Text::Template::Simple::Compiler::Safe::permit {
-      my $class = shift;
-      return qw(:default :subprocess); # enable backticks and system
-   }
-
-If this is not enough for you, you can define the safe compartment
-all by yourself by defining 
-C<Text::Template::Simple::Compiler::Safe::object>:
-
-   sub Text::Template::Simple::Compiler::Safe::object {
-      require Safe;
-      my $safe = Safe->new('Text::Template::Simple::Dummy');
-      $safe->permit(':browse');
-      return $safe;
-   }
-
-C<:default>, C<require> and C<caller> are enabled opcodes, unless you 
-define your own. You have to disable C<strict> option
-to disable C<require> opcode. Disabling C<caller> will also make
-your C<require>/C<use> calls die in perl 5.9.5 and later.
-
-See L<Safe> and especially L<Opcode> for opcode lists and 
-other details.
-
-=head3 header
-
-This is a string containing global elements (global to this particular
-object) for templates. You can define some generally accessible variables
-with this:
-
-   $tts = Text::Template::Simple->new(
-      header => q~ my $foo = "bar"; ~,
-   );
-
-and then you can use it (without defining) inside any template that 
-is compiled with C<$tts> object:
-
-   Foo is <%=$foo%>
-
-=head3 add_args
-
-ARRAYref. Can be used to add a global parameter list to the templates.
-
-   $tts = Text::Template::Simple->new(
-      add_args => [qw(foo bar baz)],
-   );
-
-and then you can fetch them inside any template that is compiled with 
-C<$tts> object:
-
-   <%
-      my $foo = shift;
-      my $bar = shift;
-      my $baz = shift;
-   %>
-   Foo is <%=$foo%>. Bar is <%=$bar%>. Baz is <%=$baz%>
-
-But it'll be logical to combine it with C<header> parameter:
-
-   $tts = Text::Template::Simple->new(
-      header   => q~my $foo = shift;my $bar = shift;my $baz = shift;~,
-      add_args => [qw(foo bar baz)],
-   );
-
-and then you can use it inside any template that is compiled with 
-C<$tts> object without manually fetching all the time:
-
-   Foo is <%=$foo%>. Bar is <%=$bar%>. Baz is <%=$baz%>
-
-Can be useful, if you want to define a default object:
-
-   $tts = Text::Template::Simple->new(
-      header   => q~my $self = shift;~,
-      add_args => [$my_default_object],
-   );
-
-and then you can use it inside any template that is compiled with 
-C<$tts> object without manually fetching:
-
-   Foo is <%= $self->{foo} %>. Test: <%= $self->method('test') %>
-
-=head3 warn_ids
-
-If enabled, the module will warn you about compile steps using 
-template ids. You must both enable this and the cache. If
-cache is disabled, no warnings will be generated.
-
-=head3 iolayer
-
-This option does not have any effect under perls older than C<5.8.0>.
-Set this to C<utf8> (no initial colon) if your I/O is C<UTF-8>. 
-Not tested with other encodings.
-
-=head3 stack
-
-This option enables caller stack tracing for templates. The generated
-list is sent to C<warn>. So, it is possible to capture
-this data with a signal handler. See L<Text::Template::Simple::Caller>
-for available options.
-
-It is also possible to send the output to the template output buffer, if you
-append C<:buffer> to the type of the C<stack> option:
-
-   $tts = Text::Template::Simple->new(
-      stack => 'string:buffer',
-   );
-
-C<html_comment> is the same as C<string> except that it also includes HTML
-comment markers. C<text_table> needs the optional module C<Text::Table>.
-
-This option is also available to all templates as a function named
-C<stack> for individual stack dumping. See L<Text::Template::Simple::Dummy>
-for more information.
-
-=head3 monolith
-
-Controls the behavior when using includes. If this is enabled, the template
-and all it's includes will be compiled into a single document. If C<monolith>
-is disabled, then the includes will be compiled individually into separate
-documents.
-
-If you need to pass the main template variables (C<my> vars) into dynamic
-includes, then you need to enable this option. However, if you are using the
-cache, then the included templates will not be updated automatically.
-
-C<monolith> is disabled by default.
-
-=head3 include_paths
-
-An ARRAY reference. If you want to use relative file paths when
-compiling/including template files, add the paths of the templates with
-this parameter.
-
-=head3 pre_chomp
-
-   use Text::Template::Simple::Constants qw( :chomp );
-   $pre = CHOMP_NONE; # no chomp
-   $pre = CHOMP_ALL;  # remove all whitespace
-   $pre = COLLAPSE_ALL; # replace all ws with a single space
-   $tts = Text::Template::Simple->new(
-      pre_chomp => $pre,
-   );
-
-=head3 post_chomp
-
-   use Text::Template::Simple::Constants qw( :chomp );
-   $post = CHOMP_NONE; # no chomp
-   $post = CHOMP_ALL;  # remove all whitespace
-   $post = COLLAPSE_ALL; # replace all ws with a single space
-   $tts = Text::Template::Simple->new(
-      post_chomp => $post,
-   );
-
-=head2 compile DATA [, FILL_IN_PARAM, OPTIONS]
-
-Compiles the template you have passed and manages template cache,
-if you've enabled cache feature. Then it returns the compiled template.
-Accepts three different types of data as the first parameter; 
-a reference to a filehandle (C<GLOB>), a string or a file path 
-(path to the template file).
-
-=head3 First parameter (DATA)
-
-The first parameter can take four different values; a filehandle,
-a string, a file path or explicit type definition via an ARRAY reference.
-Distinguishing filehandles are easy, since
-they'll be passed as a reference (but see the bareword issue below).
-So, the only problem is distinguishing strings and file paths. 
-C<compile> first checks if the string length is equal or less than
-255 characters and then tests if a file with this name exists. If
-all these tests fail, the string will be treated as the template 
-text.
-
-=head4 File paths
-
-You can pass a file path as the first parameter:
-
-   $text = $tts->compile('/my/templates/test.tts');
-
-=head4 Strings
-
-You can pass a string as the first parameter:
-
-   $text = $tts->compile(q~
-   <%for my $i (0..10) {%>
-      counting <%=$i%>...
-   <%}%>
-   ~);
-
-=head4 Filehandles
-
-C<GLOB>s must be passed as a reference. If you are using bareword 
-filehandles, be sure to pass it's reference or it'll be treated as a 
-file path and your code will probably C<die>:
-
-   open MYHANDLE, '/path/to/foo.tts' or die "Error: $!";
-   $text = $tts->compile(\*MYHANDLE); # RIGHT.
-   $text = $tts->compile( *MYHANDLE); # WRONG. Recognized as a file path
-   $text = $tts->compile(  MYHANDLE); # WRONG. Ditto. Dies under strict
-
-or use the standard C<IO::File> module:
-
-   use IO::File;
-   my $fh = IO::File->new;
-   $fh->open('/path/to/foo.tts', 'r') or die "Error: $!";
-   $text = $tts->compile($fh);
-
-or you can use lexicals inside C<open> if you don't care about 
-compatibility with older perl:
-
-   open my $fh, '/path/to/foo.tts' or die "Error: $!";
-   $text = $tts->compile($fh);
-
-Filehandles will B<not> be closed.
-
-=head4 Explicit Types
-
-Pass an arrayref containing the type and the parameter to disable guessing
-and forcing the type:
-
-   $text = $tts->compile( [ FILE   => '/path/to/my.tts'] );
-   $text = $tts->compile( [ GLOB   => \*MYHANDLE] );
-   $text = $tts->compile( [ STRING => 'I am running under <%= $] %>'] );
-
-Type can be one of these: C<FILE>, C<GLOB>, C<STRING>.
-
-=head3 FILL_IN_PARAM
-
-An arrayref. Everything inside this will be accessible from the 
-usual  C<@_> array inside templates.
-
-=head3 OPTIONS
-
-A hashref. Several template specific options can be set with
-this parameter.
-
-=head4 id
-
-Controls the cache id generation. Can be useful, if you want to 
-pass your own template id. If false or set to C<AUTO>, internal
-mechanisms will be used to generate template keys.
-
-=head4 map_keys
-
-This will change the compiler behavior. If you enable this,
-you can construct templates like this:
-
-   This is "<%foo%>", that is "<%bar%>" and the other is "<%baz%>"
-
-i.e.: only  the key names can be used instead of perl constructs.
-and as you can see, "C<< <% >>" is used instead of "C<< <%= >>". 
-C<map_keys> also disables usage of perl constructs. Only bare words 
-can be used and you don't have to I<fetch> parameters via C<@_> 
-inside the template. Here is an example:
-
-   $text = $tts->compile(
-            q~This is "<%foo%>", that is "<%bar%>" 
-              and the other is "<%baz%>"~,
-            [
-               foo => "blah 1",
-               bar => "blah 2",
-               baz => "blah 3",
-            ],
-            {
-               map_keys => 1
-            },
-   );
-
-Can be good (and simple) for compiling i18n texts. If you don't use 
-C<map_keys>, the above code must be written as:
-
-   $text = $tts->compile(
-            q~<%my(%l) = @_%>This is "<%=$l{foo}%>", that is "<%=$l{bar}%>" 
-              and the other is "<%=$l{baz}%>"~,
-            [
-               foo => "blah 1",
-               bar => "blah 2",
-               baz => "blah 3",
-            ],
-   );
-
-If C<map_keys> is set to 'init', then the uninitialized values 
-will be initialized to an empty string. But beware; C<init> may cloak 
-template errors. It'll silence I<uninitialized> warnings, but
-can also make it harder to detect template errors.
-
-If C<map_keys> is set to 'check', then the compiler will check for
-the key's existence and check if it is defined or not.
-
-=head4 chkmt
-
-If you are using file templates (i.e.: not FH or not string) and you 
-set this to a true value, modification time of templates will be checked
-and compared for template change.
-
 =head2 cache
 
-Returns the L<Text::Template::Simple::Cache> object.
-
-=head2 io
-
-Returns the L<Text::Template::Simple::IO> object.
+=head2 compile
 
 =head2 connector
 
-Returns the class name of the supplied connector.
+=head2 io
 
-=head1 CLASS METHODS
+=head2 tts
 
-These are all global (i.e.: not local to any particular object).
-
-=head2 DEBUG
-
-Used to enable/disable debugging. Debug information 
-is generated as warnings:
-
-   Text::Template::Simple->DEBUG(1); # enable
-   Text::Template::Simple->DEBUG(0); # disable
-   Text::Template::Simple->DEBUG(2); # more verbose
-
-C<DEBUG> is disabled by default.
-
-=head2 DIGEST
-
-Returns the digester object:
-
-   $digester = Text::Template::Simple->DIGEST;
-   print $digester->add($data)->hexdigest;
-
-=head1 CACHE MANAGER
-
-Cache manager has two working modes. It can use disk files or
-memory for the storage. Memory based cache is far more faster
-than disk cache.
-
-The template text is first parsed and compiled into an anonymous
-perl sub source. Then an unique key is generated from your source 
-data (you can by-pass key generation phase if you supply your own id 
-parameter).
-
-If in-memory cache is used, the perl source will be 
-compiled into an anonymous sub inside the in-memory cache hash
-and this compiled version will be used instead of continiously
-parsing/compiling the same template.
-
-If disk cache is used, a template file with the "C<.tts.cache>"
-extension will be generated on the disk.
-
-Using cache is recommended under persistent environments like 
-C<mod_perl> and C<PerlEx>.
-
-In-memory cache can use two or three times more space than disk-cache, 
-but it is far more faster than disk cache. Disk cache can also be slower
-than no-cache for small templates, since there is a little overhead 
-when generating unique keys with the L</DIGESTER> and also there will
-be a disk I/O. There is a modification time check option for disk
-based templates (see L<compile|"compile DATA [, FILL_IN_PARAM, OPTIONS]">).
-
-=head1 DIGESTER
-
-Cache keys are generated with one of these modules:
-
-   Digest::SHA
-   Digest::SHA1
-   Digest::SHA2
-   Digest::SHA::PurePerl
-   Digest::MD5
-   MD5
-   Digest::Perl::MD5
-
-SHA algorithm seems to be more reliable for key generation, but
-md5 is widely available and C<Digest::MD5> is in CORE.
-
-=head1 FUNCTIONS
-
-=head2 tts [ NEW_ARGS, ] COMPILE_ARGS
-
-This function is a wrapper around the L<Text::Template::Simple> object. It
-creates it's own temporary object behind the scenes and can be used for
-quick Perl one-liners for example. Using this function other than testing is
-not recommended.
-
-C<NEW_ARGS> is optional and must be a hashref containing the parameters to
-L</new>. C<COMPILE_ARGS> is a list and everything it contains will be passed
-to the L</compile> method.
-
-It is possible to import this function to your namespace:
-
-   use Text::Template::Simple qw( tts );
-   print tts("<%= scalar localtime time %>");
-   print tts( { strict => 1 }, "<%= scalar localtime time %>");
+See L<Text::Template::Simple::API> for the technical/gory details.
 
 =head1 EXAMPLES
 
@@ -1006,38 +584,6 @@ TODO
 You may need to C<eval> your code blocks to trap exceptions. Some recoverable
 failures are silently ignored, but you can display them as warnings 
 if you enable debugging.
-
-=begin EXPERTS
-
-How to add your own tokens into Text::Template::Simple?
-
-   use strict;
-   use Text::Template::Simple;
-   use Text::Template::Simple::Constants qw( T_MAXID );
-   use constant DIR_CMD     => '$';
-   use constant T_DIRECTIVE => T_MAXID + 1;
-   
-   # first, register our handler for unknown tokens
-   my $t = Text::Template::Simple->new( user_thandler => \&thandler );
-   print $t->compile( q{ Testing: <%$ PROCESS some.tts %> } );
-   
-   # then describe how to handle "our" commands
-   sub Text::Template::Simple::Tokenizer::commands {
-      my $self = shift;
-      return(
-         # cmd      id           callback
-         [ DIR_CMD, T_DIRECTIVE, 'trim'   ],
-      );
-   }
-   
-   # we can now use some black magic
-   sub thandler {
-      my($self, $id ,$str, $h) = @_;
-      # $h is the wrapper handler. it has two handlers: capture & raw
-      return $h->{raw}->( "id($id) cmd($str)" );
-   }
-
-=end EXPERTS
 
 =head1 BUGS
 
@@ -1075,8 +621,8 @@ Some methods/functionality of the module needs these optional modules:
 
 =head1 SEE ALSO
 
-L<Apache::SimpleTemplate>, L<Text::Template>, L<Text::ScriptTemplate>,
-L<Safe>, L<Opcode>.
+L<Text::Template::Simple::API>, L<Apache::SimpleTemplate>, L<Text::Template>,
+L<Text::ScriptTemplate>, L<Safe>, L<Opcode>.
 
 =head2 MONOLITHIC VERSION
 

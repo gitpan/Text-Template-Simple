@@ -1,16 +1,22 @@
 package Text::Template::Simple::IO;
 use strict;
 use vars qw($VERSION);
+use File::Spec;
 use Text::Template::Simple::Constants qw(:all);
 use Text::Template::Simple::Util qw( DEBUG LOG ishref binary_mode fatal );
+use constant MY_IO_LAYER      => 0;
+use constant MY_INCLUDE_PATHS => 1;
 
-$VERSION = '0.62_16';
+$VERSION = '0.62_17';
 
 sub new {
    my $class = shift;
    my $layer = shift;
-   my $self  = bless do { \my $anon }, $class;
-   $$self    = $layer if defined $layer;
+   my $paths = shift;
+   my $self  = [ undef, undef ];
+   bless $self, $class;
+   $self->[MY_IO_LAYER]      = $layer if defined $layer;
+   $self->[MY_INCLUDE_PATHS] = [ @{ $paths } ] if $paths; # copy
    $self;
 }
 
@@ -49,7 +55,7 @@ sub layer {
    return if ! NEW_PERL;
    my $self   = shift;
    my $fh     = shift || fatal('tts.io.layer.fh');
-   my $layer  = $$self;
+   my $layer  = $self->[MY_IO_LAYER];
    binary_mode( $fh, $layer ) if $layer;
    return;
 }
@@ -84,19 +90,44 @@ sub is_file {
    # safer than a simple "-e"
    my $self = shift;
    my $file = shift || return;
+   return $self->_looks_like_file( $file ) && ! -d $file;
+}
+
+sub is_dir {
+   # safer than a simple "-d"
+   my $self = shift;
+   my $file = shift || return;
+   return $self->_looks_like_file( $file ) && -d $file;
+}
+
+sub file_exists {
+   my $self = shift;
+   my $file = shift;
+
+   return $file if $self->is_file( $file );
+
+   foreach my $path ( @{ $self->[MY_INCLUDE_PATHS] } ) {
+      my $test = File::Spec->catfile( $path, $file );
+      return $test if $self->is_file( $test );
+   }
+
+   return; # fail!
+}
+
+sub _looks_like_file {
+   my $self = shift;
+   my $file = shift || return;
    return     ref $file               ? 0
          :        $file =~ RE_NONFILE ? 0
          : length $file >= 255        ? 0
-         : ! -e   $file               ? 0
-         :   -d _                     ? 0
-         :                              1
+         :     -e $file               ? 1
+         :                              0
          ;
 }
 
 sub DESTROY {
    my $self = shift;
    LOG( DESTROY => ref $self ) if DEBUG();
-   $$self = undef;
    return;
 }
 
@@ -114,8 +145,8 @@ TODO
 
 =head1 DESCRIPTION
 
-This document describes version C<0.62_16> of C<Text::Template::Simple::IO>
-released on C<23 April 2009>.
+This document describes version C<0.62_17> of C<Text::Template::Simple::IO>
+released on C<26 April 2009>.
 
 B<WARNING>: This version of the module is part of a
 developer (beta) release of the distribution and it is
@@ -143,9 +174,17 @@ Returns the contents of the supplied file as a string.
 C<TYPE> can either be C<dir> or C<file>. Returns the corrected path if
 it is valid, C<undef> otherwise.
 
+=head2 is_dir THING
+
+Test if C<THING> is a directory.
+
 =head2 is_file THING
 
 Test if C<THING> is a file.
+
+=head2 file_exists THING
+
+Test if C<THING> is a file. This method also searches all the C<include paths>.
 
 =head1 AUTHOR
 
