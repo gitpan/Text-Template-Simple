@@ -2,7 +2,7 @@ package Text::Template::Simple;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.62_18';
+$VERSION = '0.70';
 
 use File::Spec;
 use Text::Template::Simple::Constants qw(:all);
@@ -253,18 +253,15 @@ Where C<hello.tts> has this content:
 
 =head1 DESCRIPTION
 
-This document describes version C<0.62_18> of C<Text::Template::Simple>
+This document describes version C<0.70> of C<Text::Template::Simple>
 released on C<26 April 2009>.
-
-B<WARNING>: This version of the module is part of a
-developer (beta) release of the distribution and it is
-not suitable for production use.
 
 This is a simple template module. There is no extra template/mini 
 language. Instead, it uses Perl as a template language. Templates
 can be cached on disk or inside the memory via internal cache 
 manager. It is also possible to use static/dynamic includes,
 pass parameters to includes and allpt filters on them.
+Also see L<Text::Template::Simple::API> for the full API definiton.
 
 =head1 SYNTAX
 

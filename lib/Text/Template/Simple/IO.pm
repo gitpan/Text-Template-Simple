@@ -7,7 +7,7 @@ use Text::Template::Simple::Util qw( DEBUG LOG ishref binary_mode fatal );
 use constant MY_IO_LAYER      => 0;
 use constant MY_INCLUDE_PATHS => 1;
 
-$VERSION = '0.62_18';
+$VERSION = '0.70';
 
 sub new {
    my $class = shift;
@@ -145,12 +145,8 @@ TODO
 
 =head1 DESCRIPTION
 
-This document describes version C<0.62_18> of C<Text::Template::Simple::IO>
+This document describes version C<0.70> of C<Text::Template::Simple::IO>
 released on C<26 April 2009>.
-
-B<WARNING>: This version of the module is part of a
-developer (beta) release of the distribution and it is
-not suitable for production use.
 
 TODO
 
@@ -184,7 +180,8 @@ Test if C<THING> is a file.
 
 =head2 file_exists THING
 
-Test if C<THING> is a file. This method also searches all the C<include paths>.
+Test if C<THING> is a file. This method also searches all the C<include paths>
+and returns the full path to the file if it exists.
 
 =head1 AUTHOR
 

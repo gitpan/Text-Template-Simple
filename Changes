@@ -2,6 +2,16 @@ Revision history for Perl extension Text::Template::Simple.
 
 Time zone is UTC+2.
 
+0.70 Sun Apr 26 16:43:10 2009
+   => Bump the version for a new stable release.
+   => Highlights:
+         * New option: capture_warnings.
+         * Verbose error messages are now disabled by default.
+         * Moved the API reference into Text/Template/Simple/API.pod.
+         * There is now a monolithic version of the module.
+         * Include improvements (params & filters)
+         * Implemented block filters (experimental).
+
 0.62_18 Sun Apr 26 03:21:08 2009
    => Move template constants into base->parser->_internal().
 
