@@ -45,8 +45,6 @@ can_ok( 'Text::Template::Simple::Constants',
             MAX_FL
             CACHE_EXT
             PARENT
-            COMPILE_ERROR_TMP
-            FRAGMENT_TMP
             DISK_CACHE_COMMENT
             DISK_CACHE_MARKER
             DELIM_START

@@ -1,10 +1,11 @@
 package Text::Template::Simple::Base::Parser;
 use strict;
 use vars qw($VERSION);
+
+$VERSION = '0.62_18';
+
 use Text::Template::Simple::Util qw(:all);
 use Text::Template::Simple::Constants qw(:all);
-
-$VERSION = '0.62_17';
 
 # internal code templates
 my %INTERNAL = (
@@ -79,6 +80,32 @@ my %INTERNAL = (
             } @{ <%BUF%> }
          );
    ),
+
+   compile_error => <<'TEMPLATE_CONSTANT',
+Error compiling code fragment (cache id: <%CID%>):
+
+<%ERROR%>
+-------------------------------
+PARSED CODE (VERBATIM):
+-------------------------------
+
+<%PARSED%>
+
+-------------------------------
+PARSED CODE    (tidied):
+-------------------------------
+
+<%TIDIED%>
+TEMPLATE_CONSTANT
+   fragment => <<'TEMPLATE_CONSTANT',
+
+# BEGIN TIDIED FRAGMENT
+
+<%FRAGMENT%>
+
+# END TIDIED FRAGMENT
+TEMPLATE_CONSTANT
+
 );
 
 sub _internal {
@@ -269,8 +296,11 @@ sub _wrapper {
    # make this a capture sub if we're including
    $wrapper .= '->()' if $inside_inc;
 
-   LOG( COMPILED => sprintf FRAGMENT_TMP, $self->_tidy($wrapper) )
-      if DEBUG() > 1;
+   LOG( COMPILED =>  $self->_mini_compiler(
+                        $self->_internal('fragment'),
+                        { FRAGMENT => $self->_tidy($wrapper) }
+                     )
+   ) if DEBUG > 1;
    #LOG( OUTPUT => $wrapper );
    # reset
    $self->[DEEP_RECURSION] = 0 if $self->[DEEP_RECURSION];
@@ -399,7 +429,7 @@ Private module.
 
 =head1 DESCRIPTION
 
-This document describes version C<0.62_17> of C<Text::Template::Simple::Base::Parser>
+This document describes version C<0.62_18> of C<Text::Template::Simple::Base::Parser>
 released on C<26 April 2009>.
 
 B<WARNING>: This version of the module is part of a

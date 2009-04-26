@@ -2,7 +2,7 @@ package Text::Template::Simple;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.62_17';
+$VERSION = '0.62_18';
 
 use File::Spec;
 use Text::Template::Simple::Constants qw(:all);
@@ -253,7 +253,7 @@ Where C<hello.tts> has this content:
 
 =head1 DESCRIPTION
 
-This document describes version C<0.62_17> of C<Text::Template::Simple>
+This document describes version C<0.62_18> of C<Text::Template::Simple>
 released on C<26 April 2009>.
 
 B<WARNING>: This version of the module is part of a
@@ -550,6 +550,9 @@ C<HEADER> includes the commands and terminated with a semicolon. C<BODY> is the
 actual block content.
 
 =head3 BLOCK FILTERS
+
+B<WARNING> Block filters are considered to be experimental. They may be changed
+or completely removed in the future.
 
 Identical to include filters, but works on blocks of text:
 

@@ -11,6 +11,7 @@
             - Interpolated includes do not respect monolith though :p
             - This needs fix.
             - Add SHARE: command?
+            - monolith seems to be buggy
 * Improve error handling. Minimize uncontrolled die()s.
 * Improve safe compartment.
 * Improve cache.

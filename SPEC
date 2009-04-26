@@ -1,11 +1,11 @@
 {
     module_name    => 'Text::Template::Simple',
     requires       => {
-        'File::Temp'   => '0.12',
         'Digest::MD5'  => '1.00',
     },
     build_requires => {
         'Test::More'   => '0.40',
+        'File::Temp'   => '0.12',
     },
     recommends     => {
         'Devel::Size'  => '0.72',

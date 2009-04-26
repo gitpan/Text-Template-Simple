@@ -2,6 +2,9 @@ Revision history for Perl extension Text::Template::Simple.
 
 Time zone is UTC+2.
 
+0.62_18 Sun Apr 26 03:21:08 2009
+   => Move template constants into base->parser->_internal().
+
 0.62_17 Thu Apr 23 23:09:13 2009
    => Move _file_exists to io->file_exists.
    => New option: capture_warnings.

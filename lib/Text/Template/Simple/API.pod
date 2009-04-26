@@ -2,7 +2,7 @@
 
 =head1 NAME
 
-Text::Template::Simple - Simple text template engine API reference
+Text::Template::Simple::API - Simple text template engine API reference
 
 =head1 SYNOPSIS
 

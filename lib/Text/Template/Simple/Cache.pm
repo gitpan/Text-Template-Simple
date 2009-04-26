@@ -6,7 +6,7 @@ use Text::Template::Simple::Constants qw(:all);
 use Text::Template::Simple::Util qw( DEBUG LOG ishref fatal );
 use Carp qw( croak );
 
-$VERSION = '0.62_17';
+$VERSION = '0.62_18';
 
 my $CACHE = {}; # in-memory template cache
 
@@ -355,7 +355,12 @@ sub populate {
       my $cid    = $cache_id ? $cache_id : 'N/A';
       my $tidied = $parent->_tidy( $parsed );
       croak $parent->[VERBOSE_ERRORS]
-            ? sprintf(COMPILE_ERROR_TMP, $cid, $error, $parsed, $tidied)
+            ? $parent->_mini_compiler( $parent->_internal('compile_error'), {
+               CID => $cid,
+               ERROR => $error,
+               PARSED => $parsed,
+               TIDIED => $tidied,
+                                                                        } )
             : $error
             ;
    }
@@ -400,7 +405,7 @@ TODO
 
 =head1 DESCRIPTION
 
-This document describes version C<0.62_17> of C<Text::Template::Simple::Cache>
+This document describes version C<0.62_18> of C<Text::Template::Simple::Cache>
 released on C<26 April 2009>.
 
 B<WARNING>: This version of the module is part of a
