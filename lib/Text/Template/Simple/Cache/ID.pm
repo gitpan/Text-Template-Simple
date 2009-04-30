@@ -5,7 +5,7 @@ use overload q{""} => 'get';
 use Text::Template::Simple::Constants qw( MAX_FL );
 use Text::Template::Simple::Util      qw( DIGEST fatal );
 
-$VERSION = '0.79_01';
+$VERSION = '0.79_02';
 
 my $RE_INVALID = qr{[^A-Za-z_0-9]};
 
@@ -54,7 +54,7 @@ TODO
 
 =head1 DESCRIPTION
 
-This document describes version C<0.79_01> of C<Text::Template::Simple::Cache::ID>
+This document describes version C<0.79_02> of C<Text::Template::Simple::Cache::ID>
 released on C<30 April 2009>.
 
 B<WARNING>: This version of the module is part of a

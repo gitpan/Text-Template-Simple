@@ -2,7 +2,7 @@ package Text::Template::Simple::Constants;
 use strict;
 use vars qw($VERSION $OID $DID @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
 
-$VERSION = '0.79_01';
+$VERSION = '0.79_02';
 
 # object fields
 BEGIN { $OID = -1 } # init object field id counter
@@ -283,7 +283,7 @@ TODO
 
 =head1 DESCRIPTION
 
-This document describes version C<0.79_01> of C<Text::Template::Simple::Constants>
+This document describes version C<0.79_02> of C<Text::Template::Simple::Constants>
 released on C<30 April 2009>.
 
 B<WARNING>: This version of the module is part of a

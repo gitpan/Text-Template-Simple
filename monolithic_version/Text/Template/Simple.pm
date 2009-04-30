@@ -33,7 +33,7 @@ package Text::Template::Simple::Constants;
 use strict;
 use vars qw($VERSION $OID $DID @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
 
-$VERSION = '0.79_01';
+$VERSION = '0.79_02';
 
 # object fields
 BEGIN { $OID = -1 } # init object field id counter
@@ -306,7 +306,7 @@ use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
 use Text::Template::Simple::Constants qw( :info DIGEST_MODS );
 use Carp qw( croak );
 
-$VERSION = '0.79_01';
+$VERSION = '0.79_02';
 
 BEGIN {
    if ( IS_WINDOWS ) {
@@ -521,7 +521,7 @@ use strict;
 use vars qw($VERSION);
 use Text::Template::Simple::Dummy;
 
-$VERSION = '0.79_01';
+$VERSION = '0.79_02';
 
 sub _compile { shift; return __PACKAGE__->_object->reval(shift) }
 
@@ -554,7 +554,7 @@ use overload q{""} => 'get';
 use Text::Template::Simple::Constants qw( MAX_FL );
 use Text::Template::Simple::Util      qw( DIGEST fatal );
 
-$VERSION = '0.79_01';
+$VERSION = '0.79_02';
 
 my $RE_INVALID = qr{[^A-Za-z_0-9]};
 
@@ -593,7 +593,7 @@ package Text::Template::Simple::Base::Parser;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.79_01';
+$VERSION = '0.79_02';
 
 use Text::Template::Simple::Util      qw(:all);
 use Text::Template::Simple::Constants qw(:all);
@@ -978,7 +978,7 @@ use vars qw($VERSION);
 use Text::Template::Simple::Util qw(:all);
 use Text::Template::Simple::Constants qw(:all);
 
-$VERSION = '0.79_01';
+$VERSION = '0.79_02';
 
 sub _include_no_monolith {
    # no monolith eh?
@@ -1141,7 +1141,7 @@ use vars qw($VERSION);
 use Text::Template::Simple::Util qw(:all);
 use Text::Template::Simple::Constants qw(:all);
 
-$VERSION = '0.79_01';
+$VERSION = '0.79_02';
 
 sub _examine {
    my $self   = shift;
@@ -1208,7 +1208,7 @@ use vars qw($VERSION);
 use Text::Template::Simple::Util qw(:all);
 use Text::Template::Simple::Constants qw(:all);
 
-$VERSION = '0.79_01';
+$VERSION = '0.79_02';
 
 sub _compiler { shift->[SAFE] ? COMPILER_SAFE : COMPILER }
 
@@ -1358,7 +1358,7 @@ package Text::Template::Simple::Tokenizer;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.79_01';
+$VERSION = '0.79_02';
 
 use constant CMD_CHAR             =>  0;
 use constant CMD_ID               =>  1;
@@ -1679,7 +1679,7 @@ use constant MY_IO_LAYER      => 0;
 use constant MY_INCLUDE_PATHS => 1;
 use constant MY_TAINT_MODE    => 2;
 
-$VERSION = '0.79_01';
+$VERSION = '0.79_02';
 
 sub new {
    my $class = shift;
@@ -1859,7 +1859,7 @@ use vars qw($VERSION);
 use Text::Template::Simple::Caller;
 use Text::Template::Simple::Util qw();
 
-$VERSION = '0.79_01';
+$VERSION = '0.79_02';
 
 sub stack { # just a wrapper
    my $opt = shift || {};
@@ -1875,7 +1875,7 @@ use strict;
 use vars qw($VERSION);
 use Text::Template::Simple::Dummy;
 
-$VERSION = '0.79_01';
+$VERSION = '0.79_02';
 
 sub _compile { shift; return eval shift }
 
@@ -1894,7 +1894,7 @@ use constant HINTS      => 8;
 use constant BITMASK    => 9;
 use Text::Template::Simple::Util qw( ishref fatal );
 
-$VERSION = '0.79_01';
+$VERSION = '0.79_02';
 
 sub stack {
    my $self    = shift;
@@ -2067,7 +2067,7 @@ use Text::Template::Simple::Constants qw(:all);
 use Text::Template::Simple::Util qw( DEBUG LOG ishref fatal );
 use Carp qw( croak );
 
-$VERSION = '0.79_01';
+$VERSION = '0.79_02';
 
 my $CACHE = {}; # in-memory template cache
 
@@ -2467,7 +2467,7 @@ package Text::Template::Simple;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.79_01';
+$VERSION = '0.79_02';
 
 use File::Spec;
 use Text::Template::Simple::Constants qw(:all);
@@ -2729,7 +2729,7 @@ generated with an automatic build tool. If you experience problems
 with this version, please install and use the supported standard
 version. This version is B<NOT SUPPORTED>.
 
-This document describes version C<0.79_01> of C<Text::Template::Simple>
+This document describes version C<0.79_02> of C<Text::Template::Simple>
 released on C<30 April 2009>.
 
 B<WARNING>: This version of the module is part of a

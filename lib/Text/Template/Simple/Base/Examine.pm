@@ -4,7 +4,7 @@ use vars qw($VERSION);
 use Text::Template::Simple::Util qw(:all);
 use Text::Template::Simple::Constants qw(:all);
 
-$VERSION = '0.79_01';
+$VERSION = '0.79_02';
 
 sub _examine {
    my $self   = shift;
@@ -79,7 +79,7 @@ Private module.
 
 =head1 DESCRIPTION
 
-This document describes version C<0.79_01> of C<Text::Template::Simple::Base::Examine>
+This document describes version C<0.79_02> of C<Text::Template::Simple::Base::Examine>
 released on C<30 April 2009>.
 
 B<WARNING>: This version of the module is part of a
