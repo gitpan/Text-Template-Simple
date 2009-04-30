@@ -2,112 +2,12 @@ package Text::Template::Simple::Base::Parser;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.70';
+$VERSION = '0.79_01';
 
-use Text::Template::Simple::Util qw(:all);
+use Text::Template::Simple::Util      qw(:all);
 use Text::Template::Simple::Constants qw(:all);
 
-# internal code templates
-my %INTERNAL = (
-   # we need string eval in this template to catch syntax errors
-   sub_include => q~
-      <%OBJECT%>->_compile(
-         do {
-            local $@;
-            my $file = eval '<%INCLUDE%>';
-            my $rv;
-            if ( my $e = $@ ) {
-               chomp $e;
-               $file ||= '<%INCLUDE%>';
-               my $m = "The parameter ($file) is not a file. "
-                     . "Error from sub-include ($file): $e";
-               $rv = [ ERROR => '<%ERROR_TITLE%> ' . $m ]
-            }
-            else {
-               $rv = $file;
-            }
-            $rv;
-         },
-         <%PARAMS%>,
-         {
-            _sub_inc => '<%TYPE%>',
-            _filter  => '<%FILTER%>',
-         }
-      )
-   ~,
-   no_monolith => q*
-      <%OBJECT%>->compile(
-         q~<%FILE%>~,
-         undef,
-         {
-            chkmt    => 1,
-            _sub_inc => q~<%TYPE%>~,
-         }
-      );
-   *,
-
-   # see _parse()
-   map_keys_check => q(
-      <%BUF%> .= exists <%HASH%>->{"<%KEY%>"}
-               ? (
-                  defined <%HASH%>->{"<%KEY%>"}
-                  ? <%HASH%>->{"<%KEY%>"}
-                  : "[ERROR] Key not defined: <%KEY%>"
-                  )
-               : "[ERROR] Invalid key: <%KEY%>"
-               ;
-   ),
-
-   map_keys_init => q(
-      <%BUF%> .= <%HASH%>->{"<%KEY%>"} || '';
-   ),
-   map_keys_default => q(
-      <%BUF%> .= <%HASH%>->{"<%KEY%>"};
-   ),
-
-   add_sigwarn => q(
-      my <%BUF%>;
-      local $SIG{__WARN__} = sub {
-         push @{ <%BUF%> }, $_[0];
-      };
-   ),
-   dump_sigwarn => q(
-      join("\n",
-            map {
-               s{ \A \s+    }{}xms;
-               s{    \s+ \z }{}xms;
-               "[warning] $_\n"
-            } @{ <%BUF%> }
-         );
-   ),
-
-   compile_error => <<'TEMPLATE_CONSTANT',
-Error compiling code fragment (cache id: <%CID%>):
-
-<%ERROR%>
--------------------------------
-PARSED CODE (VERBATIM):
--------------------------------
-
-<%PARSED%>
-
--------------------------------
-PARSED CODE    (tidied):
--------------------------------
-
-<%TIDIED%>
-TEMPLATE_CONSTANT
-
-   fragment => <<'TEMPLATE_CONSTANT',
-
-# BEGIN TIDIED FRAGMENT
-
-<%FRAGMENT%>
-
-# END TIDIED FRAGMENT
-TEMPLATE_CONSTANT
-
-);
+my %INTERNAL = __PACKAGE__->_set_internal_templates;
 
 sub _internal {
    my $self = shift;
@@ -124,9 +24,7 @@ sub _parse {
    my $as_is    = shift; # i.e.: do not parse -> static include
    #$self->[NEEDS_OBJECT] = 0; # reset
 
-   my $resume   = $self->[RESUME] || '';
-   my $ds       = $self->[DELIMITERS][DELIM_START];
-   my $de       = $self->[DELIMITERS][DELIM_END  ];
+   my($ds, $de) = @{ $self->[DELIMITERS] };
    my $faker    = $self->[INSIDE_INCLUDE] ? $self->_output_buffer_var
                                           : $self->[FAKER]
                                           ;
@@ -141,7 +39,7 @@ sub _parse {
 
    LOG( RAW => $raw ) if ( DEBUG() > 3 );
 
-   my $uthandler = $self->[USER_THANDLER];
+   my $uth = $self->[USER_THANDLER];
 
    my $h = {
       raw     => sub { ";$faker .= q~$_[0]~;" },
@@ -167,18 +65,15 @@ sub _parse {
       }
 
       elsif ( T_CODE == $id ) {
-         $code .= $h->{code}->($resume ? $self->_resume($str, 0, 1) : $str);
+         $code .= $h->{code}->($str);
       }
 
       elsif ( T_CAPTURE == $id ) {
-         $code .= $faker;
-         $code .= $resume ? $self->_resume($str, RESUME_NOSTART)
-                :           " .= sub { $str }->();";
+         $code .= $h->{capture}->( $str );
       }
 
       elsif ( T_DYNAMIC == $id || T_STATIC == $id ) {
-         $self->[NEEDS_OBJECT]++;
-         $code .= $h->{capture}->( $self->_include($id, $str) );
+         $code .= $h->{capture}->( $self->_needs_object->_include($id, $str) );
       }
 
       elsif ( T_MAPKEY == $id ) {
@@ -186,33 +81,15 @@ sub _parse {
       }
 
       elsif ( T_COMMAND == $id ) {
-         my($head, $raw_block) = split /;/, $str, 2;
-         my @buf = split RE_PIPE_SPLIT, '|' . trim($head);
-         shift(@buf);
-         my %com = map { trim $_ } @buf;
-
-         if ( $com{FILTER} ) {
-            # embed into the template & NEEDS_OBJECT++ ???
-            local $self->[FILENAME] = '<ANON BLOCK>';
-            $self->_call_filters(
-               \$raw_block,
-               split RE_FILTER_SPLIT, $com{FILTER}
-            );
-         }
-
-         $code .= $h->{raw}->($raw_block);
+         $code .= $h->{raw}->( $self->_parse_command( $str ) );
       }
 
       else {
-         if ( $uthandler ) {
-            LOG( USER_THANDLER => "$id") if DEBUG();
-            $code .= $uthandler->( $self, $id ,$str, $h );
-         }
-         else {
-            LOG( UNKNOWN_TOKEN => "Adding unknown token as RAW: $id($str)")
-               if DEBUG();
-            $code .= $h->{raw}->($str);
-         }
+         LOG(
+            $uth  ? (USER_THANDLER => "$id")
+                  : (UNKNOWN_TOKEN => "Adding unknown token as RAW: $id($str)")
+         ) if DEBUG;
+         $code .= $uth ? $uth->( $self, $id ,$str, $h ) : $h->{raw}->( $str );
       }
 
    }
@@ -227,6 +104,23 @@ sub _parse {
    ) if $inside;
 
    return $self->_wrapper( $code, $cache_id, $faker, $map_keys, $h );
+}
+
+sub _parse_command {
+   my $self = shift;
+   my $str  = shift;
+   my($head, $raw_block) = split /;/, $str, 2;
+   my @buf  = split RE_PIPE_SPLIT, '|' . trim($head);
+   shift(@buf);
+   my %com  = map { trim $_ } @buf;
+
+   if ( $com{FILTER} ) {
+      # embed into the template & NEEDS_OBJECT++ ???
+      local $self->[FILENAME] = '<ANON BLOCK>';
+      $self->_call_filters( \$raw_block, split RE_FILTER_SPLIT, $com{FILTER} );
+   }
+
+   return $raw_block;
 }
 
 sub _chomp {
@@ -379,41 +273,112 @@ sub _add_stack {
    return "$channel stack( { type => '$type', name => '$cs_name' } );";
 }
 
-# TODO: unstable. consider removing this thing (also the constants)
-sub _resume {
-   my $self    = shift;
-   my $token   = shift           || return;
-   my $nostart = shift           || 0;
-   my $is_code = shift           || 0;
-   my $resume  = $self->[RESUME] || '';
-   my $start   = $nostart ? '' : $self->[FAKER];
-   my $void    = $nostart ? 0  : 1; # not a self-printing block
-
-   if ( $token && $resume && $token !~ RESUME_MY ) {
-      if (
-            $token !~ RESUME_CURLIES &&
-            $token !~ RESUME_ELSIF   &&
-            $token !~ RESUME_ELSE    &&
-            $token !~ RESUME_LOOP
-      ) {
-         LOG( RESUME_OK => $token ) if DEBUG() > 2;
-         my $rvar        = $self->_output_buffer_var('array');
-         my $resume_code = RESUME_TEMPLATE;
-         foreach my $replace (
-            [ RVAR  => $rvar             ],
-            [ TOKEN => $token            ],
-            [ PID   => $self->_class_id  ],
-            [ VOID  => $void             ],
-         ) {
-            $resume_code =~ s{ <% $replace->[0] %> }{$replace->[1]}xmsg;
+sub _set_internal_templates {
+   # we need string eval in this template to catch syntax errors
+   sub_include => q~
+      <%OBJECT%>->_compile(
+         do {
+            local $@;
+            my $file = eval '<%INCLUDE%>';
+            my $rv;
+            if ( my $e = $@ ) {
+               chomp $e;
+               $file ||= '<%INCLUDE%>';
+               my $m = "The parameter ($file) is not a file. "
+                     . "Error from sub-include ($file): $e";
+               $rv = [ ERROR => '<%ERROR_TITLE%> ' . $m ]
+            }
+            else {
+               $rv = $file;
+            }
+            $rv;
+         },
+         <%PARAMS%>,
+         {
+            _sub_inc => '<%TYPE%>',
+            _filter  => '<%FILTER%>',
          }
-         return $start . $resume_code;
-      }
-   }
+      )
+   ~,
+   no_monolith => q*
+      <%OBJECT%>->compile(
+         q~<%FILE%>~,
+         undef,
+         {
+            chkmt    => 1,
+            _sub_inc => q~<%TYPE%>~,
+         }
+      );
+   *,
 
-   LOG( RESUME_NOT => $token ) if DEBUG() > 2;
+   # see _parse()
+   map_keys_check => q(
+      <%BUF%> .= exists <%HASH%>->{"<%KEY%>"}
+               ? (
+                  defined <%HASH%>->{"<%KEY%>"}
+                  ? <%HASH%>->{"<%KEY%>"}
+                  : "[ERROR] Key not defined: <%KEY%>"
+                  )
+               : "[ERROR] Invalid key: <%KEY%>"
+               ;
+   ),
 
-   return $is_code ? $token : "$start .= $token;"
+   map_keys_init => q(
+      <%BUF%> .= <%HASH%>->{"<%KEY%>"} || '';
+   ),
+   map_keys_default => q(
+      <%BUF%> .= <%HASH%>->{"<%KEY%>"};
+   ),
+
+   add_sigwarn => q(
+      my <%BUF%>;
+      local $SIG{__WARN__} = sub {
+         push @{ <%BUF%> }, $_[0];
+      };
+   ),
+   dump_sigwarn => q(
+      join("\n",
+            map {
+               s{ \A \s+    }{}xms;
+               s{    \s+ \z }{}xms;
+               "[warning] $_\n"
+            } @{ <%BUF%> }
+         );
+   ),
+
+   compile_error => <<'TEMPLATE_CONSTANT',
+Error compiling code fragment (cache id: <%CID%>):
+
+<%ERROR%>
+-------------------------------
+PARSED CODE (VERBATIM):
+-------------------------------
+
+<%PARSED%>
+
+-------------------------------
+PARSED CODE    (tidied):
+-------------------------------
+
+<%TIDIED%>
+TEMPLATE_CONSTANT
+
+   fragment => <<'TEMPLATE_CONSTANT',
+
+# BEGIN TIDIED FRAGMENT
+
+<%FRAGMENT%>
+
+# END TIDIED FRAGMENT
+TEMPLATE_CONSTANT
+
+   disk_cache_comment => <<"TEMPLATE_CONSTANT",
+# !!!   W A R N I N G      W A R N I N G      W A R N I N G   !!!
+# This file was automatically generated by <%NAME%> on <%DATE%>.
+# This file is a compiled template cache.
+# Any changes you make here will be lost.
+#
+TEMPLATE_CONSTANT
 }
 
 1;
@@ -430,8 +395,12 @@ Private module.
 
 =head1 DESCRIPTION
 
-This document describes version C<0.70> of C<Text::Template::Simple::Base::Parser>
-released on C<26 April 2009>.
+This document describes version C<0.79_01> of C<Text::Template::Simple::Base::Parser>
+released on C<30 April 2009>.
+
+B<WARNING>: This version of the module is part of a
+developer (beta) release of the distribution and it is
+not suitable for production use.
 
 Private module.
 

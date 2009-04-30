@@ -2,6 +2,16 @@ Revision history for Perl extension Text::Template::Simple.
 
 Time zone is UTC+2.
 
+0.79_01 Thu Apr 30 05:08:23 2009
+   => Internal cleanup.
+   => Add version checking into template disk cache.
+   => Remove resume() completely.
+      Was:
+         - too complex
+         - too buggy
+         - dumb source filter
+   => Added support for taint mode.
+
 0.70 Sun Apr 26 16:43:10 2009
    => Bump the version for a new stable release.
    => Highlights:

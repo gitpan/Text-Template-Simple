@@ -165,19 +165,6 @@ C<monolith> is disabled by default.
       post_chomp => $post,
    );
 
-=head3 resume
-
-If has a true value, the C<die()>able code fragments will not terminate
-the compilation of remaining parts, the compiler will simply resume 
-it's job. However, enabling this may result with a performance penalty
-if cache is not enabled. If cache is enabled, the performance penalty
-will show itself after every compilation process (upto C<2x> slower).
-
-This option is currently experimental and uses more resources.
-Only enable it for debugging.
-
-CAVEAT: C<< <% use MODULE %> >> directives won't resume.
-
 =head3 safe
 
 Set this to a true value if you want to execute the template
@@ -239,6 +226,28 @@ for more information.
 
 If has a true value, the template will be compiled under strict.
 Enabled by default.
+
+=head3 taint_mode
+
+You need to run your template controller with the C<-T> flag enabled. Then
+you can set various taint mode options.
+
+   use Text::Template::Simple::Constants qw(:taint);
+   my $tmode = TAINT_CHECK_FH_READ;
+   my $restrict = Text::Template::Simple->new( taint_mode => $tmode );
+
+With the C<:taint> key, you'll get access to these constants (bitwise flags):
+
+   TAINT_CHECK_NORMAL    * Default
+   TAINT_CHECK_WINDOWS   Some tests are disabled under Windows OS. Enable them
+   TAINT_CHECK_FH_READ   FH must only be readable by the current user
+
+To have a more strict taint test:
+
+   $tmode = TAINT_CHECK_FH_READ | TAINT_CHECK_WINDOWS;
+
+However, note that this'll cause failures unless file mode is C<600>. And it will
+cause failures on Windows.
 
 =head3 verbose_errors
 
@@ -522,6 +531,14 @@ How to add your own tokens into Text::Template::Simple?
 
 =end EXPERTS
 
+=head1 CAVEATS
+
+Taint checking on filehandles have limited tests under Windows. Since file
+permission is always C<0666>, g-o read & g-o write tests are disabled under
+Windows and g-o read taint checking is also disabled by default on all
+platforms. However, it is possible to force to enable those. See L<taint_mode>
+for more information.
+
 =head1 SEE ALSO
 
 L<Text::Template::Simple>.
@@ -532,7 +549,7 @@ Burak GE<252>rsoy, E<lt>burakE<64>cpan.orgE<gt>
 
 =head1 COPYRIGHT
 
-Copyright 2004-2008 Burak GE<252>rsoy. All rights reserved.
+Copyright 2004-2009 Burak GE<252>rsoy. All rights reserved.
 
 =head1 LICENSE
 

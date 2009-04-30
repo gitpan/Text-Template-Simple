@@ -2,7 +2,7 @@ package Text::Template::Simple;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.70';
+$VERSION = '0.79_01';
 
 use File::Spec;
 use Text::Template::Simple::Constants qw(:all);
@@ -48,8 +48,7 @@ my %DEFAULT = ( # default object attributes
    verbose_errors   =>  0,    # bool
    pre_chomp        => CHOMP_NONE,
    post_chomp       => CHOMP_NONE,
-   # TODO: Consider removing this
-   resume           =>  0,    # resume on error?
+   taint_mode       => TAINT_CHECK_NORMAL,
 );
 
 my @EXPORT_OK = qw( tts );
@@ -155,7 +154,8 @@ sub _init {
 
    $self->[IO_OBJECT] = $self->connector('IO')->new(
                            $self->[IOLAYER],
-                           $self->[INCLUDE_PATHS]
+                           $self->[INCLUDE_PATHS],
+                           $self->[TAINT_MODE],
                         );
 
    if ( $self->[CACHE_DIR] ) {
@@ -216,6 +216,12 @@ sub _tidy {
    return $buf;
 }
 
+sub _needs_object {
+   my $self = shift;
+   $self->[NEEDS_OBJECT]++;
+   return $self;
+}
+
 sub DESTROY {
    my $self = shift || return;
    LOG( DESTROY => ref $self ) if DEBUG();
@@ -253,14 +259,18 @@ Where C<hello.tts> has this content:
 
 =head1 DESCRIPTION
 
-This document describes version C<0.70> of C<Text::Template::Simple>
-released on C<26 April 2009>.
+This document describes version C<0.79_01> of C<Text::Template::Simple>
+released on C<30 April 2009>.
+
+B<WARNING>: This version of the module is part of a
+developer (beta) release of the distribution and it is
+not suitable for production use.
 
 This is a simple template module. There is no extra template/mini 
-language. Instead, it uses Perl as a template language. Templates
-can be cached on disk or inside the memory via internal cache 
+language. Instead, it uses Perl as the template language. Templates
+can be cached on disk or inside the memory via the internal cache 
 manager. It is also possible to use static/dynamic includes,
-pass parameters to includes and allpt filters on them.
+pass parameters to includes and apply filters on them.
 Also see L<Text::Template::Simple::API> for the full API definiton.
 
 =head1 SYNTAX
@@ -271,31 +281,31 @@ Template syntax is very simple. There are few kinds of delimiters:
 
 =item *
 
-Code Blocks: C<< <% %> >>
+C<< <% %>  >> Code Blocks
 
 =item *
 
-Self-printing Blocks: C<< <%= %> >>
+C<< <%= %> >> Self-printing Blocks
 
 =item *
 
-Escaped Delimiters: C<< <%! %> >>
+C<< <%! %> >> Escaped Delimiters
 
 =item *
 
-Static Include Directives: C<< <%+ %> >>
+C<< <%+ %> >> Static Include Directives
 
 =item *
 
-Dynamic include directives C<< <%* %> >>
+C<< <%* %> >> Dynamic include directives
 
 =item *
 
-Comment Directives: C<< <%# %> >>
+C<< <%# %> >> Comment Directives
 
 =item *
 
-Blocks with commands: C<< <%| %> >>.
+C<< <%| %> >> Blocks with commands
 
 =back
 
@@ -354,7 +364,7 @@ parsing for the included files, use the dynamic includes:
    <%* my_other.html %>
    <%* my_other.txt  %>
 
-Interpolation is also supported with both kind of includes, so the following
+Interpolation is also supported with both kinds of includes, so the following
 is valid code:
 
    <%+ "/path/to/" . $txt    %>
@@ -640,7 +650,7 @@ Burak GE<252>rsoy, E<lt>burakE<64>cpan.orgE<gt>
 
 =head1 COPYRIGHT
 
-Copyright 2004-2008 Burak GE<252>rsoy. All rights reserved.
+Copyright 2004-2009 Burak GE<252>rsoy. All rights reserved.
 
 =head1 LICENSE
 

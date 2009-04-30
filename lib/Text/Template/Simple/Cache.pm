@@ -6,7 +6,7 @@ use Text::Template::Simple::Constants qw(:all);
 use Text::Template::Simple::Util qw( DEBUG LOG ishref fatal );
 use Carp qw( croak );
 
-$VERSION = '0.70';
+$VERSION = '0.79_01';
 
 my $CACHE = {}; # in-memory template cache
 
@@ -48,8 +48,8 @@ sub reset {
       my $file;
 
       while ( defined( $file = readdir CDIRH ) ) {
-         next if $file !~ m{ $ext \z}xmsi;
-         $file = File::Spec->catfile( $parent->[CACHE_DIR], $file );
+         next if $file !~ m{ ( .* $ext) \z}xmsi;
+         $file = File::Spec->catfile( $parent->[CACHE_DIR], $1 );
          LOG( UNLINK => $file ) if DEBUG();
          unlink $file;
       }
@@ -266,6 +266,12 @@ sub hit {
             %meta = $self->_get_meta( $1 );
             fatal('tts.cache.hit.meta', $@) if $@;
          }
+         if ( ! $meta{VERSION} || $meta{VERSION} + 0 < PARENT->VERSION ) {
+            my $id = $parent->[FILENAME] || $cache_id;
+            warn "(This messeage will only appear once) $id was compiled with"
+                ." an old version of " . PARENT . ". Resetting cache.";
+            return;
+         }
          if ( my $mtime = $meta{CHKMT} ) {
             if ( $mtime != $chkmt ) {
                LOG( MTIME_DIFF => "\tOLD: $mtime\n\t\tNEW: $chkmt")
@@ -319,6 +325,7 @@ sub populate {
             CHKMT        => $chkmt,
             NEEDS_OBJECT => $parent->[NEEDS_OBJECT],
             FAKER_SELF   => $parent->[FAKER_SELF],
+            VERSION      => PARENT->VERSION,
          );
 
          my $cache = File::Spec->catfile( $cdir, $cache_id . CACHE_EXT);
@@ -326,10 +333,14 @@ sub populate {
          $fh->open($cache, '>') or fatal('tts.cache.populate.write', $cache, $!);
          flock $fh, Fcntl::LOCK_EX() if IS_FLOCK;
          $parent->io->layer($fh);
-         print $fh '#META:' . $self->_set_meta(\%meta) . "\n",
-                   sprintf( DISK_CACHE_COMMENT,
-                            PARENT->_class_id, scalar localtime time),
-                   $parsed; 
+         my $warn =  $parent->_mini_compiler(
+                        $parent->_internal('disk_cache_comment'),
+                        {
+                           NAME => PARENT->_class_id,
+                           DATE => scalar localtime time,
+                        }
+                     );
+         print $fh '#META:' . $self->_set_meta(\%meta) . "\n", $warn, $parsed; 
          flock $fh, Fcntl::LOCK_UN() if IS_FLOCK;
          close $fh;
 
@@ -405,8 +416,12 @@ TODO
 
 =head1 DESCRIPTION
 
-This document describes version C<0.70> of C<Text::Template::Simple::Cache>
-released on C<26 April 2009>.
+This document describes version C<0.79_01> of C<Text::Template::Simple::Cache>
+released on C<30 April 2009>.
+
+B<WARNING>: This version of the module is part of a
+developer (beta) release of the distribution and it is
+not suitable for production use.
 
 Cache manager for C<Text::Template::Simple>.
 

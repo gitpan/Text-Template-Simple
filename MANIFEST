@@ -77,6 +77,35 @@ t/200-all-modules-have-the-same-version.t
 t/201-pod.t
 t/202-pod-coverage.t
 Makefile.PL	Generated automatically
+t/003-taint-mode-simple.t
+t/004-taint-mode-extend.t
+t/005-taint-mode-safe.t
+t/006-taint-mode-iolayer.t
+t/007-taint-mode-stack.t
+t/008-taint-mode-escape-delim.t
+t/009-taint-mode-subclass.t
+t/010-taint-mode-subclass-define-bufvar.t
+t/011-taint-mode-cache-mem.t
+t/012-taint-mode-cache-disk.t
+t/013-taint-mode-cache-other.t
+t/014-taint-mode-interface.t
+t/015-taint-mode-connector.t
+t/016-taint-mode-include-static.t
+t/017-taint-mode-include-dynamic.t
+t/018-taint-mode-include-dynamic-recursive.t
+t/019-taint-mode-dynamic-static-interpolate.t
+t/020-taint-mode-fake-include-recursive.t
+t/021-taint-mode-comment.t
+t/022-taint-mode-monolith.t
+t/023-taint-mode-change-delims.t
+t/024-taint-mode-include-paths.t
+t/025-taint-mode-chomp.t
+t/026-taint-mode-template-name-dollar-zero.t
+t/027-taint-mode-include-param.t
+t/028-taint-mode-include-filter.t
+t/029-taint-mode-block-filter.t
+t/030-taint-mode-toke-substr.t
+t/031-taint-mode-capture-warnings.t
 monolithic_version/README
 monolithic_version/Text/Template/Simple.pm	The monolithic version of Text::Template::Simple to ease dropping into web servers. Generated automatically.
 LICENSE
