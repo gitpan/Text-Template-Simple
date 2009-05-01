@@ -56,6 +56,7 @@ sub run {
 
         if ( $type eq 'MEMORY' ) {
             eval { require Devel::Size; };
+            skip("Devel::Size not installed") if $@;
             # RT#14849 was fixed in this *unofficial* release
             skip("Your Devel::Size is too old and has a known *serious* bug")
                 if Devel::Size->VERSION < 0.72;

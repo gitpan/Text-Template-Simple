@@ -2,7 +2,7 @@ package Text::Template::Simple::Constants;
 use strict;
 use vars qw($VERSION $OID $DID @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
 
-$VERSION = '0.79_02';
+$VERSION = '0.79_03';
 
 # object fields
 BEGIN { $OID = -1 } # init object field id counter
@@ -115,6 +115,8 @@ use constant TOKEN_CHOMP_PREV =>  1; # sub-key for TOKEN_CHOMP
 
 use constant LAST_TOKEN       => -1;
 use constant PREVIOUS_TOKEN   => -2;
+
+use constant CACHE_FMODE      => 0600;
 
 # SHA seems to be more accurate, so we'll try them first.
 # Pure-Perl ones are slower, but they are fail-safes.
@@ -258,6 +260,7 @@ BEGIN {
                         RE_NONFILE
                         STAT_SIZE
                         MAX_RECURSION
+                        CACHE_FMODE
                      )],
    );
 
@@ -283,8 +286,8 @@ TODO
 
 =head1 DESCRIPTION
 
-This document describes version C<0.79_02> of C<Text::Template::Simple::Constants>
-released on C<30 April 2009>.
+This document describes version C<0.79_03> of C<Text::Template::Simple::Constants>
+released on C<1 May 2009>.
 
 B<WARNING>: This version of the module is part of a
 developer (beta) release of the distribution and it is

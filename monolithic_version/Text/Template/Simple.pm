@@ -33,7 +33,7 @@ package Text::Template::Simple::Constants;
 use strict;
 use vars qw($VERSION $OID $DID @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
 
-$VERSION = '0.79_02';
+$VERSION = '0.79_03';
 
 # object fields
 BEGIN { $OID = -1 } # init object field id counter
@@ -146,6 +146,8 @@ use constant TOKEN_CHOMP_PREV =>  1; # sub-key for TOKEN_CHOMP
 
 use constant LAST_TOKEN       => -1;
 use constant PREVIOUS_TOKEN   => -2;
+
+use constant CACHE_FMODE      => 0600;
 
 # SHA seems to be more accurate, so we'll try them first.
 # Pure-Perl ones are slower, but they are fail-safes.
@@ -289,6 +291,7 @@ BEGIN {
                         RE_NONFILE
                         STAT_SIZE
                         MAX_RECURSION
+                        CACHE_FMODE
                      )],
    );
 
@@ -306,7 +309,7 @@ use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
 use Text::Template::Simple::Constants qw( :info DIGEST_MODS );
 use Carp qw( croak );
 
-$VERSION = '0.79_02';
+$VERSION = '0.79_03';
 
 BEGIN {
    if ( IS_WINDOWS ) {
@@ -389,6 +392,7 @@ my $lang = {
       'tts.cache.hit.meta'                       => 'Can not get meta data: %s',
       'tts.cache.hit.cache'                      => 'Error loading from disk cache: %s',
       'tts.cache.populate.write'                 => 'Error writing disk-cache %s : %s',
+      'tts.cache.populate.chmod'                 => 'Can not change file mode',
       'tts.base.compiler._compile.notmp'         => 'No template specified',
       'tts.base.compiler._compile.param'         => 'params must be an arrayref!',
       'tts.base.compiler._compile.opt'           => 'opts must be a hashref!',
@@ -521,7 +525,7 @@ use strict;
 use vars qw($VERSION);
 use Text::Template::Simple::Dummy;
 
-$VERSION = '0.79_02';
+$VERSION = '0.79_03';
 
 sub _compile { shift; return __PACKAGE__->_object->reval(shift) }
 
@@ -554,7 +558,7 @@ use overload q{""} => 'get';
 use Text::Template::Simple::Constants qw( MAX_FL );
 use Text::Template::Simple::Util      qw( DIGEST fatal );
 
-$VERSION = '0.79_02';
+$VERSION = '0.79_03';
 
 my $RE_INVALID = qr{[^A-Za-z_0-9]};
 
@@ -593,7 +597,7 @@ package Text::Template::Simple::Base::Parser;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.79_02';
+$VERSION = '0.79_03';
 
 use Text::Template::Simple::Util      qw(:all);
 use Text::Template::Simple::Constants qw(:all);
@@ -978,7 +982,7 @@ use vars qw($VERSION);
 use Text::Template::Simple::Util qw(:all);
 use Text::Template::Simple::Constants qw(:all);
 
-$VERSION = '0.79_02';
+$VERSION = '0.79_03';
 
 sub _include_no_monolith {
    # no monolith eh?
@@ -1141,7 +1145,7 @@ use vars qw($VERSION);
 use Text::Template::Simple::Util qw(:all);
 use Text::Template::Simple::Constants qw(:all);
 
-$VERSION = '0.79_02';
+$VERSION = '0.79_03';
 
 sub _examine {
    my $self   = shift;
@@ -1208,7 +1212,7 @@ use vars qw($VERSION);
 use Text::Template::Simple::Util qw(:all);
 use Text::Template::Simple::Constants qw(:all);
 
-$VERSION = '0.79_02';
+$VERSION = '0.79_03';
 
 sub _compiler { shift->[SAFE] ? COMPILER_SAFE : COMPILER }
 
@@ -1358,7 +1362,7 @@ package Text::Template::Simple::Tokenizer;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.79_02';
+$VERSION = '0.79_03';
 
 use constant CMD_CHAR             =>  0;
 use constant CMD_ID               =>  1;
@@ -1679,7 +1683,7 @@ use constant MY_IO_LAYER      => 0;
 use constant MY_INCLUDE_PATHS => 1;
 use constant MY_TAINT_MODE    => 2;
 
-$VERSION = '0.79_02';
+$VERSION = '0.79_03';
 
 sub new {
    my $class = shift;
@@ -1859,7 +1863,7 @@ use vars qw($VERSION);
 use Text::Template::Simple::Caller;
 use Text::Template::Simple::Util qw();
 
-$VERSION = '0.79_02';
+$VERSION = '0.79_03';
 
 sub stack { # just a wrapper
    my $opt = shift || {};
@@ -1875,7 +1879,7 @@ use strict;
 use vars qw($VERSION);
 use Text::Template::Simple::Dummy;
 
-$VERSION = '0.79_02';
+$VERSION = '0.79_03';
 
 sub _compile { shift; return eval shift }
 
@@ -1894,7 +1898,7 @@ use constant HINTS      => 8;
 use constant BITMASK    => 9;
 use Text::Template::Simple::Util qw( ishref fatal );
 
-$VERSION = '0.79_02';
+$VERSION = '0.79_03';
 
 sub stack {
    my $self    = shift;
@@ -2067,7 +2071,7 @@ use Text::Template::Simple::Constants qw(:all);
 use Text::Template::Simple::Util qw( DEBUG LOG ishref fatal );
 use Carp qw( croak );
 
-$VERSION = '0.79_02';
+$VERSION = '0.79_03';
 
 my $CACHE = {}; # in-memory template cache
 
@@ -2308,6 +2312,19 @@ sub has {
    }
 }
 
+sub _is_meta_version_old {
+   my $self = shift;
+   my $v    = shift;
+   return 1 if ! $v; # no version? archaic then
+   my $pv = PARENT->VERSION;
+   foreach my $i ( $v, $pv ) {
+      $i  =~ tr/_//d; # underscore versions cause warnings
+      $i +=  0;       # force number
+   }
+   return 1 if $v < $pv;
+   return;
+}
+
 sub hit {
    # TODO: return $CODE, $META;
    my $self     = shift;
@@ -2327,7 +2344,7 @@ sub hit {
             %meta = $self->_get_meta( $1 );
             fatal('tts.cache.hit.meta', $@) if $@;
          }
-         if ( ! $meta{VERSION} || $meta{VERSION} + 0 < PARENT->VERSION ) {
+         if ( $self->_is_meta_version_old( $meta{VERSION} ) ) {
             my $id = $parent->[FILENAME] || $cache_id;
             warn "(This messeage will only appear once) $id was compiled with"
                 ." an old version of " . PARENT . ". Resetting cache.";
@@ -2404,6 +2421,7 @@ sub populate {
          print $fh '#META:' . $self->_set_meta(\%meta) . "\n", $warn, $parsed; 
          flock $fh, Fcntl::LOCK_UN() if IS_FLOCK;
          close $fh;
+         chmod(CACHE_FMODE, $cache) || fatal('tts.cache.populate.chmod');
 
          ($CODE, $error) = $parent->_wrap_compile($parsed);
          LOG( DISK_POPUL => $cache_id ) if DEBUG() > 2;
@@ -2467,7 +2485,7 @@ package Text::Template::Simple;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.79_02';
+$VERSION = '0.79_03';
 
 use File::Spec;
 use Text::Template::Simple::Constants qw(:all);
@@ -2729,8 +2747,8 @@ generated with an automatic build tool. If you experience problems
 with this version, please install and use the supported standard
 version. This version is B<NOT SUPPORTED>.
 
-This document describes version C<0.79_02> of C<Text::Template::Simple>
-released on C<30 April 2009>.
+This document describes version C<0.79_03> of C<Text::Template::Simple>
+released on C<1 May 2009>.
 
 B<WARNING>: This version of the module is part of a
 developer (beta) release of the distribution and it is

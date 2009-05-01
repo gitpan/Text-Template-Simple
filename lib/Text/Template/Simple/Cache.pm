@@ -6,7 +6,7 @@ use Text::Template::Simple::Constants qw(:all);
 use Text::Template::Simple::Util qw( DEBUG LOG ishref fatal );
 use Carp qw( croak );
 
-$VERSION = '0.79_02';
+$VERSION = '0.79_03';
 
 my $CACHE = {}; # in-memory template cache
 
@@ -247,6 +247,19 @@ sub has {
    }
 }
 
+sub _is_meta_version_old {
+   my $self = shift;
+   my $v    = shift;
+   return 1 if ! $v; # no version? archaic then
+   my $pv = PARENT->VERSION;
+   foreach my $i ( $v, $pv ) {
+      $i  =~ tr/_//d; # underscore versions cause warnings
+      $i +=  0;       # force number
+   }
+   return 1 if $v < $pv;
+   return;
+}
+
 sub hit {
    # TODO: return $CODE, $META;
    my $self     = shift;
@@ -266,7 +279,7 @@ sub hit {
             %meta = $self->_get_meta( $1 );
             fatal('tts.cache.hit.meta', $@) if $@;
          }
-         if ( ! $meta{VERSION} || $meta{VERSION} + 0 < PARENT->VERSION ) {
+         if ( $self->_is_meta_version_old( $meta{VERSION} ) ) {
             my $id = $parent->[FILENAME] || $cache_id;
             warn "(This messeage will only appear once) $id was compiled with"
                 ." an old version of " . PARENT . ". Resetting cache.";
@@ -343,6 +356,7 @@ sub populate {
          print $fh '#META:' . $self->_set_meta(\%meta) . "\n", $warn, $parsed; 
          flock $fh, Fcntl::LOCK_UN() if IS_FLOCK;
          close $fh;
+         chmod(CACHE_FMODE, $cache) || fatal('tts.cache.populate.chmod');
 
          ($CODE, $error) = $parent->_wrap_compile($parsed);
          LOG( DISK_POPUL => $cache_id ) if DEBUG() > 2;
@@ -416,8 +430,8 @@ TODO
 
 =head1 DESCRIPTION
 
-This document describes version C<0.79_02> of C<Text::Template::Simple::Cache>
-released on C<30 April 2009>.
+This document describes version C<0.79_03> of C<Text::Template::Simple::Cache>
+released on C<1 May 2009>.
 
 B<WARNING>: This version of the module is part of a
 developer (beta) release of the distribution and it is

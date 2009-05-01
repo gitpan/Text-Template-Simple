@@ -4,7 +4,7 @@ use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
 use Text::Template::Simple::Constants qw( :info DIGEST_MODS );
 use Carp qw( croak );
 
-$VERSION = '0.79_02';
+$VERSION = '0.79_03';
 
 BEGIN {
    if ( IS_WINDOWS ) {
@@ -87,6 +87,7 @@ my $lang = {
       'tts.cache.hit.meta'                       => 'Can not get meta data: %s',
       'tts.cache.hit.cache'                      => 'Error loading from disk cache: %s',
       'tts.cache.populate.write'                 => 'Error writing disk-cache %s : %s',
+      'tts.cache.populate.chmod'                 => 'Can not change file mode',
       'tts.base.compiler._compile.notmp'         => 'No template specified',
       'tts.base.compiler._compile.param'         => 'params must be an arrayref!',
       'tts.base.compiler._compile.opt'           => 'opts must be a hashref!',
@@ -227,8 +228,8 @@ TODO
 
 =head1 DESCRIPTION
 
-This document describes version C<0.79_02> of C<Text::Template::Simple::Util>
-released on C<30 April 2009>.
+This document describes version C<0.79_03> of C<Text::Template::Simple::Util>
+released on C<1 May 2009>.
 
 B<WARNING>: This version of the module is part of a
 developer (beta) release of the distribution and it is
