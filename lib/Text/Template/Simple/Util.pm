@@ -4,7 +4,7 @@ use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
 use Text::Template::Simple::Constants qw( :info DIGEST_MODS );
 use Carp qw( croak );
 
-$VERSION = '0.79_03';
+$VERSION = '0.79_04';
 
 BEGIN {
    if ( IS_WINDOWS ) {
@@ -191,7 +191,7 @@ sub DIGEST {
       fatal( 'tts.util.digest' => join(', ', @report), $last, $@ );
    }
 
-   LOG( DIGESTER => $DIGEST ) if DEBUG();
+   LOG( DIGESTER => $DIGEST . ' v' . $DIGEST->VERSION ) if DEBUG();
    return $DIGEST->new;
 }
 
@@ -207,11 +207,12 @@ sub LOG {
 }
 
 sub _is_parent_object {
-   return 0 if not defined $_[0];
-   return 1 if         ref $_[0];
-   return 1 if             $_[0] eq __PACKAGE__;
-   return 1 if             $_[0] eq PARENT;
-   return 0;
+   return ! defined $_[0]       ? 0
+         : ref $_[0]            ? 1
+         : $_[0] eq __PACKAGE__ ? 1
+         : $_[0] eq PARENT      ? 1
+         :                        0
+         ;
 }
 
 1;
@@ -228,8 +229,8 @@ TODO
 
 =head1 DESCRIPTION
 
-This document describes version C<0.79_03> of C<Text::Template::Simple::Util>
-released on C<1 May 2009>.
+This document describes version C<0.79_04> of C<Text::Template::Simple::Util>
+released on C<3 May 2009>.
 
 B<WARNING>: This version of the module is part of a
 developer (beta) release of the distribution and it is

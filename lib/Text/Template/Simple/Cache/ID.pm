@@ -3,14 +3,16 @@ use strict;
 use vars qw($VERSION);
 use overload q{""} => 'get';
 use Text::Template::Simple::Constants qw( MAX_FL );
-use Text::Template::Simple::Util      qw( DIGEST fatal );
+use Text::Template::Simple::Util      qw( DEBUG DIGEST fatal );
 
-$VERSION = '0.79_03';
+$VERSION = '0.79_04';
 
 my $RE_INVALID = qr{[^A-Za-z_0-9]};
 
 sub new {
-   bless do { \my $anon }, shift;
+   my $class = shift;
+   my $self  = bless do { \my $anon }, $class;
+   return $self;
 }
 
 sub get { my $self = shift; $$self }
@@ -40,6 +42,12 @@ sub _custom {
    return $data;
 }
 
+sub DESTROY {
+   my $self = shift || return;
+   LOG( DESTROY => ref $self ) if DEBUG();
+   return;
+}
+
 1;
 
 __END__
@@ -54,8 +62,8 @@ TODO
 
 =head1 DESCRIPTION
 
-This document describes version C<0.79_03> of C<Text::Template::Simple::Cache::ID>
-released on C<1 May 2009>.
+This document describes version C<0.79_04> of C<Text::Template::Simple::Cache::ID>
+released on C<3 May 2009>.
 
 B<WARNING>: This version of the module is part of a
 developer (beta) release of the distribution and it is

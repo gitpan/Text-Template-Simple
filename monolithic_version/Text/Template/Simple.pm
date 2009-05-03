@@ -33,7 +33,7 @@ package Text::Template::Simple::Constants;
 use strict;
 use vars qw($VERSION $OID $DID @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
 
-$VERSION = '0.79_03';
+$VERSION = '0.79_04';
 
 # object fields
 BEGIN { $OID = -1 } # init object field id counter
@@ -309,7 +309,7 @@ use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
 use Text::Template::Simple::Constants qw( :info DIGEST_MODS );
 use Carp qw( croak );
 
-$VERSION = '0.79_03';
+$VERSION = '0.79_04';
 
 BEGIN {
    if ( IS_WINDOWS ) {
@@ -496,7 +496,7 @@ sub DIGEST {
       fatal( 'tts.util.digest' => join(', ', @report), $last, $@ );
    }
 
-   LOG( DIGESTER => $DIGEST ) if DEBUG();
+   LOG( DIGESTER => $DIGEST . ' v' . $DIGEST->VERSION ) if DEBUG();
    return $DIGEST->new;
 }
 
@@ -512,11 +512,12 @@ sub LOG {
 }
 
 sub _is_parent_object {
-   return 0 if not defined $_[0];
-   return 1 if         ref $_[0];
-   return 1 if             $_[0] eq __PACKAGE__;
-   return 1 if             $_[0] eq PARENT;
-   return 0;
+   return ! defined $_[0]       ? 0
+         : ref $_[0]            ? 1
+         : $_[0] eq __PACKAGE__ ? 1
+         : $_[0] eq PARENT      ? 1
+         :                        0
+         ;
 }
 
 package Text::Template::Simple::Compiler::Safe;
@@ -525,7 +526,7 @@ use strict;
 use vars qw($VERSION);
 use Text::Template::Simple::Dummy;
 
-$VERSION = '0.79_03';
+$VERSION = '0.79_04';
 
 sub _compile { shift; return __PACKAGE__->_object->reval(shift) }
 
@@ -556,14 +557,16 @@ use strict;
 use vars qw($VERSION);
 use overload q{""} => 'get';
 use Text::Template::Simple::Constants qw( MAX_FL );
-use Text::Template::Simple::Util      qw( DIGEST fatal );
+use Text::Template::Simple::Util      qw( DEBUG DIGEST fatal );
 
-$VERSION = '0.79_03';
+$VERSION = '0.79_04';
 
 my $RE_INVALID = qr{[^A-Za-z_0-9]};
 
 sub new {
-   bless do { \my $anon }, shift;
+   my $class = shift;
+   my $self  = bless do { \my $anon }, $class;
+   return $self;
 }
 
 sub get { my $self = shift; $$self }
@@ -593,11 +596,17 @@ sub _custom {
    return $data;
 }
 
+sub DESTROY {
+   my $self = shift || return;
+   LOG( DESTROY => ref $self ) if DEBUG();
+   return;
+}
+
 package Text::Template::Simple::Base::Parser;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.79_03';
+$VERSION = '0.79_04';
 
 use Text::Template::Simple::Util      qw(:all);
 use Text::Template::Simple::Constants qw(:all);
@@ -982,7 +991,7 @@ use vars qw($VERSION);
 use Text::Template::Simple::Util qw(:all);
 use Text::Template::Simple::Constants qw(:all);
 
-$VERSION = '0.79_03';
+$VERSION = '0.79_04';
 
 sub _include_no_monolith {
    # no monolith eh?
@@ -1145,7 +1154,7 @@ use vars qw($VERSION);
 use Text::Template::Simple::Util qw(:all);
 use Text::Template::Simple::Constants qw(:all);
 
-$VERSION = '0.79_03';
+$VERSION = '0.79_04';
 
 sub _examine {
    my $self   = shift;
@@ -1212,7 +1221,7 @@ use vars qw($VERSION);
 use Text::Template::Simple::Util qw(:all);
 use Text::Template::Simple::Constants qw(:all);
 
-$VERSION = '0.79_03';
+$VERSION = '0.79_04';
 
 sub _compiler { shift->[SAFE] ? COMPILER_SAFE : COMPILER }
 
@@ -1362,7 +1371,7 @@ package Text::Template::Simple::Tokenizer;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.79_03';
+$VERSION = '0.79_04';
 
 use constant CMD_CHAR             =>  0;
 use constant CMD_ID               =>  1;
@@ -1374,7 +1383,7 @@ use constant ID_POST_CHOMP        =>  3;
 use constant SUBSTR_OFFSET_FIRST  =>  0;
 use constant SUBSTR_OFFSET_SECOND =>  1;
 use constant SUBSTR_LENGTH        =>  1;
-use Text::Template::Simple::Util      qw( LOG fatal );
+use Text::Template::Simple::Util      qw( LOG DEBUG fatal );
 use Text::Template::Simple::Constants qw( :chomp :directive :token );
 
 my @COMMANDS = ( # default command list
@@ -1673,6 +1682,12 @@ sub _visualize_tid {
    return $rv;
 }
 
+sub DESTROY {
+   my $self = shift || return;
+   LOG( DESTROY => ref $self ) if DEBUG();
+   return;
+}
+
 package Text::Template::Simple::IO;
 use strict;
 use vars qw($VERSION);
@@ -1683,7 +1698,7 @@ use constant MY_IO_LAYER      => 0;
 use constant MY_INCLUDE_PATHS => 1;
 use constant MY_TAINT_MODE    => 2;
 
-$VERSION = '0.79_03';
+$VERSION = '0.79_04';
 
 sub new {
    my $class = shift;
@@ -1863,7 +1878,7 @@ use vars qw($VERSION);
 use Text::Template::Simple::Caller;
 use Text::Template::Simple::Util qw();
 
-$VERSION = '0.79_03';
+$VERSION = '0.79_04';
 
 sub stack { # just a wrapper
    my $opt = shift || {};
@@ -1879,7 +1894,7 @@ use strict;
 use vars qw($VERSION);
 use Text::Template::Simple::Dummy;
 
-$VERSION = '0.79_03';
+$VERSION = '0.79_04';
 
 sub _compile { shift; return eval shift }
 
@@ -1898,7 +1913,7 @@ use constant HINTS      => 8;
 use constant BITMASK    => 9;
 use Text::Template::Simple::Util qw( ishref fatal );
 
-$VERSION = '0.79_03';
+$VERSION = '0.79_04';
 
 sub stack {
    my $self    = shift;
@@ -2071,7 +2086,7 @@ use Text::Template::Simple::Constants qw(:all);
 use Text::Template::Simple::Util qw( DEBUG LOG ishref fatal );
 use Carp qw( croak );
 
-$VERSION = '0.79_03';
+$VERSION = '0.79_04';
 
 my $CACHE = {}; # in-memory template cache
 
@@ -2485,7 +2500,7 @@ package Text::Template::Simple;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.79_03';
+$VERSION = '0.79_04';
 
 use File::Spec;
 use Text::Template::Simple::Constants qw(:all);
@@ -2707,10 +2722,10 @@ sub _needs_object {
 
 sub DESTROY {
    my $self = shift || return;
-   LOG( DESTROY => ref $self ) if DEBUG();
    undef $self->[CACHE_OBJECT];
    undef $self->[IO_OBJECT];
    @{ $self } = ();
+   LOG( DESTROY => ref $self ) if DEBUG();
    return;
 }
 
@@ -2747,8 +2762,8 @@ generated with an automatic build tool. If you experience problems
 with this version, please install and use the supported standard
 version. This version is B<NOT SUPPORTED>.
 
-This document describes version C<0.79_03> of C<Text::Template::Simple>
-released on C<1 May 2009>.
+This document describes version C<0.79_04> of C<Text::Template::Simple>
+released on C<3 May 2009>.
 
 B<WARNING>: This version of the module is part of a
 developer (beta) release of the distribution and it is

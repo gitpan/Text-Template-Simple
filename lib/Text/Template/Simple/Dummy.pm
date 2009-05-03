@@ -10,7 +10,7 @@ use vars qw($VERSION);
 use Text::Template::Simple::Caller;
 use Text::Template::Simple::Util qw();
 
-$VERSION = '0.79_03';
+$VERSION = '0.79_04';
 
 sub stack { # just a wrapper
    my $opt = shift || {};
@@ -34,8 +34,8 @@ TODO
 
 =head1 DESCRIPTION
 
-This document describes version C<0.79_03> of C<Text::Template::Simple::Dummy>
-released on C<1 May 2009>.
+This document describes version C<0.79_04> of C<Text::Template::Simple::Dummy>
+released on C<3 May 2009>.
 
 B<WARNING>: This version of the module is part of a
 developer (beta) release of the distribution and it is

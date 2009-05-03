@@ -2,7 +2,7 @@ package Text::Template::Simple::Tokenizer;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.79_03';
+$VERSION = '0.79_04';
 
 use constant CMD_CHAR             =>  0;
 use constant CMD_ID               =>  1;
@@ -14,7 +14,7 @@ use constant ID_POST_CHOMP        =>  3;
 use constant SUBSTR_OFFSET_FIRST  =>  0;
 use constant SUBSTR_OFFSET_SECOND =>  1;
 use constant SUBSTR_LENGTH        =>  1;
-use Text::Template::Simple::Util      qw( LOG fatal );
+use Text::Template::Simple::Util      qw( LOG DEBUG fatal );
 use Text::Template::Simple::Constants qw( :chomp :directive :token );
 
 my @COMMANDS = ( # default command list
@@ -313,6 +313,12 @@ sub _visualize_tid {
    return $rv;
 }
 
+sub DESTROY {
+   my $self = shift || return;
+   LOG( DESTROY => ref $self ) if DEBUG();
+   return;
+}
+
 1;
 
 __END__
@@ -336,8 +342,8 @@ Text::Template::Simple::Tokenizer - Tokenizer
 
 =head1 DESCRIPTION
 
-This document describes version C<0.79_03> of C<Text::Template::Simple::Tokenizer>
-released on C<1 May 2009>.
+This document describes version C<0.79_04> of C<Text::Template::Simple::Tokenizer>
+released on C<3 May 2009>.
 
 B<WARNING>: This version of the module is part of a
 developer (beta) release of the distribution and it is
