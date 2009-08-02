@@ -2,7 +2,7 @@ package Text::Template::Simple::Tokenizer;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.79_04';
+$VERSION = '0.79_05';
 
 use constant CMD_CHAR             =>  0;
 use constant CMD_ID               =>  1;
@@ -40,9 +40,10 @@ sub new {
 
 sub tokenize {
    # compile the template into a tree and optimize
-   my $self       = shift;
-   my $tmp        = shift || fatal('tts.tokenizer.tokenize.tmp');
-   my $map_keys   = shift;
+   my($self, $tmp, $map_keys) = @_;
+
+   return $self->_empty_token( $tmp ) if ! $tmp;
+   
    my($ds, $de)   = ($self->[ID_DS], $self->[ID_DE]);
    my($qds, $qde) = map { quotemeta $_ } $ds, $de;
 
@@ -80,41 +81,26 @@ sub tokenize {
 sub tilde { shift; Text::Template::Simple::Util::escape( '~' => @_ ) }
 sub quote { shift; Text::Template::Simple::Util::escape( '"' => @_ ) }
 
-sub _debug_tokens {
-   my $self   = shift;
-   my $tokens = shift;
-   # TODO: heredocs look ugly
-   my $buf = <<'HEAD';
+sub _empty_token {
+   my $self = shift;
+   my $tmp  = shift;
+   fatal('tts.tokenizer.tokenize.tmp') if ! defined $tmp;
+   # empty string or zero
+   return [
+         [ $self->[ID_DS], T_DELIMSTART, [], undef ],
+         [ $tmp          , T_RAW       , [], undef ],
+         [ $self->[ID_DE], T_DELIMEND  , [], undef ],
+   ]
+}
 
----------------------------
-       TOKEN DUMP
----------------------------
-HEAD
-
-   my $tmp = <<'DUMP';
-ID        : %s
-STRING    : %s
-CHOMP_NEXT: %s
-CHOMP_PREV: %s
-TRIGGER   : %s
----------------------------
-DUMP
-
-   foreach my $t ( @{ $tokens } ) {
-      my $s = $t->[TOKEN_STR];
-      $s =~ s{\r}{\\r}xmsg;
-      $s =~ s{\n}{\\n}xmsg;
-      $s =~ s{\f}{\\f}xmsg;
-      $s =~ s{\s}{\\s}xmsg;
-      my @v = (
-         scalar $self->_visualize_chomp( $t->[TOKEN_CHOMP][TOKEN_CHOMP_NEXT] ),
-         scalar $self->_visualize_chomp( $t->[TOKEN_CHOMP][TOKEN_CHOMP_PREV] ),
-         scalar $self->_visualize_chomp( $t->[TOKEN_TRIGGER]                 )
-      );
-      @v = map { $_ eq 'undef' ? '' : $_ } @v;
-      $buf .= sprintf $tmp, $self->_visualize_tid( $t->[TOKEN_ID] ), $s, @v;
-   }
-   Text::Template::Simple::Util::LOG( DEBUG => $buf );
+sub _get_command_chars {
+   my($self, $str) = @_;
+   my($first, $second, $last) = ('') x 3;
+   # $first is the left-cmd, $last is the right-cmd. $second is the extra
+   $first  = substr $str, SUBSTR_OFFSET_FIRST , SUBSTR_LENGTH if $str ne '';
+   $second = substr $str, SUBSTR_OFFSET_SECOND, SUBSTR_LENGTH if $str ne '';
+   $last   = substr $str, length($str) - 1    , SUBSTR_LENGTH if $str ne '';
+   return $first, $second, $last;
 }
 
 sub _user_commands {
@@ -167,16 +153,6 @@ sub _token_for_code {
                [ CHOMP_NONE, CHOMP_NONE ],
                $needs_chomp ? $ctoken : undef # trigger
             ];
-}
-
-sub _get_command_chars {
-   my($self, $str) = @_;
-   my($first, $second, $last) = ('') x 3;
-   # $first is the left-cmd, $last is the right-cmd. $second is the extra
-   $first  = substr $str, SUBSTR_OFFSET_FIRST , SUBSTR_LENGTH if $str ne '';
-   $second = substr $str, SUBSTR_OFFSET_SECOND, SUBSTR_LENGTH if $str ne '';
-   $last   = substr $str, length($str) - 1    , SUBSTR_LENGTH if $str ne '';
-   return $first, $second, $last;
 }
 
 sub _token_code {
@@ -313,6 +289,43 @@ sub _visualize_tid {
    return $rv;
 }
 
+sub _debug_tokens {
+   my $self   = shift;
+   my $tokens = shift;
+   # TODO: heredocs look ugly
+   my $buf = <<'HEAD';
+
+---------------------------
+       TOKEN DUMP
+---------------------------
+HEAD
+
+   my $tmp = <<'DUMP';
+ID        : %s
+STRING    : %s
+CHOMP_NEXT: %s
+CHOMP_PREV: %s
+TRIGGER   : %s
+---------------------------
+DUMP
+
+   foreach my $t ( @{ $tokens } ) {
+      my $s = $t->[TOKEN_STR];
+      $s =~ s{\r}{\\r}xmsg;
+      $s =~ s{\n}{\\n}xmsg;
+      $s =~ s{\f}{\\f}xmsg;
+      $s =~ s{\s}{\\s}xmsg;
+      my @v = (
+         scalar $self->_visualize_chomp( $t->[TOKEN_CHOMP][TOKEN_CHOMP_NEXT] ),
+         scalar $self->_visualize_chomp( $t->[TOKEN_CHOMP][TOKEN_CHOMP_PREV] ),
+         scalar $self->_visualize_chomp( $t->[TOKEN_TRIGGER]                 )
+      );
+      @v = map { $_ eq 'undef' ? '' : $_ } @v;
+      $buf .= sprintf $tmp, $self->_visualize_tid( $t->[TOKEN_ID] ), $s, @v;
+   }
+   Text::Template::Simple::Util::LOG( DEBUG => $buf );
+}
+
 sub DESTROY {
    my $self = shift || return;
    LOG( DESTROY => ref $self ) if DEBUG();
@@ -342,8 +355,8 @@ Text::Template::Simple::Tokenizer - Tokenizer
 
 =head1 DESCRIPTION
 
-This document describes version C<0.79_04> of C<Text::Template::Simple::Tokenizer>
-released on C<3 May 2009>.
+This document describes version C<0.79_05> of C<Text::Template::Simple::Tokenizer>
+released on C<2 August 2009>.
 
 B<WARNING>: This version of the module is part of a
 developer (beta) release of the distribution and it is
@@ -375,16 +388,16 @@ Escapes double quotes.
 
 =head1 AUTHOR
 
-Burak GE<252>rsoy, E<lt>burakE<64>cpan.orgE<gt>
+Burak Gursoy <burak@cpan.org>.
 
 =head1 COPYRIGHT
 
-Copyright 2004-2008 Burak GE<252>rsoy. All rights reserved.
+Copyright 2004 - 2009 Burak Gursoy. All rights reserved.
 
 =head1 LICENSE
 
 This library is free software; you can redistribute it and/or modify 
-it under the same terms as Perl itself, either Perl version 5.8.8 or, 
+it under the same terms as Perl itself, either Perl version 5.10.0 or, 
 at your option, any later version of Perl 5 you may have available.
 
 =cut

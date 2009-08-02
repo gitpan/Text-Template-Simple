@@ -43,6 +43,8 @@ t/028-include-filter.t
 t/029-block-filter.t
 t/030-toke-substr.t
 t/031-capture-warnings.t
+t/032-empty-includes.t
+t/033-dynamic-include-shared-vars.t
 t/data/test.tts
 t/data/dynamic.tts
 t/data/dynamic_delim.tts
@@ -104,6 +106,8 @@ t/028-taint-mode-include-filter.t
 t/029-taint-mode-block-filter.t
 t/030-taint-mode-toke-substr.t
 t/031-taint-mode-capture-warnings.t
+t/032-taint-mode-empty-includes.t
+t/033-taint-mode-dynamic-include-shared-vars.t
 monolithic_version/README
 monolithic_version/Text/Template/Simple.pm	The monolithic version of Text::Template::Simple to ease dropping into web servers. Generated automatically.
 LICENSE

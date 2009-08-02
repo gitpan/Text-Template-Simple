@@ -4,13 +4,12 @@ use vars qw($VERSION);
 use Text::Template::Simple::Util qw(:all);
 use Text::Template::Simple::Constants qw(:all);
 
-$VERSION = '0.79_04';
+$VERSION = '0.79_05';
 
 sub _include_no_monolith {
    # no monolith eh?
-   my $self = shift;
-   my $type = shift;
-   my $file = shift;
+   my($self, $type, $file, $opt) = @_;
+
    my $rv   =  $self->_mini_compiler(
                   $self->_internal('no_monolith') => {
                      OBJECT => $self->[FAKER_SELF],
@@ -25,15 +24,15 @@ sub _include_no_monolith {
 }
 
 sub _include_static {
-   my($self, $file, $text, $err) = @_;
+   my($self, $file, $text, $err, $opt) = @_;
    return $self->[MONOLITH]
         ? 'q~' . escape('~' => $text) . '~;'
-        : $self->_include_no_monolith( T_STATIC, $file )
+        : $self->_include_no_monolith( T_STATIC, $file, $opt )
         ;
 }
 
 sub _include_dynamic {
-   my($self, $file, $text, $err) = @_;
+   my($self, $file, $text, $err, $opt) = @_;
    my $rv   = '';
 
    ++$self->[INSIDE_INCLUDE];
@@ -43,19 +42,17 @@ sub _include_dynamic {
 
    if ( ++$self->[COUNTER_INCLUDE]{ $file } >= MAX_RECURSION ) {
       # failsafe
-      my $max   = MAX_RECURSION;
-      my $error = qq{$err Deep recursion (>=$max) detected in }
-                . qq{the included file: $file};
-      LOG( DEEP_RECURSION => $file ) if DEBUG();
-      $error = escape( '~' => $error );
       $self->[DEEP_RECURSION] = 1;
-      $rv .= "q~$error~";
+      LOG( DEEP_RECURSION => $file ) if DEBUG;
+      my $w = L( warning => 'tts.base.include.dynamic.recursion',
+                            $err, MAX_RECURSION, $file );
+      $rv .= sprintf "q~%s~", escape( '~' => $w );
    }
    else {
       # local stuff is for file name access through $0 in templates
       $rv .= $self->[MONOLITH]
            ? do { local $self->[FILENAME] = $file; $self->_parse( $text ) }
-           : $self->_include_no_monolith( T_DYNAMIC, $file )
+           : $self->_include_no_monolith( T_DYNAMIC, $file, $opt )
            ;
    }
 
@@ -68,6 +65,7 @@ sub _include {
    my $self       = shift;
    my $type       = shift || 0;
    my $file       = shift;
+   my $opt        = shift;
    my $is_static  = T_STATIC  == $type ? 1 : 0;
    my $is_dynamic = T_DYNAMIC == $type ? 1 : 0;
    my $known      = $is_static || $is_dynamic;
@@ -113,7 +111,7 @@ sub _include {
    return "q~$err $@~" if $@;
 
    my $meth = '_include_' . ($is_dynamic ? 'dynamic' : 'static');
-   return $self->$meth( $file, $text, $err);
+   return $self->$meth( $file, $text, $err, $opt );
 }
 
 sub _interpolate {
@@ -135,6 +133,27 @@ sub _interpolate {
 
    my $filter = $inc{FILTER} ? escape( q{'} => $inc{FILTER} ) : '';
 
+   if ( $inc{SHARE} ) {
+      my @vars = map { trim $_ } split RE_FILTER_SPLIT, $inc{SHARE};
+      my %type = qw(
+                     @   ARRAY
+                     %   HASH
+                     *   GLOB
+                     \   REFERENCE
+                  );
+      my @buf;
+      foreach my $var ( @vars ) {
+         if ( $var !~ m{ \A \$ }xms ) {
+            my($char) = $var =~ m{ \A (.) }xms;
+            my $type  = $type{ $char } || '<UNKNOWN>';
+            fatal('tts.base.include._interpolate.bogus_share', $type, $var);
+         }
+         $var =~ tr/;//d;
+         push @buf, $var;
+      }
+      $inc{SHARE} = join ',', @buf;
+   }
+
    my $rv = $self->_mini_compiler(
                $self->_internal('sub_include') => {
                   OBJECT      => $self->[FAKER_SELF],
@@ -143,10 +162,12 @@ sub _interpolate {
                   TYPE        => $type,
                   PARAMS      => $inc{PARAM} ? qq{[$inc{PARAM}]} : 'undef',
                   FILTER      => $filter,
+                  SHARE       => ( $inc{SHARE} ? sprintf(qq{'%s', %s}, ($inc{SHARE}) x 2) : 'undef' ),
                } => {
                   flatten => 1,
                }
             );
+
    return $rv;
 }
 
@@ -175,8 +196,8 @@ Private module.
 
 =head1 DESCRIPTION
 
-This document describes version C<0.79_04> of C<Text::Template::Simple::Base::Include>
-released on C<3 May 2009>.
+This document describes version C<0.79_05> of C<Text::Template::Simple::Base::Include>
+released on C<2 August 2009>.
 
 B<WARNING>: This version of the module is part of a
 developer (beta) release of the distribution and it is
@@ -186,16 +207,16 @@ Private module.
 
 =head1 AUTHOR
 
-Burak GE<252>rsoy, E<lt>burakE<64>cpan.orgE<gt>
+Burak Gursoy <burak@cpan.org>.
 
 =head1 COPYRIGHT
 
-Copyright 2004-2008 Burak GE<252>rsoy. All rights reserved.
+Copyright 2004 - 2009 Burak Gursoy. All rights reserved.
 
 =head1 LICENSE
 
 This library is free software; you can redistribute it and/or modify 
-it under the same terms as Perl itself, either Perl version 5.8.8 or, 
+it under the same terms as Perl itself, either Perl version 5.10.0 or, 
 at your option, any later version of Perl 5 you may have available.
 
 =cut

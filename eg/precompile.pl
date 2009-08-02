@@ -22,7 +22,7 @@ use Text::Template::Simple;
 
 my $source_dir = "/full/path/to/original/templates";
 my $cache_dir  = "/full/path/to/cache/directory";
-my $extension  = ".tts"; # the extension of files to compile
+my $extension  = qr{ [.]tts \z }xms; # the extension of files to compile
 
 my $cwd = getcwd;
 chdir $source_dir;
@@ -34,8 +34,8 @@ find { no_chdir => 1, wanted => \&search_and_compile }, '.';
 chdir $cwd; # restore
 
 sub search_and_compile {
-    return if $_ !~ m{ \Q$extension\E \z }xms;
     return if -d;
+    return if $_ !~ $extension;
     my $file = catfile $_;
     warn "COMPILING: $file\n";
     eval {

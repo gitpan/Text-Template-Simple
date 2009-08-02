@@ -4,7 +4,7 @@ use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
 use Text::Template::Simple::Constants qw( :info DIGEST_MODS );
 use Carp qw( croak );
 
-$VERSION = '0.79_04';
+$VERSION = '0.79_05';
 
 BEGIN {
    if ( IS_WINDOWS ) {
@@ -31,7 +31,7 @@ BEGIN {
    %EXPORT_TAGS = (
       macro => [qw( isaref      ishref iscref                  )],
       util  => [qw( binary_mode DIGEST trim rtrim ltrim escape )],
-      debug => [qw( fatal       DEBUG  LOG                     )],
+      debug => [qw( fatal       DEBUG  LOG  L                  )],
    );
    @EXPORT_OK        = map { @{ $EXPORT_TAGS{$_} } } keys %EXPORT_TAGS;
    $EXPORT_TAGS{all} = \@EXPORT_OK;
@@ -65,7 +65,6 @@ my $lang = {
       'tts.main.init.thandler'                   => 'user_thandler parameter must be a CODE reference',
       'tts.main.init.include'                    => 'include_paths parameter must be a ARRAY reference',
       'tts.util.escape'                          => 'Missing the character to escape',
-      'tts.util.fatal'                           => '%s is not defined as an error',
       'tts.tokenizer.new.ds'                     => 'Start delimiter is missing',
       'tts.tokenizer.new.de'                     => 'End delimiter is missing',
       'tts.tokenizer.tokenize.tmp'               => 'Template string is missing',
@@ -101,27 +100,38 @@ my $lang = {
       'tts.base.examine._examine_type.extra'     => 'Type array has unknown extra fields',
       'tts.base.examine._examine_type.unknown'   => 'Unknown first argument of %s type to compile()',
       'tts.base.include._include.unknown'        => 'Unknown include type: %s',
+      'tts.base.include._interpolate.bogus_share' => 'Only SCALARs can be shared. You have tried to share a variable '
+                                                    .'type of %s named "%s". Consider converting it to a SCALAR or try '
+                                                    .'the monolith option to enable automatic variable sharing. '
+                                                    .'But please read the fine manual first',
       'tts.base.parser._internal.id'             => '_internal(): id is missing',
       'tts.base.parser._internal.rv'             => '_internal(): id is invalid',
       'tts.base.parser._parse.unbalanced'        => '%d unbalanced %s delimiter(s) in template %s',
       'tts.cache.id.generate.data'               => "Can't generate id without data!",
       'tts.cache.id._custom.data'                => "Can't generate id without data!",
    },
+   warning => {
+      'tts.base.include.dynamic.recursion'       => qq{%s Deep recursion (>=%d) detected in the included file: %s},
+   }
 };
 
-my $DEBUG = 0;  # Disabled by default
-my $DIGEST;     # Will hold digester class name.
+my $DEBUG = 0; # Disabled by default
+my $DIGEST;    # Will hold digester class name.
 
 sub isaref { $_[0] && ref($_[0]) && ref($_[0]) eq 'ARRAY' };
 sub ishref { $_[0] && ref($_[0]) && ref($_[0]) eq 'HASH'  };
 sub iscref { $_[0] && ref($_[0]) && ref($_[0]) eq 'CODE'  };
 
-sub fatal  {
-   my $ID  = shift;
-   my $str = $lang->{error}{$ID}
-             || croak sprintf( $lang->{error}{'tts.util.fatal'}, $ID );
-   croak @_ ? sprintf($str, @_) : $str;
+sub L {
+   my $type  = shift || croak "Type parameter to L() is missing";
+   my $id    = shift || croak "ID parameter ro L() is missing";
+   my @param = @_;
+   my $root  = $lang->{ $type } || croak "$type is not a valid L() type";
+   my $value = $root->{ $id }   || croak "$id is not a valid L() ID";
+   return @param ? sprintf($value, @param) : $value;
 }
+
+sub fatal { croak L( error => @_ ) }
 
 sub escape {
    my $c = shift || fatal('tts.util.escape');
@@ -229,8 +239,8 @@ TODO
 
 =head1 DESCRIPTION
 
-This document describes version C<0.79_04> of C<Text::Template::Simple::Util>
-released on C<3 May 2009>.
+This document describes version C<0.79_05> of C<Text::Template::Simple::Util>
+released on C<2 August 2009>.
 
 B<WARNING>: This version of the module is part of a
 developer (beta) release of the distribution and it is
@@ -250,7 +260,11 @@ Returns the digester object.
 
 =head2 binary_mode FH, LAYER
 
-Sets the I/O layer of FH in moern perls, only sets binmode on FH otherwise.
+Sets the I/O layer of FH in modern perls, only sets binmode on FH otherwise.
+
+=head2 L TYPE, ID [, PARAMS]
+
+Internal method.
 
 =head2 fatal ID [, PARAMS]
 
@@ -299,16 +313,16 @@ the C<MYLOG> sub.
 
 =head1 AUTHOR
 
-Burak GE<252>rsoy, E<lt>burakE<64>cpan.orgE<gt>
+Burak Gursoy <burak@cpan.org>.
 
 =head1 COPYRIGHT
 
-Copyright 2004-2008 Burak GE<252>rsoy. All rights reserved.
+Copyright 2004 - 2009 Burak Gursoy. All rights reserved.
 
 =head1 LICENSE
 
 This library is free software; you can redistribute it and/or modify 
-it under the same terms as Perl itself, either Perl version 5.8.8 or, 
+it under the same terms as Perl itself, either Perl version 5.10.0 or, 
 at your option, any later version of Perl 5 you may have available.
 
 =cut

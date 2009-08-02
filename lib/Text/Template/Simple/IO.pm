@@ -8,7 +8,7 @@ use constant MY_IO_LAYER      => 0;
 use constant MY_INCLUDE_PATHS => 1;
 use constant MY_TAINT_MODE    => 2;
 
-$VERSION = '0.79_04';
+$VERSION = '0.79_05';
 
 sub new {
    my $class = shift;
@@ -97,7 +97,7 @@ sub slurp {
 }
 
 sub _handle_looks_safe {
-   # Cargo Culting: original code was taken from "The Camel"
+   # Cargo Culting: original taint checking code was taken from "The Camel"
    my $self = shift;
    my $fh   = shift;
    fatal('tts.io.hls.invalid') if ! $fh || ! fileno $fh;
@@ -114,7 +114,7 @@ sub _handle_looks_safe {
 
    # Check whether group or other can write file.
    # Read check is disabled by default
-   # Mode always 0666 on Windows, so all tests below are disabled on Windows
+   # Mode is always 0666 on Windows, so all tests below are disabled on Windows
    # unless you force them to run
    LOG( FILE_MODE => sprintf "%04o", $i->mode & 07777) if DEBUG;
 
@@ -190,8 +190,8 @@ TODO
 
 =head1 DESCRIPTION
 
-This document describes version C<0.79_04> of C<Text::Template::Simple::IO>
-released on C<3 May 2009>.
+This document describes version C<0.79_05> of C<Text::Template::Simple::IO>
+released on C<2 August 2009>.
 
 B<WARNING>: This version of the module is part of a
 developer (beta) release of the distribution and it is
@@ -234,16 +234,16 @@ and returns the full path to the file if it exists.
 
 =head1 AUTHOR
 
-Burak GE<252>rsoy, E<lt>burakE<64>cpan.orgE<gt>
+Burak Gursoy <burak@cpan.org>.
 
 =head1 COPYRIGHT
 
-Copyright 2008 Burak GE<252>rsoy. All rights reserved.
+Copyright 2004 - 2009 Burak Gursoy. All rights reserved.
 
 =head1 LICENSE
 
 This library is free software; you can redistribute it and/or modify 
-it under the same terms as Perl itself, either Perl version 5.8.8 or, 
+it under the same terms as Perl itself, either Perl version 5.10.0 or, 
 at your option, any later version of Perl 5 you may have available.
 
 =cut

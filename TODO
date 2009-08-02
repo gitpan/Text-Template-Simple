@@ -5,6 +5,9 @@
         - Add SHARE: command?
         - monolith seems to be buggy
         - Implement 022-monolith
+* Implement a way to find out the name of the top level file which included the sub-template.
+* Implement 032-empty-includes.t
+* Implement 033-dynamic-include-shared-vars.t
 * ***LOW*** Consider trying PPI. Resume?
 * ***LOW*** Implement TTS plugins for major frameworks.
 * ***LOW*** Benchmarks?

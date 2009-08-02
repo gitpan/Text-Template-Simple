@@ -2,7 +2,7 @@ package Text::Template::Simple;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.79_04';
+$VERSION = '0.79_05';
 
 use File::Spec;
 use Text::Template::Simple::Constants qw(:all);
@@ -90,7 +90,7 @@ sub new {
    my($fid, $fval);
    INITIALIZE: foreach my $field ( keys %DEFAULT ) {
       $fid = uc $field;
-      next INITIALIZE if ! $class->can($fid);
+      next INITIALIZE if ! $class->can( $fid );
       $fid  = $class->$fid();
       $fval = delete $param{$field};
       $self->[$fid] = defined $fval ? $fval : $DEFAULT{$field};
@@ -143,7 +143,7 @@ sub _init {
    $self->[FAKER_HASH]     = $self->_output_buffer_var('hash');
    $self->[FAKER_SELF]     = $self->_output_buffer_var('self');
    $self->[INSIDE_INCLUDE] = -1; # must be -1 not 0
-   $self->[NEEDS_OBJECT]   =  0; # does the template need $self ?
+   $self->[NEEDS_OBJECT]   =  0; # the template needs $self ?
    $self->[DEEP_RECURSION] =  0; # recursion detector
 
    fatal('tts.main.init.thandler')
@@ -259,8 +259,8 @@ Where C<hello.tts> has this content:
 
 =head1 DESCRIPTION
 
-This document describes version C<0.79_04> of C<Text::Template::Simple>
-released on C<3 May 2009>.
+This document describes version C<0.79_05> of C<Text::Template::Simple>
+released on C<2 August 2009>.
 
 B<WARNING>: This version of the module is part of a
 developer (beta) release of the distribution and it is
@@ -510,13 +510,19 @@ PARAM
 
 FILTER
 
+=item *
+
+SHARE
+
 =back
 
    <%+ /path/to/static.tts  | FILTER: MyFilter %>
    <%* /path/to/dynamic.tts | FILTER: MyFilter | PARAM: test => 123 %>
 
-C<FILTER:> defines the list of filters to apply to the output of the include.
 C<PARAM:> defines the parameter list to pass to the included file.
+C<FILTER:> defines the list of filters to apply to the output of the include.
+C<SHARE:> used to list the variables to share with the included template when
+the monolith option is disabled.
 
 =head3 INCLUDE FILTERS
 
@@ -555,6 +561,37 @@ A block consists of a header part and the content.
 
 C<HEADER> includes the commands and terminated with a semicolon. C<BODY> is the
 actual block content.
+
+=head3 SHARED VARIABLES
+
+C<Text::Template::Simple> compiles every template individually with separate
+scopes. A variable defined in the master template is not accessible from a
+dynamic include. The exception to this rule is the C<monolith> option to C<new>.
+If it is enabled; the master template and any includes it has will be compiled
+into a single document, thus making every variable defined at the top available
+to the includes below. But this method has a drawback, it disables cache check
+for the sub files (includes). You'll need to edit the master template to force
+a cache reload.
+
+If you don't use C<monolith> (disabled by default), then you'll need to share
+the variables somehow to don't repeat yourself. Variable sharing is demonstrated
+in the below template:
+
+   <%
+      my $foo = 42;
+      my $bar = 23;
+   %>
+   <%* dyna.inc | SHARE: $foo, $bar %>
+
+And then you can access C<$foo> and C<$bar> inside C<dyna.inc>. There is one
+drawback by shared variables: only SCALARs can be shared. You can not share
+anything else. If you want to share an array, use an array reference instead:
+
+   <%
+      my @foo = (1..10);
+      my $fooref = \@foo;
+   %>
+   <%* dyna.inc | SHARE: $fooref %>
 
 =head3 BLOCK FILTERS
 
@@ -646,16 +683,16 @@ However, be aware that the monolithic version is B<not supported>.
 
 =head1 AUTHOR
 
-Burak GE<252>rsoy, E<lt>burakE<64>cpan.orgE<gt>
+Burak Gursoy <burak@cpan.org>.
 
 =head1 COPYRIGHT
 
-Copyright 2004-2009 Burak GE<252>rsoy. All rights reserved.
+Copyright 2004 - 2009 Burak Gursoy. All rights reserved.
 
 =head1 LICENSE
 
 This library is free software; you can redistribute it and/or modify 
-it under the same terms as Perl itself, either Perl version 5.8.8 or, 
+it under the same terms as Perl itself, either Perl version 5.10.0 or, 
 at your option, any later version of Perl 5 you may have available.
 
 =cut

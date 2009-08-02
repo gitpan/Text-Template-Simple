@@ -1,5 +1,4 @@
 #!/usr/bin/env perl -w
-# Simple test. Just try to use the module.
 use strict;
 use Test::More qw( no_plan );
 use Text::Template::Simple;

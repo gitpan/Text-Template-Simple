@@ -1,6 +1,6 @@
 ---
 name: Text-Template-Simple
-version: 0.79_04
+version: 0.79_05
 author:
   - 'Burak Gursoy <burak@cpan.org>'
 abstract: Simple text template engine
@@ -20,49 +20,49 @@ recommends:
 provides:
   Text::Template::Simple:
     file: lib/Text/Template/Simple.pm
-    version: 0.79_04
+    version: 0.79_05
   Text::Template::Simple::Base::Compiler:
     file: lib/Text/Template/Simple/Base/Compiler.pm
-    version: 0.79_04
+    version: 0.79_05
   Text::Template::Simple::Base::Examine:
     file: lib/Text/Template/Simple/Base/Examine.pm
-    version: 0.79_04
+    version: 0.79_05
   Text::Template::Simple::Base::Include:
     file: lib/Text/Template/Simple/Base/Include.pm
-    version: 0.79_04
+    version: 0.79_05
   Text::Template::Simple::Base::Parser:
     file: lib/Text/Template/Simple/Base/Parser.pm
-    version: 0.79_04
+    version: 0.79_05
   Text::Template::Simple::Cache:
     file: lib/Text/Template/Simple/Cache.pm
-    version: 0.79_04
+    version: 0.79_05
   Text::Template::Simple::Cache::ID:
     file: lib/Text/Template/Simple/Cache/ID.pm
-    version: 0.79_04
+    version: 0.79_05
   Text::Template::Simple::Caller:
     file: lib/Text/Template/Simple/Caller.pm
-    version: 0.79_04
+    version: 0.79_05
   Text::Template::Simple::Compiler:
     file: lib/Text/Template/Simple/Compiler.pm
-    version: 0.79_04
+    version: 0.79_05
   Text::Template::Simple::Compiler::Safe:
     file: lib/Text/Template/Simple/Compiler/Safe.pm
-    version: 0.79_04
+    version: 0.79_05
   Text::Template::Simple::Constants:
     file: lib/Text/Template/Simple/Constants.pm
-    version: 0.79_04
+    version: 0.79_05
   Text::Template::Simple::Dummy:
     file: lib/Text/Template/Simple/Dummy.pm
-    version: 0.79_04
+    version: 0.79_05
   Text::Template::Simple::IO:
     file: lib/Text/Template/Simple/IO.pm
-    version: 0.79_04
+    version: 0.79_05
   Text::Template::Simple::Tokenizer:
     file: lib/Text/Template/Simple/Tokenizer.pm
-    version: 0.79_04
+    version: 0.79_05
   Text::Template::Simple::Util:
     file: lib/Text/Template/Simple/Util.pm
-    version: 0.79_04
+    version: 0.79_05
 no_index:
   directory:
     - monolithic_version

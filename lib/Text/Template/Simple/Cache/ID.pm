@@ -2,12 +2,10 @@ package Text::Template::Simple::Cache::ID;
 use strict;
 use vars qw($VERSION);
 use overload q{""} => 'get';
-use Text::Template::Simple::Constants qw( MAX_FL );
-use Text::Template::Simple::Util      qw( DEBUG DIGEST fatal );
+use Text::Template::Simple::Constants qw( MAX_FL RE_INVALID_CID );
+use Text::Template::Simple::Util      qw( LOG DEBUG DIGEST fatal );
 
-$VERSION = '0.79_04';
-
-my $RE_INVALID = qr{[^A-Za-z_0-9]};
+$VERSION = '0.79_05';
 
 sub new {
    my $class = shift;
@@ -19,10 +17,13 @@ sub get { my $self = shift; $$self }
 sub set { my $self = shift; $$self = shift if defined $_[0]; return; }
 
 sub generate { # cache id generator
-   my $self   = shift;
-   my $data   = shift or fatal('tts.cache.id.generate.data');
-   my $custom = shift;
-   my $regex  = shift;
+   my($self, $data, $custom, $regex) = @_;
+
+   if ( ! $data ) {
+      fatal('tts.cache.id.generate.data') if ! defined $data;
+      LOG( IDGEN => "Generating ID from empty data" ) if DEBUG;
+   }
+
    $self->set(
       $custom ? $self->_custom( $data, $regex )
               : $self->DIGEST->add( $data )->hexdigest
@@ -33,12 +34,11 @@ sub generate { # cache id generator
 sub _custom {
    my $self  = shift;
    my $data  = shift or fatal('tts.cache.id._custom.data');
-   my $regex = shift || $RE_INVALID;
+   my $regex = shift || RE_INVALID_CID;
       $data  =~ s{$regex}{_}xmsg; # remove bogus characters
-   my $len   = length( $data );
-   if ( $len > MAX_FL ) { # limit file name length
-      $data = substr $data, $len - MAX_FL, MAX_FL;
-   }
+   my $len   = length $data;
+   # limit file name length
+   $data = substr $data, $len - MAX_FL, MAX_FL if $len > MAX_FL;
    return $data;
 }
 
@@ -62,8 +62,8 @@ TODO
 
 =head1 DESCRIPTION
 
-This document describes version C<0.79_04> of C<Text::Template::Simple::Cache::ID>
-released on C<3 May 2009>.
+This document describes version C<0.79_05> of C<Text::Template::Simple::Cache::ID>
+released on C<2 August 2009>.
 
 B<WARNING>: This version of the module is part of a
 developer (beta) release of the distribution and it is
@@ -91,16 +91,16 @@ Set the cache ID.
 
 =head1 AUTHOR
 
-Burak GE<252>rsoy, E<lt>burakE<64>cpan.orgE<gt>
+Burak Gursoy <burak@cpan.org>.
 
 =head1 COPYRIGHT
 
-Copyright 2008 Burak GE<252>rsoy. All rights reserved.
+Copyright 2004 - 2009 Burak Gursoy. All rights reserved.
 
 =head1 LICENSE
 
 This library is free software; you can redistribute it and/or modify 
-it under the same terms as Perl itself, either Perl version 5.8.8 or, 
+it under the same terms as Perl itself, either Perl version 5.10.0 or, 
 at your option, any later version of Perl 5 you may have available.
 
 =cut

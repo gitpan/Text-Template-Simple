@@ -2,7 +2,7 @@ package Text::Template::Simple::Base::Parser;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.79_04';
+$VERSION = '0.79_05';
 
 use Text::Template::Simple::Util      qw(:all);
 use Text::Template::Simple::Constants qw(:all);
@@ -13,15 +13,17 @@ sub _internal {
    my $self = shift;
    my $id   = shift            || fatal('tts.base.parser._internal.id');
    my $rv   = $INTERNAL{ $id } || fatal('tts.base.parser._internal.id');
+   LOG( INTERNAL => "TEMPLATE: $id" ) if DEBUG;
    return $rv;
 }
 
 sub _parse {
-   my $self     = shift;
-   my $raw      = shift;
-   my $map_keys = shift; # code sections are hash keys
-   my $cache_id = shift;
-   my $as_is    = shift; # i.e.: do not parse -> static include
+   my($self, $raw, $opt) = @_;
+
+   # $opt->
+   #      map_keys: code sections are hash keys
+   #      as_is   : i.e.: do not parse -> static include
+
    #$self->[NEEDS_OBJECT] = 0; # reset
 
    my($ds, $de) = @{ $self->[DELIMITERS] };
@@ -35,7 +37,7 @@ sub _parse {
    my $code     = '';
    my $inside   = 0;
 
-   my($mko, $mkc) = $self->_parse_mapkeys( $map_keys, $faker, $buf_hash );
+   my($mko, $mkc) = $self->_parse_mapkeys( $opt->{map_keys}, $faker, $buf_hash );
 
    LOG( RAW => $raw ) if ( DEBUG() > 3 );
 
@@ -48,10 +50,10 @@ sub _parse {
    };
 
    # little hack to convert delims into escaped delims for static inclusion
-   $raw =~ s{\Q$ds}{$ds!}xmsg if $as_is;
+   $raw =~ s{\Q$ds}{$ds!}xmsg if $opt->{as_is};
 
    # fetch and walk the tree
-   PARSER: foreach my $token ( @{ $toke->tokenize( $raw, $map_keys ) } ) {
+   PARSER: foreach my $token ( @{ $toke->tokenize( $raw, $opt->{map_keys} ) } ) {
       my($str, $id, $chomp, undef) = @{ $token };
       LOG( TOKEN => $toke->_visualize_tid($id) . " => $str" ) if DEBUG() > 1;
       next PARSER if T_DISCARD == $id;
@@ -73,7 +75,7 @@ sub _parse {
       }
 
       elsif ( T_DYNAMIC == $id || T_STATIC == $id ) {
-         $code .= $h->{capture}->( $self->_needs_object->_include($id, $str) );
+         $code .= $h->{capture}->( $self->_needs_object->_include($id, $str, $opt) );
       }
 
       elsif ( T_MAPKEY == $id ) {
@@ -103,7 +105,7 @@ sub _parse {
          $self->[FILENAME]
    ) if $inside;
 
-   return $self->_wrapper( $code, $cache_id, $faker, $map_keys, $h );
+   return $self->_wrapper( $code, $opt->{cache_id}, $faker, $opt->{map_keys}, $h );
 }
 
 sub _parse_command {
@@ -297,6 +299,7 @@ sub _set_internal_templates {
          {
             _sub_inc => '<%TYPE%>',
             _filter  => '<%FILTER%>',
+            _share   => [<%SHARE%>],
          }
       )
    ~,
@@ -395,8 +398,8 @@ Private module.
 
 =head1 DESCRIPTION
 
-This document describes version C<0.79_04> of C<Text::Template::Simple::Base::Parser>
-released on C<3 May 2009>.
+This document describes version C<0.79_05> of C<Text::Template::Simple::Base::Parser>
+released on C<2 August 2009>.
 
 B<WARNING>: This version of the module is part of a
 developer (beta) release of the distribution and it is
@@ -430,16 +433,16 @@ happens.
 
 =head1 AUTHOR
 
-Burak GE<252>rsoy, E<lt>burakE<64>cpan.orgE<gt>
+Burak Gursoy <burak@cpan.org>.
 
 =head1 COPYRIGHT
 
-Copyright 2004-2008 Burak GE<252>rsoy. All rights reserved.
+Copyright 2004 - 2009 Burak Gursoy. All rights reserved.
 
 =head1 LICENSE
 
 This library is free software; you can redistribute it and/or modify 
-it under the same terms as Perl itself, either Perl version 5.8.8 or, 
+it under the same terms as Perl itself, either Perl version 5.10.0 or, 
 at your option, any later version of Perl 5 you may have available.
 
 =cut
