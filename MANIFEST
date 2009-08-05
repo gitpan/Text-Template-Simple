@@ -48,8 +48,13 @@ t/033-dynamic-include-shared-vars.t
 t/data/test.tts
 t/data/dynamic.tts
 t/data/dynamic_delim.tts
+t/data/empty.tts
 t/data/recursive.tts
 t/data/static.tts
+t/data/shared-var.tts
+t/data/shared-var-1.tts
+t/data/shared-var-2.tts
+t/data/shared-var-3.tts
 t/data/raw.txt
 t/data/interpolate.tts
 t/data/interpolate_data.tts

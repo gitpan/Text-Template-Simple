@@ -4,7 +4,7 @@ use vars qw($VERSION);
 use Text::Template::Simple::Util qw(:all);
 use Text::Template::Simple::Constants qw(:all);
 
-$VERSION = '0.79_05';
+$VERSION = '0.79_06';
 
 sub _compiler { shift->[SAFE] ? COMPILER_SAFE : COMPILER }
 
@@ -53,6 +53,7 @@ sub _compile {
    my $cache_id = '';
 
    my $as_is = $opt->{_sub_inc} && $opt->{_sub_inc} == T_STATIC;
+
    # first element is the shared names. if it's not defined, then there
    # are no shared variables from top level
    delete $opt->{_share}
@@ -185,8 +186,8 @@ Private module.
 
 =head1 DESCRIPTION
 
-This document describes version C<0.79_05> of C<Text::Template::Simple::Base::Compiler>
-released on C<2 August 2009>.
+This document describes version C<0.79_06> of C<Text::Template::Simple::Base::Compiler>
+released on C<5 August 2009>.
 
 B<WARNING>: This version of the module is part of a
 developer (beta) release of the distribution and it is

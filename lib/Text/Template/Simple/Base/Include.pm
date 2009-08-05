@@ -4,7 +4,7 @@ use vars qw($VERSION);
 use Text::Template::Simple::Util qw(:all);
 use Text::Template::Simple::Constants qw(:all);
 
-$VERSION = '0.79_05';
+$VERSION = '0.79_06';
 
 sub _include_no_monolith {
    # no monolith eh?
@@ -154,6 +154,7 @@ sub _interpolate {
       $inc{SHARE} = join ',', @buf;
    }
 
+   my $share = $inc{SHARE} ? sprintf(qq{'%s', %s}, ($inc{SHARE}) x 2) : 'undef';
    my $rv = $self->_mini_compiler(
                $self->_internal('sub_include') => {
                   OBJECT      => $self->[FAKER_SELF],
@@ -162,7 +163,7 @@ sub _interpolate {
                   TYPE        => $type,
                   PARAMS      => $inc{PARAM} ? qq{[$inc{PARAM}]} : 'undef',
                   FILTER      => $filter,
-                  SHARE       => ( $inc{SHARE} ? sprintf(qq{'%s', %s}, ($inc{SHARE}) x 2) : 'undef' ),
+                  SHARE       => $share,
                } => {
                   flatten => 1,
                }
@@ -196,8 +197,8 @@ Private module.
 
 =head1 DESCRIPTION
 
-This document describes version C<0.79_05> of C<Text::Template::Simple::Base::Include>
-released on C<2 August 2009>.
+This document describes version C<0.79_06> of C<Text::Template::Simple::Base::Include>
+released on C<5 August 2009>.
 
 B<WARNING>: This version of the module is part of a
 developer (beta) release of the distribution and it is

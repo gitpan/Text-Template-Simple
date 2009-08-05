@@ -2,7 +2,7 @@ package Text::Template::Simple;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.79_05';
+$VERSION = '0.79_06';
 
 use File::Spec;
 use Text::Template::Simple::Constants qw(:all);
@@ -259,8 +259,8 @@ Where C<hello.tts> has this content:
 
 =head1 DESCRIPTION
 
-This document describes version C<0.79_05> of C<Text::Template::Simple>
-released on C<2 August 2009>.
+This document describes version C<0.79_06> of C<Text::Template::Simple>
+released on C<5 August 2009>.
 
 B<WARNING>: This version of the module is part of a
 developer (beta) release of the distribution and it is
@@ -551,17 +551,6 @@ prefix:
 Just pass the parameters as described above and fetch them via C<@_> inside
 the included file.
 
-=head2 BLOCKS
-
-A block consists of a header part and the content.
-
-   <%| HEADER;
-       BODY
-   %>
-
-C<HEADER> includes the commands and terminated with a semicolon. C<BODY> is the
-actual block content.
-
 =head3 SHARED VARIABLES
 
 C<Text::Template::Simple> compiles every template individually with separate
@@ -592,6 +581,17 @@ anything else. If you want to share an array, use an array reference instead:
       my $fooref = \@foo;
    %>
    <%* dyna.inc | SHARE: $fooref %>
+
+=head2 BLOCKS
+
+A block consists of a header part and the content.
+
+   <%| HEADER;
+       BODY
+   %>
+
+C<HEADER> includes the commands and terminated with a semicolon. C<BODY> is the
+actual block content.
 
 =head3 BLOCK FILTERS
 

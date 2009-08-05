@@ -2,7 +2,7 @@ package Text::Template::Simple::Tokenizer;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.79_05';
+$VERSION = '0.79_06';
 
 use constant CMD_CHAR             =>  0;
 use constant CMD_ID               =>  1;
@@ -355,8 +355,8 @@ Text::Template::Simple::Tokenizer - Tokenizer
 
 =head1 DESCRIPTION
 
-This document describes version C<0.79_05> of C<Text::Template::Simple::Tokenizer>
-released on C<2 August 2009>.
+This document describes version C<0.79_06> of C<Text::Template::Simple::Tokenizer>
+released on C<5 August 2009>.
 
 B<WARNING>: This version of the module is part of a
 developer (beta) release of the distribution and it is

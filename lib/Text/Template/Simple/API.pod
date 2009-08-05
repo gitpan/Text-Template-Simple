@@ -246,8 +246,8 @@ To have a more strict taint test:
 
    $tmode = TAINT_CHECK_FH_READ | TAINT_CHECK_WINDOWS;
 
-However, note that this'll cause failures unless file mode is C<600>. And it will
-cause failures on Windows.
+However, note that this'll cause failures unless file mode is C<600>. And it
+will cause failures on Windows.
 
 =head3 verbose_errors
 

@@ -2,10 +2,15 @@ Revision history for Perl extension Text::Template::Simple.
 
 Time zone is UTC+2.
 
+0.79_06 Wed Aug  5 06:53:49 2009
+   => Pod fixes.
+   => Implemented shared var & empty includes tests.
+
 0.79_05 Sun Aug  2 10:46:33 2009
    => Internal cleanup.
    => Fixed the tokenizer for empty includes. It now returns an empty token
       instead of dying.
+   => Implemented shared variables for dynamic includes (no monolith).
 
 0.79_04 Sat May  2 06:32:11 2009
    => Internal cleanup.

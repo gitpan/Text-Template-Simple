@@ -2,7 +2,7 @@ package Text::Template::Simple::Base::Parser;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.79_05';
+$VERSION = '0.79_06';
 
 use Text::Template::Simple::Util      qw(:all);
 use Text::Template::Simple::Constants qw(:all);
@@ -56,8 +56,7 @@ sub _parse {
    PARSER: foreach my $token ( @{ $toke->tokenize( $raw, $opt->{map_keys} ) } ) {
       my($str, $id, $chomp, undef) = @{ $token };
       LOG( TOKEN => $toke->_visualize_tid($id) . " => $str" ) if DEBUG() > 1;
-      next PARSER if T_DISCARD == $id;
-      next PARSER if T_COMMENT == $id;
+      next PARSER if T_DISCARD == $id || T_COMMENT == $id;
 
       if ( T_DELIMSTART == $id ) { $inside++; next PARSER; }
       if ( T_DELIMEND   == $id ) { $inside--; next PARSER; }
@@ -200,7 +199,7 @@ sub _wrapper {
    ) if DEBUG > 1;
    #LOG( OUTPUT => $wrapper );
    # reset
-   $self->[DEEP_RECURSION] = 0 if $self->[DEEP_RECURSION];
+   $self->[DEEP_RECURSION] = 0; # reset
    return $wrapper;
 }
 
@@ -303,6 +302,7 @@ sub _set_internal_templates {
          }
       )
    ~,
+
    no_monolith => q*
       <%OBJECT%>->compile(
          q~<%FILE%>~,
@@ -329,6 +329,7 @@ sub _set_internal_templates {
    map_keys_init => q(
       <%BUF%> .= <%HASH%>->{"<%KEY%>"} || '';
    ),
+
    map_keys_default => q(
       <%BUF%> .= <%HASH%>->{"<%KEY%>"};
    ),
@@ -339,6 +340,7 @@ sub _set_internal_templates {
          push @{ <%BUF%> }, $_[0];
       };
    ),
+
    dump_sigwarn => q(
       join("\n",
             map {
@@ -398,8 +400,8 @@ Private module.
 
 =head1 DESCRIPTION
 
-This document describes version C<0.79_05> of C<Text::Template::Simple::Base::Parser>
-released on C<2 August 2009>.
+This document describes version C<0.79_06> of C<Text::Template::Simple::Base::Parser>
+released on C<5 August 2009>.
 
 B<WARNING>: This version of the module is part of a
 developer (beta) release of the distribution and it is
