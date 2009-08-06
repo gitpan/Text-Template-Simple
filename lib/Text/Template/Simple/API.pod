@@ -539,6 +539,9 @@ Windows and g-o read taint checking is also disabled by default on all
 platforms. However, it is possible to force to enable those. See L<taint_mode>
 for more information.
 
+C<monolith> option can not be used with interpolated includes. You'll need to
+use the C<SHARE> commad instead to explicitly share variables with includes.
+
 =head1 SEE ALSO
 
 L<Text::Template::Simple>.

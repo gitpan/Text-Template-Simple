@@ -2,7 +2,7 @@ package Text::Template::Simple;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.79_06';
+$VERSION = '0.79_07';
 
 use File::Spec;
 use Text::Template::Simple::Constants qw(:all);
@@ -259,8 +259,8 @@ Where C<hello.tts> has this content:
 
 =head1 DESCRIPTION
 
-This document describes version C<0.79_06> of C<Text::Template::Simple>
-released on C<5 August 2009>.
+This document describes version C<0.79_07> of C<Text::Template::Simple>
+released on C<6 August 2009>.
 
 B<WARNING>: This version of the module is part of a
 developer (beta) release of the distribution and it is
@@ -558,9 +558,10 @@ scopes. A variable defined in the master template is not accessible from a
 dynamic include. The exception to this rule is the C<monolith> option to C<new>.
 If it is enabled; the master template and any includes it has will be compiled
 into a single document, thus making every variable defined at the top available
-to the includes below. But this method has a drawback, it disables cache check
-for the sub files (includes). You'll need to edit the master template to force
-a cache reload.
+to the includes below. But this method has several drawbacks, it disables cache
+check for the sub files (includes) --you'll need to edit the master template
+to force a cache reload-- and it can not be used with interpolated includes.
+If you use an interpolated include with monolith enabled, you'll get an error.
 
 If you don't use C<monolith> (disabled by default), then you'll need to share
 the variables somehow to don't repeat yourself. Variable sharing is demonstrated

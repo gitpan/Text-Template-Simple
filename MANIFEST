@@ -61,6 +61,10 @@ t/data/interpolate_data.tts
 t/data/test_var.tts
 t/data/tname_main.tts
 t/data/tname_sub.tts
+t/data/monolith.tts
+t/data/monolith-1.tts
+t/data/monolith-2.tts
+t/data/monolith-3.tts
 t/data/path1/test1.tts
 t/data/path1/test4.tts
 t/data/path2/test2.tts

@@ -4,8 +4,38 @@ use strict;
 use Test::More qw( no_plan );
 use Text::Template::Simple;
 
-my $t = Text::Template::Simple->new();
+my $t = Text::Template::Simple->new(
+   monolith => 1,
+);
 
-TODO: {
-    todo_skip("Test monolith => 1 & monolith => 0 with both static & dynamic inc");
+my $got = $t->compile( 't/data/monolith.tts' );
+chomp $got;
+
+is( $got, expected(), "Testing Monolith");
+
+sub expected {
+    <<'EXPECT';
+
+[ dynamic include error ] Interpolated includes don't work under monolith option. Please disable monolith and use the 'SHARE' directive in the include command: t/data/monolith-1.tts | PARAM: 'test'
+$VAR1 = [
+          42,
+          {
+            'abc' => 123
+          },
+          1,
+          2,
+          3
+        ];
+
+$VAR1 = [
+          42,
+          {
+            'abc' => 123
+          },
+          1,
+          2,
+          3
+        ];
+
+EXPECT
 }

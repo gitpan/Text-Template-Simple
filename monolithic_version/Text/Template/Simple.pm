@@ -33,7 +33,7 @@ package Text::Template::Simple::Constants;
 use strict;
 use vars qw($VERSION $OID $DID @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
 
-$VERSION = '0.79_06';
+$VERSION = '0.79_07';
 
 # object fields
 BEGIN { $OID = -1 } # init object field id counter
@@ -311,7 +311,7 @@ use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
 use Text::Template::Simple::Constants qw( :info DIGEST_MODS );
 use Carp qw( croak );
 
-$VERSION = '0.79_06';
+$VERSION = '0.79_07';
 
 BEGIN {
    if ( IS_WINDOWS ) {
@@ -538,7 +538,7 @@ use strict;
 use vars qw($VERSION);
 use Text::Template::Simple::Dummy;
 
-$VERSION = '0.79_06';
+$VERSION = '0.79_07';
 
 sub _compile { shift; return __PACKAGE__->_object->reval(shift) }
 
@@ -571,7 +571,7 @@ use overload q{""} => 'get';
 use Text::Template::Simple::Constants qw( MAX_FL RE_INVALID_CID );
 use Text::Template::Simple::Util      qw( LOG DEBUG DIGEST fatal );
 
-$VERSION = '0.79_06';
+$VERSION = '0.79_07';
 
 sub new {
    my $class = shift;
@@ -618,7 +618,7 @@ package Text::Template::Simple::Base::Parser;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.79_06';
+$VERSION = '0.79_07';
 
 use Text::Template::Simple::Util      qw(:all);
 use Text::Template::Simple::Constants qw(:all);
@@ -1008,7 +1008,7 @@ use vars qw($VERSION);
 use Text::Template::Simple::Util qw(:all);
 use Text::Template::Simple::Constants qw(:all);
 
-$VERSION = '0.79_06';
+$VERSION = '0.79_07';
 
 sub _include_no_monolith {
    # no monolith eh?
@@ -1088,6 +1088,10 @@ sub _include {
    }
    else {
       $interpolate = 1; # just guessing ...
+      return "qq~$err Interpolated includes don't work under monolith option. "
+            ."Please disable monolith and use the 'SHARE' directive in the"
+            ." include command: $file~"
+         if $self->[MONOLITH];
    }
 
    return "q~$err '" . escape('~' => $file) . "' is a directory~"
@@ -1193,7 +1197,7 @@ use vars qw($VERSION);
 use Text::Template::Simple::Util qw(:all);
 use Text::Template::Simple::Constants qw(:all);
 
-$VERSION = '0.79_06';
+$VERSION = '0.79_07';
 
 sub _examine {
    my $self   = shift;
@@ -1260,7 +1264,7 @@ use vars qw($VERSION);
 use Text::Template::Simple::Util qw(:all);
 use Text::Template::Simple::Constants qw(:all);
 
-$VERSION = '0.79_06';
+$VERSION = '0.79_07';
 
 sub _compiler { shift->[SAFE] ? COMPILER_SAFE : COMPILER }
 
@@ -1432,7 +1436,7 @@ package Text::Template::Simple::Tokenizer;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.79_06';
+$VERSION = '0.79_07';
 
 use constant CMD_CHAR             =>  0;
 use constant CMD_ID               =>  1;
@@ -1772,7 +1776,7 @@ use constant MY_IO_LAYER      => 0;
 use constant MY_INCLUDE_PATHS => 1;
 use constant MY_TAINT_MODE    => 2;
 
-$VERSION = '0.79_06';
+$VERSION = '0.79_07';
 
 sub new {
    my $class = shift;
@@ -1952,7 +1956,7 @@ use vars qw($VERSION);
 use Text::Template::Simple::Caller;
 use Text::Template::Simple::Util qw();
 
-$VERSION = '0.79_06';
+$VERSION = '0.79_07';
 
 sub stack { # just a wrapper
    my $opt = shift || {};
@@ -1968,7 +1972,7 @@ use strict;
 use vars qw($VERSION);
 use Text::Template::Simple::Dummy;
 
-$VERSION = '0.79_06';
+$VERSION = '0.79_07';
 
 sub _compile { shift; return eval shift }
 
@@ -1987,7 +1991,7 @@ use constant HINTS      => 8;
 use constant BITMASK    => 9;
 use Text::Template::Simple::Util qw( ishref fatal );
 
-$VERSION = '0.79_06';
+$VERSION = '0.79_07';
 
 sub stack {
    my $self    = shift;
@@ -2160,7 +2164,7 @@ use Text::Template::Simple::Constants qw(:all);
 use Text::Template::Simple::Util qw( DEBUG LOG ishref fatal );
 use Carp qw( croak );
 
-$VERSION = '0.79_06';
+$VERSION = '0.79_07';
 
 my $CACHE = {}; # in-memory template cache
 
@@ -2574,7 +2578,7 @@ package Text::Template::Simple;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.79_06';
+$VERSION = '0.79_07';
 
 use File::Spec;
 use Text::Template::Simple::Constants qw(:all);
@@ -2836,8 +2840,8 @@ generated with an automatic build tool. If you experience problems
 with this version, please install and use the supported standard
 version. This version is B<NOT SUPPORTED>.
 
-This document describes version C<0.79_06> of C<Text::Template::Simple>
-released on C<5 August 2009>.
+This document describes version C<0.79_07> of C<Text::Template::Simple>
+released on C<6 August 2009>.
 
 B<WARNING>: This version of the module is part of a
 developer (beta) release of the distribution and it is
@@ -3135,9 +3139,10 @@ scopes. A variable defined in the master template is not accessible from a
 dynamic include. The exception to this rule is the C<monolith> option to C<new>.
 If it is enabled; the master template and any includes it has will be compiled
 into a single document, thus making every variable defined at the top available
-to the includes below. But this method has a drawback, it disables cache check
-for the sub files (includes). You'll need to edit the master template to force
-a cache reload.
+to the includes below. But this method has several drawbacks, it disables cache
+check for the sub files (includes) --you'll need to edit the master template
+to force a cache reload-- and it can not be used with interpolated includes.
+If you use an interpolated include with monolith enabled, you'll get an error.
 
 If you don't use C<monolith> (disabled by default), then you'll need to share
 the variables somehow to don't repeat yourself. Variable sharing is demonstrated

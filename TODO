@@ -1,11 +1,13 @@
-* Implement variable sharing without monolith..?
-    o PROCESS -> no monolith ?
-        - Interpolated includes do not respect monolith though :p
-        - This needs fix.
-        - Add SHARE: command?
-        - monolith seems to be buggy
-        - Implement 022-monolith
-* Implement a way to find out the name of the top level file which included the sub-template.
+* Interpolated includes can not be used with monolith. It does not seem to be
+  possible to use shared variables in interpolated includes. An error message
+  is returned instead at the moment. Options:
+     o Remove monolith from the API
+     o Leave it as-is. i.e.: an error message will be returned
+     o Find a new way to implement interpolated includes (if possible at all!).
+* Implement a way to find out the name of the top level file which included the
+  sub-template.
+* Fix line numbering. It's probably badly broken (chomp, code/comment blocks, etc.)
+    o Implement a unit test related to this.
 * ***LOW*** Consider trying PPI. Resume?
 * ***LOW*** Implement TTS plugins for major frameworks.
 * ***LOW*** Benchmarks?
