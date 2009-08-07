@@ -13,7 +13,7 @@ use constant HINTS      => 8;
 use constant BITMASK    => 9;
 use Text::Template::Simple::Util qw( ishref fatal );
 
-$VERSION = '0.79_07';
+$VERSION = '0.79_08';
 
 sub stack {
    my $self    = shift;
@@ -197,8 +197,8 @@ Text::Template::Simple::Caller - Caller stack tracer
 
 =head1 DESCRIPTION
 
-This document describes version C<0.79_07> of C<Text::Template::Simple::Caller>
-released on C<6 August 2009>.
+This document describes version C<0.79_08> of C<Text::Template::Simple::Caller>
+released on C<7 August 2009>.
 
 B<WARNING>: This version of the module is part of a
 developer (beta) release of the distribution and it is

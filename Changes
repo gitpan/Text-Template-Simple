@@ -2,6 +2,9 @@ Revision history for Perl extension Text::Template::Simple.
 
 Time zone is UTC+2.
 
+0.79_08 Fri Aug  7 03:42:48 2009
+   => Fix monolith test.
+
 0.79_07 Thu Aug  6 04:17:38 2009
    => Implemented the monolith test.
    => monolith option does not work with interpolated includes. It's currently
