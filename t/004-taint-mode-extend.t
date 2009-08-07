@@ -1,4 +1,4 @@
-#!perl -Tw
+#!C:\Perl\bin\perl.exe -Tw
 #!/usr/bin/env perl -w
 # Extending Text::Template::Simple with functions and globals
 # SEE ALSO: t/lib/My.pm

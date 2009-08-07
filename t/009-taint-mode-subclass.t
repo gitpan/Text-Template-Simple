@@ -1,4 +1,4 @@
-#!perl -Tw
+#!C:\Perl\bin\perl.exe -Tw
 #!/usr/bin/env perl -w
 # Simple Subclassing
 package MyTTS;

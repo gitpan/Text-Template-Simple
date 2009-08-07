@@ -2,7 +2,7 @@ package Build;
 use strict;
 use vars qw( $VERSION );
 use warnings;
-use constant TAINT_SHEBANG => "#!perl -Tw\n";
+use constant TAINT_SHEBANG => "#!$^X -Tw\n";
 
 $VERSION = '0.61';
 

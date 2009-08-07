@@ -2,7 +2,7 @@ package Text::Template::Simple::Tokenizer;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.79_08';
+$VERSION = '0.79_09';
 
 use constant CMD_CHAR             =>  0;
 use constant CMD_ID               =>  1;
@@ -14,6 +14,7 @@ use constant ID_POST_CHOMP        =>  3;
 use constant SUBSTR_OFFSET_FIRST  =>  0;
 use constant SUBSTR_OFFSET_SECOND =>  1;
 use constant SUBSTR_LENGTH        =>  1;
+
 use Text::Template::Simple::Util      qw( LOG DEBUG fatal );
 use Text::Template::Simple::Constants qw( :chomp :directive :token );
 
@@ -222,85 +223,87 @@ sub _chomp_prev {
    return;
 }
 
+sub _get_symbols {
+   # fetch the related constants
+   my $self  = shift;
+   my $regex = shift || die "regex is missing";
+   no strict qw( refs );
+   return grep { $_ =~ $regex } keys %{ ref($self) . '::' };
+}
+
 sub _visualize_chomp {
    my $self  = shift;
    my $param = shift;
-   if ( ! defined $param ) {
-      return wantarray ? ("undef", "undef") : "undef";
-   }
+   return 'undef' if ! defined $param;
 
-   my @types = (
-      [ COLLAPSE_ALL   => COLLAPSE_ALL   ],
-      [ COLLAPSE_LEFT  => COLLAPSE_LEFT  ],
-      [ COLLAPSE_RIGHT => COLLAPSE_RIGHT ],
-      [ CHOMP_ALL      => CHOMP_ALL      ],
-      [ CHOMP_LEFT     => CHOMP_LEFT     ],
-      [ CHOMP_RIGHT    => CHOMP_RIGHT    ],
-      [ CHOMP_NONE     => CHOMP_NONE     ],
-      [ COLLAPSE_NONE  => COLLAPSE_NONE  ],
-   );
+   my @test = map  { $_->[0]             }
+              grep { $param & $_->[1]    }
+              map  { [ $_, $self->$_() ] }
+              $self->_get_symbols( qr{ \A (?: CHOMP|COLLAPSE ) }xms );
 
-   my $which;
-   foreach my $type ( @types ) {
-       if ( $type->[1] & $param ) {
-           $which = $type->[0];
-           last;
-       }
-   }
-
-   $which ||= "undef";
-   return $which if ! wantarray;
-
-   # can be smaller?
-   my @test = (
-      sprintf( "COLLAPSE_ALL  : %s", $param & COLLAPSE_ALL   ? 1 : 0 ),
-      sprintf( "COLLAPSE_LEFT : %s", $param & COLLAPSE_LEFT  ? 1 : 0 ),
-      sprintf( "COLLAPSE_RIGHT: %s", $param & COLLAPSE_RIGHT ? 1 : 0 ),
-      sprintf( "CHOMP_ALL     : %s", $param & CHOMP_ALL      ? 1 : 0 ),
-      sprintf( "CHOMP_LEFT    : %s", $param & CHOMP_LEFT     ? 1 : 0 ),
-      sprintf( "CHOMP_RIGHT   : %s", $param & CHOMP_RIGHT    ? 1 : 0 ),
-      sprintf( "COLLAPSE_NONE : %s", $param & COLLAPSE_NONE  ? 1 : 0 ),
-      sprintf( "CHOMP_NONE    : %s", $param & CHOMP_NONE     ? 1 : 0 ),
-   );
-
-   return $which, join( "\n", @test );
+   return @test ? join( ',', @test ) : 'undef';
 }
 
 sub _visualize_tid {
    my $self = shift;
    my $id   = shift;
-   my @ids  = ( undef,
-                qw(
-                     T_DELIMSTART
-                     T_DELIMEND
-                     T_DISCARD
-                     T_COMMENT
-                     T_RAW
-                     T_NOTADELIM
-                     T_CODE
-                     T_CAPTURE
-                     T_DYNAMIC
-                     T_STATIC
-                     T_MAPKEY
-                     T_COMMAND
-                  )
-               );
-   my $rv = $ids[$id] || ( defined $id ? $id : 'undef' );
+   my @ids  = (
+      undef,
+      sort { $self->$a() <=> $self->$b() }
+      grep { $_ ne 'T_MAXID' }
+      $self->_get_symbols( qr{ \A (?: T_ ) }xms )
+   );
+
+   my $rv = $ids[ $id ] || ( defined $id ? $id : 'undef' );
    return $rv;
+}
+
+sub _visualize_ws {
+   my $self = shift;
+   my $str  = shift;
+      $str =~ s{\r}{\\r}xmsg;
+      $str =~ s{\n}{\\n}xmsg;
+      $str =~ s{\f}{\\f}xmsg;
+      $str =~ s{\s}{\\s}xmsg;
+   return $str;
 }
 
 sub _debug_tokens {
    my $self   = shift;
    my $tokens = shift;
-   # TODO: heredocs look ugly
-   my $buf = <<'HEAD';
+   my $buf    = $self->_debug_tokens_head;
+
+   foreach my $t ( @{ $tokens } ) {
+      $buf .=  $self->_debug_tokens_row(
+                  $self->_visualize_tid( $t->[TOKEN_ID] ),
+                  $self->_visualize_ws(  $t->[TOKEN_STR] ),
+                  map {
+                     my $c = $self->_visualize_chomp( $_ );
+                     $c eq 'undef' ? '' : $c
+                  }
+                  $t->[TOKEN_CHOMP][TOKEN_CHOMP_NEXT],
+                  $t->[TOKEN_CHOMP][TOKEN_CHOMP_PREV],
+                  $t->[TOKEN_TRIGGER]
+               );
+   }
+   Text::Template::Simple::Util::LOG( DEBUG => $buf );
+   return;
+}
+
+sub _debug_tokens_head {
+   my $self = shift;
+   return <<'HEAD';
 
 ---------------------------
        TOKEN DUMP
 ---------------------------
 HEAD
+}
 
-   my $tmp = <<'DUMP';
+sub _debug_tokens_row {
+   my $self = shift;
+   my @params = @_;
+   return sprintf <<'DUMP', @params;
 ID        : %s
 STRING    : %s
 CHOMP_NEXT: %s
@@ -308,22 +311,6 @@ CHOMP_PREV: %s
 TRIGGER   : %s
 ---------------------------
 DUMP
-
-   foreach my $t ( @{ $tokens } ) {
-      my $s = $t->[TOKEN_STR];
-      $s =~ s{\r}{\\r}xmsg;
-      $s =~ s{\n}{\\n}xmsg;
-      $s =~ s{\f}{\\f}xmsg;
-      $s =~ s{\s}{\\s}xmsg;
-      my @v = (
-         scalar $self->_visualize_chomp( $t->[TOKEN_CHOMP][TOKEN_CHOMP_NEXT] ),
-         scalar $self->_visualize_chomp( $t->[TOKEN_CHOMP][TOKEN_CHOMP_PREV] ),
-         scalar $self->_visualize_chomp( $t->[TOKEN_TRIGGER]                 )
-      );
-      @v = map { $_ eq 'undef' ? '' : $_ } @v;
-      $buf .= sprintf $tmp, $self->_visualize_tid( $t->[TOKEN_ID] ), $s, @v;
-   }
-   Text::Template::Simple::Util::LOG( DEBUG => $buf );
 }
 
 sub DESTROY {
@@ -355,7 +342,7 @@ Text::Template::Simple::Tokenizer - Tokenizer
 
 =head1 DESCRIPTION
 
-This document describes version C<0.79_08> of C<Text::Template::Simple::Tokenizer>
+This document describes version C<0.79_09> of C<Text::Template::Simple::Tokenizer>
 released on C<7 August 2009>.
 
 B<WARNING>: This version of the module is part of a
