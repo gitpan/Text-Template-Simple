@@ -1,4 +1,4 @@
-#!C:\Perl\bin\perl.exe -Tw
+#!perl -Tw
 #!/usr/bin/env perl -w
 # Using Safe templates (tricky)
 # SEE ALSO: t/lib/My.pm

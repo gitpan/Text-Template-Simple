@@ -2,7 +2,7 @@ package Text::Template::Simple;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.79_09';
+$VERSION = '0.80';
 
 use File::Spec;
 use Text::Template::Simple::Constants qw(:all);
@@ -259,12 +259,8 @@ Where C<hello.tts> has this content:
 
 =head1 DESCRIPTION
 
-This document describes version C<0.79_09> of C<Text::Template::Simple>
-released on C<7 August 2009>.
-
-B<WARNING>: This version of the module is part of a
-developer (beta) release of the distribution and it is
-not suitable for production use.
+This document describes version C<0.80> of C<Text::Template::Simple>
+released on C<8 August 2009>.
 
 This is a simple template module. There is no extra template/mini 
 language. Instead, it uses Perl as the template language. Templates

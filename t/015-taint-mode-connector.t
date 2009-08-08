@@ -1,4 +1,4 @@
-#!C:\Perl\bin\perl.exe -Tw
+#!perl -Tw
 #!/usr/bin/env perl -w
 package TTS;
 use strict;

@@ -1,4 +1,4 @@
-#!C:\Perl\bin\perl.exe -Tw
+#!perl -Tw
 #!/usr/bin/env perl -w
 use strict;
 use subs qw( trim );

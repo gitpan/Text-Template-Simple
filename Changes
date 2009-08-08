@@ -2,6 +2,15 @@ Revision history for Perl extension Text::Template::Simple.
 
 Time zone is UTC+2.
 
+0.80 Sat Aug  8 02:37:32 2009
+   => New stable version. Highlights:
+      o "resume" option went to oblivion.
+      o Taint mode support
+      o Cache improvements.
+      o "monolith" & interpolated includes do not mix. It now returns an error.
+      o Empty includes return enpty string instead of dying.
+      o Shared variables (only SCALARs) for includes.
+
 0.79_09 Fri Aug  7 06:11:05 2009
    => Polish the tokenizer debugging codes.
    => Testing build tool change.

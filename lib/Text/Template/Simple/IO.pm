@@ -8,7 +8,7 @@ use constant MY_IO_LAYER      => 0;
 use constant MY_INCLUDE_PATHS => 1;
 use constant MY_TAINT_MODE    => 2;
 
-$VERSION = '0.79_09';
+$VERSION = '0.80';
 
 sub new {
    my $class = shift;
@@ -190,12 +190,8 @@ TODO
 
 =head1 DESCRIPTION
 
-This document describes version C<0.79_09> of C<Text::Template::Simple::IO>
-released on C<7 August 2009>.
-
-B<WARNING>: This version of the module is part of a
-developer (beta) release of the distribution and it is
-not suitable for production use.
+This document describes version C<0.80> of C<Text::Template::Simple::IO>
+released on C<8 August 2009>.
 
 TODO
 

@@ -6,7 +6,7 @@ use Text::Template::Simple::Constants qw(:all);
 use Text::Template::Simple::Util qw( DEBUG LOG ishref fatal );
 use Carp qw( croak );
 
-$VERSION = '0.79_09';
+$VERSION = '0.80';
 
 my $CACHE = {}; # in-memory template cache
 
@@ -430,12 +430,8 @@ TODO
 
 =head1 DESCRIPTION
 
-This document describes version C<0.79_09> of C<Text::Template::Simple::Cache>
-released on C<7 August 2009>.
-
-B<WARNING>: This version of the module is part of a
-developer (beta) release of the distribution and it is
-not suitable for production use.
+This document describes version C<0.80> of C<Text::Template::Simple::Cache>
+released on C<8 August 2009>.
 
 Cache manager for C<Text::Template::Simple>.
 

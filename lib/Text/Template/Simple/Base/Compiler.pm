@@ -4,7 +4,7 @@ use vars qw($VERSION);
 use Text::Template::Simple::Util qw(:all);
 use Text::Template::Simple::Constants qw(:all);
 
-$VERSION = '0.79_09';
+$VERSION = '0.80';
 
 sub _compiler { shift->[SAFE] ? COMPILER_SAFE : COMPILER }
 
@@ -186,12 +186,8 @@ Private module.
 
 =head1 DESCRIPTION
 
-This document describes version C<0.79_09> of C<Text::Template::Simple::Base::Compiler>
-released on C<7 August 2009>.
-
-B<WARNING>: This version of the module is part of a
-developer (beta) release of the distribution and it is
-not suitable for production use.
+This document describes version C<0.80> of C<Text::Template::Simple::Base::Compiler>
+released on C<8 August 2009>.
 
 Private module.
 
