@@ -6,7 +6,7 @@ use Carp qw( croak );
 use constant DEFAULT_AUTHOR => 'Burak Gursoy <burak@cpan.org>';
 use constant OS_ERROR       => qr{OS \s+ unsupported}xms;
 
-$VERSION   = '0.50';
+$VERSION   = '0.51';
 @ISA       = qw( Exporter );
 @EXPORT    = qw( spec );
 @EXPORT_OK = qw( mm_spec );
@@ -72,12 +72,12 @@ sub _mm_abstract {
     my $fh = IO::File->new;
     $fh->open( $file, 'r' ) || croak "Can not read $file: $!";
     binmode $fh;
-    while ( my $line = readline $fh ) {
+    while ( my $line = <$fh> ) {
         chomp $line;
         last if $line eq '=head1 NAME';
     }
     my $buf;
-    while ( my $line = readline $fh ) {
+    while ( my $line = <$fh> ) {
         chomp $line;
         last if $line =~ m{ \A =head }xms;
         $buf .= $line;

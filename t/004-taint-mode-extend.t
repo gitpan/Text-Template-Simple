@@ -1,4 +1,5 @@
 #!perl -Tw
+use constant TAINTMODE => 1;
 #!/usr/bin/env perl -w
 # Extending Text::Template::Simple with functions and globals
 # SEE ALSO: t/lib/My.pm

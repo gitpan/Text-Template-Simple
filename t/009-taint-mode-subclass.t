@@ -1,4 +1,5 @@
 #!perl -Tw
+use constant TAINTMODE => 1;
 #!/usr/bin/env perl -w
 # Simple Subclassing
 package MyTTS;

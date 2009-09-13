@@ -9,8 +9,8 @@ eval { require Pod::Simple; };
 push @errors, "Pod::Simple is required for testing POD" if $@;
 
 if ( not @errors ) {
-   my $tpv = $Test::Pod::VERSION;
-   my $psv = $Pod::Simple::VERSION;
+   my $tpv = Test::Pod->VERSION;
+   my $psv = Pod::Simple->VERSION;
 
    if ( $tpv < 1.26 ) {
       push @errors, "Upgrade Test::Pod to 1.26 to run this test. "

@@ -1,4 +1,5 @@
 #!perl -Tw
+use constant TAINTMODE => 1;
 #!/usr/bin/env perl -w
 # Subclassing to define the buffer variables
 use strict;

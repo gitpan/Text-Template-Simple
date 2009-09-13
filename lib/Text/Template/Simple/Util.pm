@@ -4,7 +4,7 @@ use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
 use Text::Template::Simple::Constants qw( :info DIGEST_MODS );
 use Carp qw( croak );
 
-$VERSION = '0.80';
+$VERSION = '0.81';
 
 BEGIN {
    if ( IS_WINDOWS ) {
@@ -240,8 +240,8 @@ TODO
 
 =head1 DESCRIPTION
 
-This document describes version C<0.80> of C<Text::Template::Simple::Util>
-released on C<8 August 2009>.
+This document describes version C<0.81> of C<Text::Template::Simple::Util>
+released on C<13 September 2009>.
 
 Contains utility functions for Text::Template::Simple.
 

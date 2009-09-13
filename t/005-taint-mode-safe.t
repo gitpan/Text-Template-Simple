@@ -1,4 +1,5 @@
 #!perl -Tw
+use constant TAINTMODE => 1;
 #!/usr/bin/env perl -w
 # Using Safe templates (tricky)
 # SEE ALSO: t/lib/My.pm

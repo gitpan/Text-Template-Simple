@@ -8,7 +8,7 @@ use constant MY_IO_LAYER      => 0;
 use constant MY_INCLUDE_PATHS => 1;
 use constant MY_TAINT_MODE    => 2;
 
-$VERSION = '0.80';
+$VERSION = '0.81';
 
 sub new {
    my $class = shift;
@@ -71,7 +71,8 @@ sub slurp {
    my($fh, $seek);
    LOG(IO_SLURP => $file) if DEBUG();
 
-   if ( fileno $file ) {
+   # perl 5.5.3 compat: we need to check if it's a ref first
+   if ( ref $file && fileno $file ) {
       $fh   = $file;
       $seek = 1;
    }
@@ -190,8 +191,8 @@ TODO
 
 =head1 DESCRIPTION
 
-This document describes version C<0.80> of C<Text::Template::Simple::IO>
-released on C<8 August 2009>.
+This document describes version C<0.81> of C<Text::Template::Simple::IO>
+released on C<13 September 2009>.
 
 TODO
 
