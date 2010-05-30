@@ -3,6 +3,7 @@ use constant TAINTMODE => 1;
 #!/usr/bin/env perl -w
 package TTS;
 use strict;
+use warnings;
 use base qw(Text::Template::Simple);
 
 my %CONNECTOR = ( # Default classes list

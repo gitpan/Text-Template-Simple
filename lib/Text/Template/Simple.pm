@@ -1,8 +1,9 @@
 package Text::Template::Simple;
 use strict;
-use vars qw($VERSION);
+use warnings;
+use vars qw( $VERSION );
 
-$VERSION = '0.81';
+$VERSION = '0.82';
 
 use File::Spec;
 use Text::Template::Simple::Constants qw(:all);
@@ -31,21 +32,21 @@ my %CONNECTOR = ( # Default classes list
 );
 
 my %DEFAULT = ( # default object attributes
-   delimiters       => [ DELIMS ], # default delimiters
-   cache            =>  0,    # use cache or not
-   cache_dir        => '',    # will use hdd intead of memory for caching...
-   strict           =>  1,    # set to false for toleration to un-declared vars
-   safe             =>  0,    # use safe compartment?
-   header           =>  0,    # template header. i.e. global codes.
-   add_args         => '',    # will unshift template argument list. ARRAYref.
-   warn_ids         =>  0,    # warn template ids?
-   capture_warnings =>  0,    # bool
-   iolayer          => '',    # I/O layer for filehandles
-   stack            => '',    # dump caller stack?
-   user_thandler    => undef, # user token handler callback
-   monolith         =>  0,    # use monolithic template & cache ?
-   include_paths    => [],    # list of template dirs
-   verbose_errors   =>  0,    # bool
+   delimiters       => [ DELIMS ],   # default delimiters
+   cache            =>  0,           # use cache or not
+   cache_dir        => EMPTY_STRING, # will use hdd intead of memory for caching...
+   strict           =>  1,           # set to false for toleration to un-declared vars
+   safe             =>  0,           # use safe compartment?
+   header           =>  0,           # template header. i.e. global codes.
+   add_args         => EMPTY_STRING, # will unshift template argument list. ARRAYref.
+   warn_ids         =>  0,           # warn template ids?
+   capture_warnings =>  0,           # bool
+   iolayer          => EMPTY_STRING, # I/O layer for filehandles
+   stack            => EMPTY_STRING, # dump caller stack?
+   user_thandler    => undef,        # user token handler callback
+   monolith         =>  0,           # use monolithic template & cache ?
+   include_paths    => [],           # list of template dirs
+   verbose_errors   =>  0,           # bool
    pre_chomp        => CHOMP_NONE,
    post_chomp       => CHOMP_NONE,
    taint_mode       => TAINT_CHECK_NORMAL,
@@ -54,16 +55,16 @@ my %DEFAULT = ( # default object attributes
 my @EXPORT_OK = qw( tts );
 
 sub import {
-   my $class = shift;
+   my($class, @args) = @_;
+   return if ! @args;
    my $caller = caller;
-   my @args   = @_ or return;
-   my %ok     = map { $_, $_ } @EXPORT_OK;
+   my %ok     = map { ($_, $_) } @EXPORT_OK;
 
    no strict qw( refs );
    foreach my $name ( @args ) {
       fatal('tts.main.import.invalid', $name, $class) if ! $ok{$name};
       fatal('tts.main.import.undef',   $name, $class) if ! defined &{ $name   };
-      my $target = $caller . '::' . $name;
+      my $target = $caller . q{::} . $name;
       fatal('tts.main.import.redefine', $name, $caller) if defined &{ $target };
       *{ $target } = \&{ $name }; # install
    }
@@ -74,17 +75,17 @@ sub import {
 sub tts {
    my @args = @_;
    fatal('tts.main.tts.args') if ! @args;
-   my @new  = ishref($args[0]) ? %{ shift(@args) } : ();
+   my @new  = ishref($args[0]) ? %{ shift @args } : ();
    return __PACKAGE__->new( @new )->compile( @args );
 }
 
 sub new {
-   my $class = shift;
-   my %param = scalar(@_) % 2 ? () : (@_);
+   my($class, @args) = @_;
+   my %param = @args % 2 ? () : (@args);
    my $self  = [ map { undef } 0 .. MAXOBJFIELD ];
    bless $self, $class;
 
-   LOG( CONSTRUCT => $self->_class_id . " @ ".(scalar localtime time) )
+   LOG( CONSTRUCT => $self->class_id . q{ @ } . (scalar localtime time) )
       if DEBUG();
 
    my($fid, $fval);
@@ -97,7 +98,7 @@ sub new {
    }
 
    foreach my $bogus ( keys %param ) {
-      warn "'$bogus' is not a known parameter. Did you make a typo?";
+      warn "'$bogus' is not a known parameter. Did you make a typo?\n";
    }
 
    $self->_init;
@@ -110,12 +111,12 @@ sub connector {
    return $CONNECTOR{ $id } || fatal('tts.main.connector.invalid', $id);
 }
 
-sub cache { shift->[CACHE_OBJECT] }
-sub io    { shift->[IO_OBJECT]    }
+sub cache { return shift->[CACHE_OBJECT] }
+sub io    { return shift->[IO_OBJECT]    }
 
 sub compile {
-   my $self  = shift;
-   my $rv    = $self->_compile( @_ );
+   my($self, @args) = @_;
+   my $rv    = $self->_compile( @args );
    # we need to reset this to prevent false positives
    # the trick is: this is set in _compile() and sub includes call _compile()
    # instead of compile(), so it will only be reset here
@@ -137,12 +138,12 @@ sub _init {
    fatal('tts.main.dsws')         if $d->[DELIM_START] =~ m{\s}xms;
    fatal('tts.main.dews')         if $d->[DELIM_END]   =~ m{\s}xms;
 
-   $self->[TYPE]           = '';
+   $self->[TYPE]           = EMPTY_STRING;
    $self->[COUNTER]        = 0;
    $self->[FAKER]          = $self->_output_buffer_var;
    $self->[FAKER_HASH]     = $self->_output_buffer_var('hash');
    $self->[FAKER_SELF]     = $self->_output_buffer_var('self');
-   $self->[INSIDE_INCLUDE] = -1; # must be -1 not 0
+   $self->[INSIDE_INCLUDE] = MINUS_ONE; # must be -1 not 0
    $self->[NEEDS_OBJECT]   =  0; # the template needs $self ?
    $self->[DEEP_RECURSION] =  0; # recursion detector
 
@@ -176,16 +177,16 @@ sub _output_buffer_var {
             :                    \my $fake
             ;
    $id  = "$id";
-   $id .= int( rand($$) ); # . rand() . time;
+   $id .= int rand $$; # . rand() . time;
    $id  =~ tr/a-zA-Z_0-9//cd;
    $id  =~ s{SCALAR}{SELF}xms if $type eq 'self';
-   return '$' . $id;
+   return q{$} . $id;
 }
 
-sub _class_id {
+sub class_id {
    my $self = shift;
    my $class = ref($self) || $self;
-   return sprintf( "%s v%s", $class, $self->VERSION() );
+   return sprintf q{%s v%s}, $class, $self->VERSION;
 }
 
 sub _tidy {
@@ -194,8 +195,8 @@ sub _tidy {
 
    TEST_TIDY: {
       local($@, $SIG{__DIE__});
-      eval { require Perl::Tidy; };
-      if ( $@ ) { # :(
+      my $ok = eval { require Perl::Tidy; 1; };
+      if ( ! $ok ) { # :(
          $code =~ s{;}{;\n}xmsgo; # new lines makes it easy to debug
          return $code;
       }
@@ -214,12 +215,6 @@ sub _tidy {
 
    LOG( TIDY_WARNING => $stderr ) if $stderr;
    return $buf;
-}
-
-sub _needs_object {
-   my $self = shift;
-   $self->[NEEDS_OBJECT]++;
-   return $self;
 }
 
 sub DESTROY {
@@ -259,8 +254,8 @@ Where C<hello.tts> has this content:
 
 =head1 DESCRIPTION
 
-This document describes version C<0.81> of C<Text::Template::Simple>
-released on C<13 September 2009>.
+This document describes version C<0.82> of C<Text::Template::Simple>
+released on C<30 May 2010>.
 
 This is a simple template module. There is no extra template/mini 
 language. Instead, it uses Perl as the template language. Templates
@@ -609,6 +604,8 @@ Note that you can not use any variables in these blocks. They are static.
 
 =head2 cache
 
+=head2 class_id
+
 =head2 compile
 
 =head2 connector
@@ -684,12 +681,12 @@ Burak Gursoy <burak@cpan.org>.
 
 =head1 COPYRIGHT
 
-Copyright 2004 - 2009 Burak Gursoy. All rights reserved.
+Copyright 2004 - 2010 Burak Gursoy. All rights reserved.
 
 =head1 LICENSE
 
 This library is free software; you can redistribute it and/or modify 
-it under the same terms as Perl itself, either Perl version 5.10.0 or, 
+it under the same terms as Perl itself, either Perl version 5.10.1 or, 
 at your option, any later version of Perl 5 you may have available.
 
 =cut

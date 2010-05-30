@@ -1,11 +1,12 @@
 package Text::Template::Simple::Cache::ID;
 use strict;
+use warnings;
 use vars qw($VERSION);
 use overload q{""} => 'get';
 use Text::Template::Simple::Constants qw( MAX_FL RE_INVALID_CID );
 use Text::Template::Simple::Util      qw( LOG DEBUG DIGEST fatal );
 
-$VERSION = '0.81';
+$VERSION = '0.82';
 
 sub new {
    my $class = shift;
@@ -13,22 +14,32 @@ sub new {
    return $self;
 }
 
-sub get { my $self = shift; $$self }
-sub set { my $self = shift; $$self = shift if defined $_[0]; return; }
+sub get {
+   my $self = shift;
+   return ${$self};
+}
+
+sub set { ## no critic (ProhibitAmbiguousNames)
+   my $self = shift;
+   my $val  = shift;
+   ${$self} = $val if defined $val;
+   return;
+}
 
 sub generate { # cache id generator
    my($self, $data, $custom, $regex) = @_;
 
    if ( ! $data ) {
       fatal('tts.cache.id.generate.data') if ! defined $data;
-      LOG( IDGEN => "Generating ID from empty data" ) if DEBUG;
+      LOG( IDGEN => 'Generating ID from empty data' ) if DEBUG;
    }
 
    $self->set(
       $custom ? $self->_custom( $data, $regex )
               : $self->DIGEST->add( $data )->hexdigest
    );
-   $self->get;
+
+   return $self->get;
 }
 
 sub _custom {
@@ -44,7 +55,7 @@ sub _custom {
 
 sub DESTROY {
    my $self = shift || return;
-   LOG( DESTROY => ref $self ) if DEBUG();
+   LOG( DESTROY => ref $self ) if DEBUG;
    return;
 }
 
@@ -62,8 +73,8 @@ TODO
 
 =head1 DESCRIPTION
 
-This document describes version C<0.81> of C<Text::Template::Simple::Cache::ID>
-released on C<13 September 2009>.
+This document describes version C<0.82> of C<Text::Template::Simple::Cache::ID>
+released on C<30 May 2010>.
 
 TODO
 
@@ -91,12 +102,12 @@ Burak Gursoy <burak@cpan.org>.
 
 =head1 COPYRIGHT
 
-Copyright 2004 - 2009 Burak Gursoy. All rights reserved.
+Copyright 2004 - 2010 Burak Gursoy. All rights reserved.
 
 =head1 LICENSE
 
 This library is free software; you can redistribute it and/or modify 
-it under the same terms as Perl itself, either Perl version 5.10.0 or, 
+it under the same terms as Perl itself, either Perl version 5.10.1 or, 
 at your option, any later version of Perl 5 you may have available.
 
 =cut

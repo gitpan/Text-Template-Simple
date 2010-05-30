@@ -1,12 +1,12 @@
 package Text::Template::Simple::Cache;
 use strict;
+use warnings;
 use vars qw($VERSION);
-use constant CACHE_PARENT => 0;
 use Text::Template::Simple::Constants qw(:all);
-use Text::Template::Simple::Util qw( DEBUG LOG ishref fatal );
+use Text::Template::Simple::Util      qw( DEBUG LOG ishref fatal );
 use Carp qw( croak );
 
-$VERSION = '0.81';
+$VERSION = '0.82';
 
 my $CACHE = {}; # in-memory template cache
 
@@ -16,13 +16,14 @@ sub new {
    my $self   = [undef];
    bless $self, $class;
    $self->[CACHE_PARENT] = $parent;
-   $self;
+   return $self;
 }
 
 sub id {
    my $self = shift;
-   $self->[CACHE_PARENT][CID] = shift if @_;
-   $self->[CACHE_PARENT][CID];
+   my $val  = shift;
+   $self->[CACHE_PARENT][CID] = $val if $val;
+   return $self->[CACHE_PARENT][CID];
 }
 
 sub type {
@@ -33,7 +34,7 @@ sub type {
                            : 'OFF';
 }
 
-sub reset {
+sub reset { ## no critic (ProhibitBuiltinHomonyms)
    my $self   = shift;
    my $parent = $self->[CACHE_PARENT];
    %{$CACHE}  = ();
@@ -41,21 +42,24 @@ sub reset {
    if ( $parent->[CACHE] && $parent->[CACHE_DIR] ) {
 
       my $cdir = $parent->[CACHE_DIR];
-      local  *CDIRH;
-      opendir CDIRH, $cdir or fatal( 'tts.cache.opendir' => $cdir, $! );
+      require Symbol;
+      my $CDIRH = Symbol::gensym();
+      opendir $CDIRH, $cdir or fatal( 'tts.cache.opendir' => $cdir, $! );
       require File::Spec;
       my $ext = quotemeta CACHE_EXT;
       my $file;
 
-      while ( defined( $file = readdir CDIRH ) ) {
-         next if $file !~ m{ ( .* $ext) \z}xmsi;
-         $file = File::Spec->catfile( $parent->[CACHE_DIR], $1 );
-         LOG( UNLINK => $file ) if DEBUG();
-         unlink $file;
+      while ( defined( $file = readdir $CDIRH ) ) {
+         if ( $file =~ m{ ( .* $ext) \z}xmsi ) {
+            $file = File::Spec->catfile( $parent->[CACHE_DIR], $1 );
+            LOG( UNLINK => $file ) if DEBUG;
+            unlink $file;
+         }
       }
 
-      closedir CDIRH;
+      closedir $CDIRH;
    }
+   return;
 }
 
 sub dumper {
@@ -63,7 +67,7 @@ sub dumper {
    my $type  = shift || 'structure';
    my $param = shift || {};
    fatal('tts.cache.dumper.hash')        if not ishref $param;
-   my %valid = map { $_, $_ } qw( ids structure );
+   my %valid = map { ($_, $_) } qw( ids structure );
    fatal('tts.cache.dumper.type', $type) if not $valid{ $type };
    my $method = '_dump_' . $type;
    return $self->$method( $param ); # TODO: modify the methods to accept HASH
@@ -73,7 +77,7 @@ sub _dump_ids {
    my $self   = shift;
    my $parent = $self->[CACHE_PARENT];
    my $p      = shift;
-   my $VAR    = $p->{varname} || '$CACHE_IDS';
+   my $VAR    = $p->{varname} || q{$} . q{CACHE_IDS};
    my @rv;
 
    if ( $parent->[CACHE_DIR] ) {
@@ -81,16 +85,21 @@ sub _dump_ids {
       require File::Find;
       require File::Spec;
       my $ext = quotemeta CACHE_EXT;
+      my $re  = qr{ (.+?) $ext \z }xms;
       my($id, @list);
 
-      my $wanted = sub {
-         return if $_ !~ m{ (.+?) $ext \z }xms;
-         $id      = $1;
-         $id      =~ s{.*[\\/]}{};
-         push @list, $id;
-      };
-
-      File::Find::find({wanted => $wanted, no_chdir => 1}, $parent->[CACHE_DIR]);
+      File::Find::find(
+         {
+            no_chdir => 1,
+            wanted   => sub {
+                           if ( $_ =~ $re ) {
+                              ($id = $1) =~ s{.*[\\/]}{}xms;
+                              push @list, $id;
+                           }
+                        },
+         },
+         $parent->[CACHE_DIR]
+      );
 
       @rv = sort @list;
 
@@ -108,7 +117,7 @@ sub _dump_structure {
    my $self    = shift;
    my $parent  = $self->[CACHE_PARENT];
    my $p       = shift;
-   my $VAR     = $p->{varname} || '$CACHE';
+   my $VAR     = $p->{varname} || q{$} . q{CACHE};
    my $deparse = $p->{no_deparse} ? 0 : 1;
    require Data::Dumper;
    my $d;
@@ -119,13 +128,13 @@ sub _dump_structure {
    else {
       $d = Data::Dumper->new( [ $CACHE ], [ $VAR ]);
       if ( $deparse ) {
-         fatal('tts.cache.dumper' => $Data::Dumper::VERSION) if !$d->can('Deparse');
+         fatal('tts.cache.dumper' => $Data::Dumper::VERSION)
+            if !$d->can('Deparse');
          $d->Deparse(1);
       }
    }
 
-   my $str;
-   eval { $str = $d->Dump; };
+   my $str = eval { $d->Dump; };
 
    if ( my $error = $@ ) {
       if ( $deparse && $error =~ RE_DUMP_ERROR ) {
@@ -150,19 +159,21 @@ sub _dump_disk_cache {
    require File::Spec;
    my $self    = shift;
    my $parent  = $self->[CACHE_PARENT];
-   my $ext     = quotemeta CACHE_EXT;
    my $pattern = quotemeta DISK_CACHE_MARKER;
-   my(%disk_cache, $id, $content, $ok, $_temp, $line);
+   my $ext     = quotemeta CACHE_EXT;
+   my $re      = qr{(.+?) $ext \z}xms;
+   my(%disk_cache);
 
-   my $wanted = sub {
-      return if $_ !~ m{(.+?) $ext \z}xms;
-      $id      = $1;
-      $id      =~ s{.*[\\/]}{};
-      $content = $parent->io->slurp( File::Spec->canonpath($_) );
-      $ok      = 0;  # reset
-      $_temp   = ''; # reset
+   my $process = sub {
+      my $file  = $_;
+      my @match = $file =~ $re;
+      return if ! @match;
+      (my $id = $match[0]) =~ s{.*[\\/]}{}xms;
+      my $content = $parent->io->slurp( File::Spec->canonpath($file) );
+      my $ok      = 0;  # reset
+      my $_temp   = EMPTY_STRING; # reset
 
-      foreach $line ( split /\n/, $content ) {
+      foreach my $line ( split m{\n}xms, $content ) {
          if ( $line =~ m{$pattern}xmso ) {
             $ok = 1;
             next;
@@ -172,12 +183,18 @@ sub _dump_disk_cache {
       }
 
       $disk_cache{ $id } = {
-         MTIME => (stat $_)[STAT_MTIME],
+         MTIME => (stat $file)[STAT_MTIME],
          CODE  => $_temp,
       };
    };
- 
-   File::Find::find({ wanted => $wanted, no_chdir => 1 }, $parent->[CACHE_DIR]);
+
+   File::Find::find(
+      {
+         no_chdir => 1,
+         wanted   => $process,
+      },
+      $parent->[CACHE_DIR]
+   );
    return \%disk_cache;
 }
 
@@ -206,15 +223,14 @@ sub size {
       local $SIG{__DIE__};
       if ( eval { require Devel::Size; 1; } ) {
          my $dsv = Devel::Size->VERSION;
-         LOG( DEBUG => "Devel::Size v$dsv is loaded." )
-            if DEBUG();
-         fatal('tts.cache.develsize.buggy', $dsv) if $dsv < 0.72;
+         LOG( DEBUG => "Devel::Size v$dsv is loaded." ) if DEBUG;
+         fatal('tts.cache.develsize.buggy', $dsv) if $dsv < DEVEL_SIZE_VERSION;
          my $size = eval { Devel::Size::total_size( $CACHE ) };
          fatal('tts.cache.develsize.total', $@) if $@;
          return $size;
       }
       else {
-         warn "Failed to load Devel::Size: $@";
+         warn "Failed to load Devel::Size: $@\n";
          return 0;
       }
 
@@ -222,17 +238,17 @@ sub size {
 }
 
 sub has {
-   my $self   = shift;
+   my($self, @args ) = @_;
+   fatal('tts.cache.pformat') if @args % 2;
+   my %opt    = @args;
    my $parent = $self->[CACHE_PARENT];
 
    if ( not $parent->[CACHE] ) {
-      LOG( DEBUG => "Cache is disabled!") if DEBUG();
+      LOG( DEBUG => 'Cache is disabled!') if DEBUG;
       return;
    }
 
-   fatal('tts.cache.pformat') if @_ % 2;
 
-   my %opt = @_;
    my $id  = $parent->connector('Cache::ID')->new;
    my $cid = $opt{id}   ? $id->generate($opt{id}  , 'custom')
            : $opt{data} ? $id->generate($opt{data}          )
@@ -263,154 +279,172 @@ sub _is_meta_version_old {
 sub hit {
    # TODO: return $CODE, $META;
    my $self     = shift;
-   my $parent   = $self->[CACHE_PARENT];
    my $cache_id = shift;
    my $chkmt    = shift || 0;
-   my($CODE, $error);
 
-   if ( my $cdir = $parent->[CACHE_DIR] ) {
-      require File::Spec;
-      my $cache = File::Spec->catfile( $cdir, $cache_id . CACHE_EXT );
+   my $method = $self->[CACHE_PARENT][CACHE_DIR] ? '_hit_disk' : '_hit_memory';
+   return $self->$method( $cache_id, $chkmt );
+}
 
-      if ( -e $cache && not -d _ && -f _ ) {
-         my $disk_cache = $parent->io->slurp($cache);
-         my %meta;
-         if ( $disk_cache =~ m{ \A \#META: (.+?) \n }xms ) {
-            %meta = $self->_get_meta( $1 );
-            fatal('tts.cache.hit.meta', $@) if $@;
-         }
-         if ( $self->_is_meta_version_old( $meta{VERSION} ) ) {
-            my $id = $parent->[FILENAME] || $cache_id;
-            warn "(This messeage will only appear once) $id was compiled with"
-                ." an old version of " . PARENT . ". Resetting cache.";
-            return;
-         }
-         if ( my $mtime = $meta{CHKMT} ) {
-            if ( $mtime != $chkmt ) {
-               LOG( MTIME_DIFF => "\tOLD: $mtime\n\t\tNEW: $chkmt")
-                  if DEBUG();
-               return; # i.e.: Update cache
-            }
-         }
-
-         ($CODE, $error) = $parent->_wrap_compile($disk_cache);
-         $parent->[NEEDS_OBJECT] = $meta{NEEDS_OBJECT} if $meta{NEEDS_OBJECT};
-         $parent->[FAKER_SELF]   = $meta{FAKER_SELF}   if $meta{FAKER_SELF};
-
-         fatal('tts.cache.hit.cache', $error) if $error;
-         LOG( FILE_CACHE => '' ) if DEBUG();
-         #$parent->[COUNTER]++;
-         return $CODE;
+sub _hit_memory {
+   my($self, $cache_id, $chkmt) = @_;
+   if ( $chkmt ) {
+      my $mtime = $CACHE->{$cache_id}{MTIME} || 0;
+      if ( $mtime != $chkmt ) {
+         LOG( MTIME_DIFF => "\tOLD: $mtime\n\t\tNEW: $chkmt" ) if DEBUG;
+         return; # i.e.: Update cache
       }
-
    }
-   else {
-      if ( $chkmt ) {
-         my $mtime = $CACHE->{$cache_id}{MTIME} || 0;
+   LOG( MEM_CACHE => EMPTY_STRING ) if DEBUG;
+   return $CACHE->{$cache_id}->{CODE};
+}
 
-         if ( $mtime != $chkmt ) {
-            LOG( MTIME_DIFF => "\tOLD: $mtime\n\t\tNEW: $chkmt" ) if DEBUG();
-            return; # i.e.: Update cache
-         }
+sub _hit_disk {
+   my($self, $cache_id, $chkmt) = @_;
+   my $parent = $self->[CACHE_PARENT];
+   my $cdir   = $parent->[CACHE_DIR];
+   require File::Spec;
+   my $cache = File::Spec->catfile( $cdir, $cache_id . CACHE_EXT );
+   my $ok    = -e $cache && ! -d _ && -f _;
+   return if not $ok;
 
+   my $disk_cache = $parent->io->slurp($cache);
+   my %meta;
+   if ( $disk_cache =~ m{ \A \#META: (.+?) \n }xms ) {
+      %meta = $self->_get_meta( $1 );
+      fatal('tts.cache.hit.meta', $@) if $@;
+   }
+   if ( $self->_is_meta_version_old( $meta{VERSION} ) ) {
+      my $id = $parent->[FILENAME] || $cache_id;
+      warn "(This messeage will only appear once) $id was compiled with"
+          .' an old version of ' . PARENT . ". Resetting cache.\n";
+      return;
+   }
+   if ( my $mtime = $meta{CHKMT} ) {
+      if ( $mtime != $chkmt ) {
+         LOG( MTIME_DIFF => "\tOLD: $mtime\n\t\tNEW: $chkmt") if DEBUG;
+         return; # i.e.: Update cache
       }
-      LOG( MEM_CACHE => '' ) if DEBUG();
-      return $CACHE->{$cache_id}->{CODE};
    }
-   return;
+
+   my($CODE, $error) = $parent->_wrap_compile($disk_cache);
+   $parent->[NEEDS_OBJECT] = $meta{NEEDS_OBJECT} if $meta{NEEDS_OBJECT};
+   $parent->[FAKER_SELF]   = $meta{FAKER_SELF}   if $meta{FAKER_SELF};
+
+   fatal('tts.cache.hit.cache', $error) if $error;
+   LOG( FILE_CACHE => EMPTY_STRING )    if DEBUG;
+   #$parent->[COUNTER]++;
+   return $CODE;
 }
 
 sub populate {
-   my $self     = shift;
-   my $parent   = $self->[CACHE_PARENT];
-   my $cache_id = shift;
-   my $parsed   = shift;
-   my $chkmt    = shift;
-   my($CODE, $error);
+   my($self, $cache_id, $parsed, $chkmt) = @_;
+   my $parent = $self->[CACHE_PARENT];
+   my $target = ! $parent->[CACHE]     ? '_populate_no_cache'
+              :   $parent->[CACHE_DIR] ? '_populate_disk'
+              :                          '_populate_memory'
+              ;
 
-   if ( $parent->[CACHE] ) {
-      if ( my $cdir = $parent->[CACHE_DIR] ) {
-         require File::Spec;
-         require Fcntl;
-         require IO::File;
-
-         my %meta = (
-            CHKMT        => $chkmt,
-            NEEDS_OBJECT => $parent->[NEEDS_OBJECT],
-            FAKER_SELF   => $parent->[FAKER_SELF],
-            VERSION      => PARENT->VERSION,
-         );
-
-         my $cache = File::Spec->catfile( $cdir, $cache_id . CACHE_EXT);
-         my $fh    = IO::File->new;
-         $fh->open($cache, '>') or fatal('tts.cache.populate.write', $cache, $!);
-         flock $fh, Fcntl::LOCK_EX() if IS_FLOCK;
-         $parent->io->layer($fh);
-         my $warn =  $parent->_mini_compiler(
-                        $parent->_internal('disk_cache_comment'),
-                        {
-                           NAME => PARENT->_class_id,
-                           DATE => scalar localtime time,
-                        }
-                     );
-         print $fh '#META:' . $self->_set_meta(\%meta) . "\n", $warn, $parsed; 
-         flock $fh, Fcntl::LOCK_UN() if IS_FLOCK;
-         close $fh;
-         chmod(CACHE_FMODE, $cache) || fatal('tts.cache.populate.chmod');
-
-         ($CODE, $error) = $parent->_wrap_compile($parsed);
-         LOG( DISK_POPUL => $cache_id ) if DEBUG() > 2;
-      } 
-      else {
-         $CACHE->{ $cache_id } = {}; # init
-         ($CODE, $error)                       = $parent->_wrap_compile($parsed);
-         $CACHE->{ $cache_id }->{CODE}         = $CODE;
-         $CACHE->{ $cache_id }->{MTIME}        = $chkmt if $chkmt;
-         $CACHE->{ $cache_id }->{NEEDS_OBJECT} = $parent->[NEEDS_OBJECT];
-         $CACHE->{ $cache_id }->{FAKER_SELF}   = $parent->[FAKER_SELF];
-         LOG( MEM_POPUL => $cache_id ) if DEBUG() > 2;
-      }
-   }
-   else {
-      ($CODE, $error) = $parent->_wrap_compile($parsed); # cache is disabled
-      LOG( NC_POPUL => $cache_id ) if DEBUG() > 2;
-   }
-
-   if ( $error ) {
-      my $cid    = $cache_id ? $cache_id : 'N/A';
-      my $tidied = $parent->_tidy( $parsed );
-      croak $parent->[VERBOSE_ERRORS]
-            ? $parent->_mini_compiler( $parent->_internal('compile_error'), {
-               CID => $cid,
-               ERROR => $error,
-               PARSED => $parsed,
-               TIDIED => $tidied,
-                                                                        } )
-            : $error
-            ;
-   }
-
-   $parent->[COUNTER]++;
+   my($CODE, $error) = $self->$target( $parsed, $cache_id, $chkmt );
+   $self->_populate_error( $parsed, $cache_id, $error ) if $error;
+   ++$parent->[COUNTER];
    return $CODE;
+}
+
+sub _populate_error {
+   my($self, $parsed, $cache_id, $error);
+   my $parent   = $self->[CACHE_PARENT];
+   croak $parent->[VERBOSE_ERRORS]
+         ?  $parent->_mini_compiler(
+               $parent->_internal('compile_error'),
+               {
+                  CID    => $cache_id ? $cache_id : 'N/A',
+                  ERROR  => $error,
+                  PARSED => $parsed,
+                  TIDIED => $parent->_tidy( $parsed ),
+               }
+            )
+         : $error
+         ;
+}
+
+sub _populate_no_cache {
+   # cache is disabled
+   my($self, $parsed, $cache_id, $chkmt) = @_;
+   my($CODE, $error) = $self->[CACHE_PARENT]->_wrap_compile($parsed);
+   LOG( NC_POPUL => $cache_id ) if DEBUG >= DEBUG_LEVEL_INSANE;
+   return $CODE, $error;
+}
+
+sub _populate_memory {
+   my($self, $parsed, $cache_id, $chkmt) = @_;
+   my $parent = $self->[CACHE_PARENT];
+   $CACHE->{ $cache_id } = {}; # init
+   my($CODE, $error)                     = $parent->_wrap_compile($parsed);
+   $CACHE->{ $cache_id }->{CODE}         = $CODE;
+   $CACHE->{ $cache_id }->{MTIME}        = $chkmt if $chkmt;
+   $CACHE->{ $cache_id }->{NEEDS_OBJECT} = $parent->[NEEDS_OBJECT];
+   $CACHE->{ $cache_id }->{FAKER_SELF}   = $parent->[FAKER_SELF];
+   LOG( MEM_POPUL => $cache_id ) if DEBUG >= DEBUG_LEVEL_INSANE;
+   return $CODE, $error;
+}
+
+sub _populate_disk {
+   my($self, $parsed, $cache_id, $chkmt) = @_;
+
+   require File::Spec;
+   require Fcntl;
+   require IO::File;
+
+   my $parent = $self->[CACHE_PARENT];
+   my %meta   = (
+      CHKMT        => $chkmt,
+      NEEDS_OBJECT => $parent->[NEEDS_OBJECT],
+      FAKER_SELF   => $parent->[FAKER_SELF],
+      VERSION      => PARENT->VERSION,
+   );
+
+   my $cache = File::Spec->catfile( $parent->[CACHE_DIR], $cache_id . CACHE_EXT);
+   my $fh    = IO::File->new;
+   $fh->open($cache, '>') or fatal('tts.cache.populate.write', $cache, $!);
+   flock $fh, Fcntl::LOCK_EX() if IS_FLOCK;
+   $parent->io->layer($fh);
+   my $warn =  $parent->_mini_compiler(
+                  $parent->_internal('disk_cache_comment'),
+                  {
+                     NAME => PARENT->class_id,
+                     DATE => scalar localtime time,
+                  }
+               );
+   my $ok = print { $fh } '#META:' . $self->_set_meta(\%meta) . "\n",
+                          $warn,
+                          $parsed;
+   flock $fh, Fcntl::LOCK_UN() if IS_FLOCK;
+   close $fh or croak "Unable to close filehandle: $!";
+   chmod(CACHE_FMODE, $cache) || fatal('tts.cache.populate.chmod');
+
+   my($CODE, $error) = $parent->_wrap_compile($parsed);
+   LOG( DISK_POPUL => $cache_id ) if DEBUG >= DEBUG_LEVEL_INSANE;
+   return $CODE, $error;
 }
 
 sub _get_meta {
    my $self = shift;
    my $raw  = shift;
-   my %meta = map { split /:/, $_ } split /\|/, $raw;
+   my %meta = map { split m{:}xms, $_ } split m{\|}xms, $raw;
    return %meta;
 }
 
 sub _set_meta {
    my $self = shift;
    my $meta = shift;
-   my $rv   = join '|', map { $_ . ':' . $meta->{ $_ } } keys %{ $meta };
+   my $rv   = join q{|}, map { $_ . q{:} . $meta->{ $_ } } keys %{ $meta };
    return $rv;
 }
 
 sub DESTROY {
    my $self = shift;
-   LOG( DESTROY => ref $self ) if DEBUG();
+   LOG( DESTROY => ref $self ) if DEBUG;
    $self->[CACHE_PARENT] = undef;
    @{$self} = ();
    return;
@@ -430,8 +464,8 @@ TODO
 
 =head1 DESCRIPTION
 
-This document describes version C<0.81> of C<Text::Template::Simple::Cache>
-released on C<13 September 2009>.
+This document describes version C<0.82> of C<Text::Template::Simple::Cache>
+released on C<30 May 2010>.
 
 Cache manager for C<Text::Template::Simple>.
 
@@ -531,12 +565,12 @@ Burak Gursoy <burak@cpan.org>.
 
 =head1 COPYRIGHT
 
-Copyright 2004 - 2009 Burak Gursoy. All rights reserved.
+Copyright 2004 - 2010 Burak Gursoy. All rights reserved.
 
 =head1 LICENSE
 
 This library is free software; you can redistribute it and/or modify 
-it under the same terms as Perl itself, either Perl version 5.10.0 or, 
+it under the same terms as Perl itself, either Perl version 5.10.1 or, 
 at your option, any later version of Perl 5 you may have available.
 
 =cut

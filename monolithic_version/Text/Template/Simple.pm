@@ -31,92 +31,95 @@ package Text::Template::Simple::Compiler::Safe;
 sub ________monolith {}
 package Text::Template::Simple::Constants;
 use strict;
+use warnings;
 use vars qw($VERSION $OID $DID @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
 
-$VERSION = '0.81';
+$VERSION = '0.82';
+
+use constant MINUS_ONE           => -1;
 
 # object fields
-BEGIN { $OID = -1 } # init object field id counter
-use constant DELIMITERS       => ++$OID;
-use constant AS_STRING        => ++$OID;
-use constant DELETE_WS        => ++$OID;
-use constant FAKER            => ++$OID;
-use constant FAKER_HASH       => ++$OID;
-use constant FAKER_SELF       => ++$OID;
-use constant FAKER_WARN       => ++$OID;
-use constant MONOLITH         => ++$OID;
-use constant CACHE            => ++$OID;
-use constant CACHE_DIR        => ++$OID;
-use constant CACHE_OBJECT     => ++$OID;
-use constant IO_OBJECT        => ++$OID;
-use constant STRICT           => ++$OID;
-use constant SAFE             => ++$OID;
-use constant HEADER           => ++$OID;
-use constant ADD_ARGS         => ++$OID;
-use constant CAPTURE_WARNINGS => ++$OID;
-use constant WARN_IDS         => ++$OID;
-use constant TYPE             => ++$OID;
-use constant TYPE_FILE        => ++$OID;
-use constant COUNTER          => ++$OID;
-use constant COUNTER_INCLUDE  => ++$OID;
-use constant INSIDE_INCLUDE   => ++$OID;
-use constant NEEDS_OBJECT     => ++$OID;
-use constant CID              => ++$OID;
-use constant FILENAME         => ++$OID;
-use constant IOLAYER          => ++$OID;
-use constant STACK            => ++$OID;
-use constant USER_THANDLER    => ++$OID;
-use constant DEEP_RECURSION   => ++$OID;
-use constant INCLUDE_PATHS    => ++$OID;
-use constant PRE_CHOMP        => ++$OID;
-use constant POST_CHOMP       => ++$OID;
-use constant VERBOSE_ERRORS   => ++$OID;
-use constant TAINT_MODE       => ++$OID;
-use constant MAXOBJFIELD      =>   $OID; # number of the last object field
+BEGIN { $OID = MINUS_ONE } # init object field id counter
+use constant DELIMITERS          => ++$OID;
+use constant AS_STRING           => ++$OID;
+use constant DELETE_WS           => ++$OID;
+use constant FAKER               => ++$OID;
+use constant FAKER_HASH          => ++$OID;
+use constant FAKER_SELF          => ++$OID;
+use constant FAKER_WARN          => ++$OID;
+use constant MONOLITH            => ++$OID;
+use constant CACHE               => ++$OID;
+use constant CACHE_DIR           => ++$OID;
+use constant CACHE_OBJECT        => ++$OID;
+use constant IO_OBJECT           => ++$OID;
+use constant STRICT              => ++$OID;
+use constant SAFE                => ++$OID;
+use constant HEADER              => ++$OID;
+use constant ADD_ARGS            => ++$OID;
+use constant CAPTURE_WARNINGS    => ++$OID;
+use constant WARN_IDS            => ++$OID;
+use constant TYPE                => ++$OID;
+use constant TYPE_FILE           => ++$OID;
+use constant COUNTER             => ++$OID;
+use constant COUNTER_INCLUDE     => ++$OID;
+use constant INSIDE_INCLUDE      => ++$OID;
+use constant NEEDS_OBJECT        => ++$OID;
+use constant CID                 => ++$OID;
+use constant FILENAME            => ++$OID;
+use constant IOLAYER             => ++$OID;
+use constant STACK               => ++$OID;
+use constant USER_THANDLER       => ++$OID;
+use constant DEEP_RECURSION      => ++$OID;
+use constant INCLUDE_PATHS       => ++$OID;
+use constant PRE_CHOMP           => ++$OID;
+use constant POST_CHOMP          => ++$OID;
+use constant VERBOSE_ERRORS      => ++$OID;
+use constant TAINT_MODE          => ++$OID;
+use constant MAXOBJFIELD         =>   $OID; # number of the last object field
 
 # token type ids
 BEGIN { $DID = 0 }
-use constant T_DELIMSTART     => ++$DID;
-use constant T_DELIMEND       => ++$DID;
-use constant T_DISCARD        => ++$DID;
-use constant T_COMMENT        => ++$DID;
-use constant T_RAW            => ++$DID;
-use constant T_NOTADELIM      => ++$DID;
-use constant T_CODE           => ++$DID;
-use constant T_CAPTURE        => ++$DID;
-use constant T_DYNAMIC        => ++$DID;
-use constant T_STATIC         => ++$DID;
-use constant T_MAPKEY         => ++$DID;
-use constant T_COMMAND        => ++$DID;
-use constant T_MAXID          =>   $DID;
+use constant T_DELIMSTART        => ++$DID;
+use constant T_DELIMEND          => ++$DID;
+use constant T_DISCARD           => ++$DID;
+use constant T_COMMENT           => ++$DID;
+use constant T_RAW               => ++$DID;
+use constant T_NOTADELIM         => ++$DID;
+use constant T_CODE              => ++$DID;
+use constant T_CAPTURE           => ++$DID;
+use constant T_DYNAMIC           => ++$DID;
+use constant T_STATIC            => ++$DID;
+use constant T_MAPKEY            => ++$DID;
+use constant T_COMMAND           => ++$DID;
+use constant T_MAXID             =>   $DID;
 
 # settings
-use constant MAX_RECURSION    => 50; # recursion limit for dynamic includes
-use constant PARENT           => ( __PACKAGE__ =~ m{ (.+?) ::Constants }xms );
-use constant IS_WINDOWS       => $^O eq 'MSWin32' || $^O eq 'MSWin64';
-use constant DELIM_START      => 0; # field id
-use constant DELIM_END        => 1; # field id
-use constant RE_NONFILE       => qr{ [ \n \r < > \* \? ] }xmso;
-use constant RE_DUMP_ERROR    => qr{Can\'t locate object method "first" via package "B::SVOP"};
-use constant COMPILER         => PARENT.'::Compiler'; # The compiler
-use constant COMPILER_SAFE    => COMPILER.'::Safe';   # Safe compiler
-use constant DUMMY_CLASS      => PARENT.'::Dummy';    # Dummy class
-use constant MAX_FL           => 120;                 # Maximum file name length
-use constant CACHE_EXT        => '.tts.cache';        # disk cache extension
-use constant STAT_SIZE        => 7;                   # for stat()
-use constant STAT_MTIME       => 9;                   # for stat()
-use constant DELIMS           => qw( <% %> );         # default delimiter pair
-use constant NEW_PERL         => $] >= 5.008;         # for I/O layer
-use constant IS_FLOCK         => IS_WINDOWS ? ( Win32::IsWin95() ? 0 : 1 ) : 1;
+use constant MAX_RECURSION       => 50; # recursion limit for dynamic includes
+use constant PARENT              => ( __PACKAGE__ =~ m{ (.+?) ::Constants }xms );
+use constant IS_WINDOWS          => $^O eq 'MSWin32' || $^O eq 'MSWin64';
+use constant DELIM_START         => 0; # field id
+use constant DELIM_END           => 1; # field id
+use constant RE_NONFILE          => qr{ [ \n \r < > \* \? ] }xmso;
+use constant RE_DUMP_ERROR       => qr{Can\'t \s locate \s object \s method \s "first" \s via \s package \s "B::SVOP"}xms;
+use constant COMPILER            => PARENT.'::Compiler'; # The compiler
+use constant COMPILER_SAFE       => COMPILER.'::Safe';   # Safe compiler
+use constant DUMMY_CLASS         => PARENT.'::Dummy';    # Dummy class
+use constant MAX_FL              => 120;                 # Maximum file name length
+use constant CACHE_EXT           => '.tts.cache';        # disk cache extension
+use constant STAT_SIZE           => 7;                   # for stat()
+use constant STAT_MTIME          => 9;                   # for stat()
+use constant DELIMS              => qw( <% %> );         # default delimiter pair
+use constant NEW_PERL            => $] >= 5.008;         # for I/O layer
+use constant IS_FLOCK            => IS_WINDOWS ? ( Win32::IsWin95() ? 0 : 1 ) : 1;
 
-use constant CHOMP_NONE       => 0x000000;
-use constant COLLAPSE_NONE    => 0x000000;
-use constant CHOMP_ALL        => 0x000002;
-use constant CHOMP_LEFT       => 0x000004;
-use constant CHOMP_RIGHT      => 0x000008;
-use constant COLLAPSE_LEFT    => 0x000010;
-use constant COLLAPSE_RIGHT   => 0x000020;
-use constant COLLAPSE_ALL     => 0x000040;
+use constant CHOMP_NONE          => 0x000000;
+use constant COLLAPSE_NONE       => 0x000000;
+use constant CHOMP_ALL           => 0x000002;
+use constant CHOMP_LEFT          => 0x000004;
+use constant CHOMP_RIGHT         => 0x000008;
+use constant COLLAPSE_LEFT       => 0x000010;
+use constant COLLAPSE_RIGHT      => 0x000020;
+use constant COLLAPSE_ALL        => 0x000040;
 
 use constant TAINT_CHECK_NORMAL  => 0x000000;
 use constant TAINT_CHECK_ALL     => 0x000002;
@@ -124,30 +127,45 @@ use constant TAINT_CHECK_WINDOWS => 0x000004;
 use constant TAINT_CHECK_FH_READ => 0x000008;
 
 # first level directives
-use constant DIR_CAPTURE      => '=';
-use constant DIR_DYNAMIC      => '*';
-use constant DIR_STATIC       => '+';
-use constant DIR_NOTADELIM    => '!';
-use constant DIR_COMMENT      => '#';
-use constant DIR_COMMAND      => '|';
+use constant DIR_CAPTURE         => q{=};
+use constant DIR_DYNAMIC         => q{*};
+use constant DIR_STATIC          => q{+};
+use constant DIR_NOTADELIM       => q{!};
+use constant DIR_COMMENT         => q{#};
+use constant DIR_COMMAND         => q{|};
 # second level directives
-use constant DIR_CHOMP        => '-';
-use constant DIR_COLLAPSE     => '~';
-use constant DIR_CHOMP_NONE   => '^';
+use constant DIR_CHOMP           => q{-};
+use constant DIR_COLLAPSE        => q{~};
+use constant DIR_CHOMP_NONE      => q{^};
 
 # token related indexes
-use constant TOKEN_STR        =>  0;
-use constant TOKEN_ID         =>  1;
-use constant TOKEN_CHOMP      =>  2;
-use constant TOKEN_TRIGGER    =>  3;
+use constant TOKEN_STR           =>  0;
+use constant TOKEN_ID            =>  1;
+use constant TOKEN_CHOMP         =>  2;
+use constant TOKEN_TRIGGER       =>  3;
 
-use constant TOKEN_CHOMP_NEXT =>  0; # sub-key for TOKEN_CHOMP
-use constant TOKEN_CHOMP_PREV =>  1; # sub-key for TOKEN_CHOMP
+use constant TOKEN_CHOMP_NEXT    =>  0; # sub-key for TOKEN_CHOMP
+use constant TOKEN_CHOMP_PREV    =>  1; # sub-key for TOKEN_CHOMP
 
-use constant LAST_TOKEN       => -1;
-use constant PREVIOUS_TOKEN   => -2;
+use constant LAST_TOKEN          => -1;
+use constant PREVIOUS_TOKEN      => -2;
 
-use constant CACHE_FMODE      => 0600;
+use constant CACHE_PARENT        => 0; # object id
+use constant CACHE_FMODE         => 0600;
+
+use constant EMPTY_STRING        => q{};
+
+use constant FMODE_GO_WRITABLE   => 022;
+use constant FMODE_GO_READABLE   => 066;
+use constant FTYPE_MASK          => 07777;
+
+use constant MAX_PATH_LENGTH     => 255;
+use constant DEVEL_SIZE_VERSION  => 0.72;
+
+use constant DEBUG_LEVEL_NORMAL  => 1;
+use constant DEBUG_LEVEL_VERBOSE => 2;
+use constant DEBUG_LEVEL_INSANE  => 3;
+
 
 # SHA seems to be more accurate, so we'll try them first.
 # Pure-Perl ones are slower, but they are fail-safes.
@@ -163,7 +181,7 @@ use constant DIGEST_MODS => qw(
    Digest::Perl::MD5
 );
 
-use constant RE_PIPE_SPLIT   => qr/ \| (?:\s+)? (PARAM|FILTER|SHARE) : /xms;
+use constant RE_PIPE_SPLIT   => qr/ \| (?:\s+)? (NAME|PARAM|FILTER|SHARE) : /xms;
 use constant RE_FILTER_SPLIT => qr/ \, (?:\s+)? /xms;
 use constant RE_INVALID_CID  => qr{[^A-Za-z_0-9]}xms;
 
@@ -171,8 +189,9 @@ use constant DISK_CACHE_MARKER => q{# This file is automatically generated by }
                                .  PARENT
                                ;
 
+use base qw( Exporter );
+
 BEGIN {
-   @ISA         = qw( Exporter );
 
    %EXPORT_TAGS = (
       info      =>   [qw(
@@ -294,6 +313,21 @@ BEGIN {
                         STAT_SIZE
                         MAX_RECURSION
                         CACHE_FMODE
+                        CACHE_PARENT
+                        MINUS_ONE
+                        EMPTY_STRING
+                        MAX_PATH_LENGTH
+                        DEVEL_SIZE_VERSION
+                     )],
+      fmode     =>   [qw(
+                        FMODE_GO_WRITABLE
+                        FMODE_GO_READABLE
+                        FTYPE_MASK
+                     )],
+      debug     =>   [qw(
+                        DEBUG_LEVEL_NORMAL
+                        DEBUG_LEVEL_VERBOSE
+                        DEBUG_LEVEL_INSANE
                      )],
    );
 
@@ -303,38 +337,33 @@ BEGIN {
 
 }
 
-BEGIN { require Exporter; }
-
 package Text::Template::Simple::Util;
 use strict;
+use warnings;
 use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-use Text::Template::Simple::Constants qw( :info DIGEST_MODS );
+use Text::Template::Simple::Constants qw( :info DIGEST_MODS EMPTY_STRING );
 use Carp qw( croak );
+use base qw( Exporter );
 
-$VERSION = '0.81';
+$VERSION = '0.82';
 
 BEGIN {
    if ( IS_WINDOWS ) {
       local $@; # perl 5.5.4 does not seem to have a Win32.pm
-      eval { require Win32; Win32->import; };
+      my $ok = eval { require Win32; Win32->import; 1; };
    }
 
    # create a wrapper for binmode() 
    if ( NEW_PERL ) {
       # older perl binmode() does not accept a second param
-      eval q/
-         sub binary_mode {
-            my($fh, $layer) = @_;
-            binmode $fh, ':' . $layer;
-         }
-      /;
-      # should never happen
-      die "Error compiling binary_mode(): $@" if $@;
+      *binary_mode = sub {
+         my($fh, $layer) = @_;
+         binmode $fh, q{:} . $layer;
+      };
    }
    else {
       *binary_mode = sub { binmode $_[0] };
    }
-   @ISA         = qw( Exporter );
    %EXPORT_TAGS = (
       macro => [qw( isaref      ishref iscref                  )],
       util  => [qw( binary_mode DIGEST trim rtrim ltrim escape )],
@@ -345,115 +374,116 @@ BEGIN {
    @EXPORT           =  @EXPORT_OK;
 }
 
-BEGIN { require Exporter; }
-
 my $lang = {
    error => {
-      'tts.base.examine.notglob'                 => "Unknown template parameter passed as %s reference! Supported types are GLOB, PATH and STRING.",
-      'tts.base.examine.notfh'                   => "This GLOB is not a filehandle",
-      'tts.main.cdir'                            => "Cache dir %s does not exist!",
-      'tts.main.bogus_args'                      => "Malformed add_args parameter! 'add_args' must be an arrayref!",
-      'tts.main.bogus_delims'                    => "Malformed delimiters parameter! 'delimiters' must be a two element arrayref!",
-      'tts.cache.opendir'                        => "Can not open cache dir (%s) for reading: %s",
-      'tts.util.digest'                          => "Can not load a digest module. Disable cache or install one of these (%s or %s). Last error was: %s",
-      'tts.cache.dumper'                         => "Can not dump in-memory cache! Your version of Data::Dumper (%s) does not implement the Deparse() method. Please upgrade this module!",
-      'tts.cache.pformat'                        => "Parameters must be in 'param => value' format",
-      'tts.cache.incache'                        => "I need an 'id' or a 'data' parameter for cache check!",
-      'tts.main.dslen'                           => 'Start delimiter is smaller than 2 characters',
-      'tts.main.delen'                           => 'End delimiter is smaller than 2 characters',
-      'tts.main.dsws'                            => 'Start delimiter contains whitespace',
-      'tts.main.dews'                            => 'End delimiter contains whitespace',
-      'tts.main.import.invalid'                  => "%s isn't a valid import parameter for %s",
-      'tts.main.import.undef'                    => '%s is not defined in %s',
-      'tts.main.import.redefine'                 => '%s is already defined in %s',
-      'tts.main.tts.args'                        => 'Nothing to compile!',
-      'tts.main.connector.args'                  => 'connector(): id is missing',
-      'tts.main.connector.invalid'               => 'connector(): invalid id: %s',
-      'tts.main.init.thandler'                   => 'user_thandler parameter must be a CODE reference',
-      'tts.main.init.include'                    => 'include_paths parameter must be a ARRAY reference',
-      'tts.util.escape'                          => 'Missing the character to escape',
-      'tts.tokenizer.new.ds'                     => 'Start delimiter is missing',
-      'tts.tokenizer.new.de'                     => 'End delimiter is missing',
-      'tts.tokenizer.tokenize.tmp'               => 'Template string is missing',
-      'tts.tokenizer._get_symbols.regex'         => 'Regex is missing',
-      'tts.io.validate.type'                     => 'No type specified',
-      'tts.io.validate.path'                     => 'No path specified',
-      'tts.io.validate.file'                     => 'validate(file) is not yet implemented',
-      'tts.io.layer.fh'                          => 'Filehandle is absent',
-      'tts.io.slurp.open'                        => "Error opening '%s' for reading: %s",
-      'tts.io.slurp.taint'                       => "Can't untaint FH",
-      'tts.io.hls.invalid'                       => 'FH is either absent or invalid',
-      'tts.caller.stack.hash'                    => 'Parameters to stack() must be a HASH',
-      'tts.caller.stack.type'                    => 'Unknown caller stack type: %s',
-      'tts.caller._text_table.module'            => "Caller stack type 'text_table' requires Text::Table: %s",
-      'tts.cache.new.parent'                     => 'Parent object is missing',
-      'tts.cache.dumper.hash'                    => 'Parameters to dumper() must be a HASHref',
-      'tts.cache.dumper.type'                    => "Dumper type '%s' is not valid",
-      'tts.cache.develsize.buggy'                => 'Your Devel::Size version (%s) has a known bug. Upgrade Devel::Size to 0.72 or newer or do not use the size() method',
-      'tts.cache.develsize.total'                => 'Devel::Size::total_size(): %s',
-      'tts.cache.hit.meta'                       => 'Can not get meta data: %s',
-      'tts.cache.hit.cache'                      => 'Error loading from disk cache: %s',
-      'tts.cache.populate.write'                 => 'Error writing disk-cache %s : %s',
-      'tts.cache.populate.chmod'                 => 'Can not change file mode',
-      'tts.base.compiler._compile.notmp'         => 'No template specified',
-      'tts.base.compiler._compile.param'         => 'params must be an arrayref!',
-      'tts.base.compiler._compile.opt'           => 'opts must be a hashref!',
-      'tts.base.compiler._wrap_compile.parsed'   => 'nothing to compile',
-      'tts.base.compiler._mini_compiler.notmp'   => '_mini_compiler(): missing the template',
-      'tts.base.compiler._mini_compiler.noparam' => '_mini_compiler(): missing the parameters',
-      'tts.base.compiler._mini_compiler.opt'     => '_mini_compiler(): options must be a hash',
-      'tts.base.compiler._mini_compiler.param'   => '_mini_compiler(): parameters must be a HASH',
-      'tts.base.examine._examine_type.ftype'     => 'ARRAY does not contain the type',
-      'tts.base.examine._examine_type.fthing'    => 'ARRAY does not contain the data',
-      'tts.base.examine._examine_type.extra'     => 'Type array has unknown extra fields',
-      'tts.base.examine._examine_type.unknown'   => 'Unknown first argument of %s type to compile()',
-      'tts.base.include._include.unknown'        => 'Unknown include type: %s',
-      'tts.base.include._interpolate.bogus_share' => 'Only SCALARs can be shared. You have tried to share a variable '
-                                                    .'type of %s named "%s". Consider converting it to a SCALAR or try '
-                                                    .'the monolith option to enable automatic variable sharing. '
-                                                    .'But please read the fine manual first',
-      'tts.base.parser._internal.id'             => '_internal(): id is missing',
-      'tts.base.parser._internal.rv'             => '_internal(): id is invalid',
-      'tts.base.parser._parse.unbalanced'        => '%d unbalanced %s delimiter(s) in template %s',
-      'tts.cache.id.generate.data'               => "Can't generate id without data!",
-      'tts.cache.id._custom.data'                => "Can't generate id without data!",
+      q{tts.base.examine.notglob}                 => q{Unknown template parameter passed as %s reference! Supported types are GLOB, PATH and STRING.},
+      q{tts.base.examine.notfh}                   => q{This GLOB is not a filehandle},
+      q{tts.main.cdir}                            => q{Cache dir %s does not exist!},
+      q{tts.main.bogus_args}                      => q{Malformed add_args parameter! 'add_args' must be an arrayref!},
+      q{tts.main.bogus_delims}                    => q{Malformed delimiters parameter! 'delimiters' must be a two element arrayref!},
+      q{tts.cache.opendir}                        => q{Can not open cache dir (%s) for reading: %s},
+      q{tts.util.digest}                          => q{Can not load a digest module. Disable cache or install one of these (%s or %s). Last error was: %s},
+      q{tts.cache.dumper}                         => q{Can not dump in-memory cache! Your version of Data::Dumper (%s) does not implement the Deparse() method. Please upgrade this module!},
+      q{tts.cache.pformat}                        => q{Parameters must be in 'param => value' format},
+      q{tts.cache.incache}                        => q{I need an 'id' or a 'data' parameter for cache check!},
+      q{tts.main.dslen}                           => q{Start delimiter is smaller than 2 characters},
+      q{tts.main.delen}                           => q{End delimiter is smaller than 2 characters},
+      q{tts.main.dsws}                            => q{Start delimiter contains whitespace},
+      q{tts.main.dews}                            => q{End delimiter contains whitespace},
+      q{tts.main.import.invalid}                  => q{%s isn't a valid import parameter for %s},
+      q{tts.main.import.undef}                    => q{%s is not defined in %s},
+      q{tts.main.import.redefine}                 => q{%s is already defined in %s},
+      q{tts.main.tts.args}                        => q{Nothing to compile!},
+      q{tts.main.connector.args}                  => q{connector(): id is missing},
+      q{tts.main.connector.invalid}               => q{connector(): invalid id: %s},
+      q{tts.main.init.thandler}                   => q{user_thandler parameter must be a CODE reference},
+      q{tts.main.init.include}                    => q{include_paths parameter must be a ARRAY reference},
+      q{tts.util.escape}                          => q{Missing the character to escape},
+      q{tts.tokenizer.new.ds}                     => q{Start delimiter is missing},
+      q{tts.tokenizer.new.de}                     => q{End delimiter is missing},
+      q{tts.tokenizer.tokenize.tmp}               => q{Template string is missing},
+      q{tts.tokenizer._get_symbols.regex}         => q{Regex is missing},
+      q{tts.io.validate.type}                     => q{No type specified},
+      q{tts.io.validate.path}                     => q{No path specified},
+      q{tts.io.validate.file}                     => q{validate(file) is not yet implemented},
+      q{tts.io.layer.fh}                          => q{Filehandle is absent},
+      q{tts.io.slurp.open}                        => q{Error opening '%s' for reading: %s},
+      q{tts.io.slurp.taint}                       => q{Can't untaint FH},
+      q{tts.io.hls.invalid}                       => q{FH is either absent or invalid},
+      q{tts.caller.stack.hash}                    => q{Parameters to stack() must be a HASH},
+      q{tts.caller.stack.type}                    => q{Unknown caller stack type: %s},
+      q{tts.caller._text_table.module}            => q{Caller stack type 'text_table' requires Text::Table: %s},
+      q{tts.cache.new.parent}                     => q{Parent object is missing},
+      q{tts.cache.dumper.hash}                    => q{Parameters to dumper() must be a HASHref},
+      q{tts.cache.dumper.type}                    => q{Dumper type '%s' is not valid},
+      q{tts.cache.develsize.buggy}                => q{Your Devel::Size version (%s) has a known bug. Upgrade Devel::Size to 0.72 or newer or do not use the size() method},
+      q{tts.cache.develsize.total}                => q{Devel::Size::total_size(): %s},
+      q{tts.cache.hit.meta}                       => q{Can not get meta data: %s},
+      q{tts.cache.hit.cache}                      => q{Error loading from disk cache: %s},
+      q{tts.cache.populate.write}                 => q{Error writing disk-cache %s : %s},
+      q{tts.cache.populate.chmod}                 => q{Can not change file mode},
+      q{tts.base.compiler._compile.notmp}         => q{No template specified},
+      q{tts.base.compiler._compile.param}         => q{params must be an arrayref!},
+      q{tts.base.compiler._compile.opt}           => q{opts must be a hashref!},
+      q{tts.base.compiler._wrap_compile.parsed}   => q{nothing to compile},
+      q{tts.base.compiler._mini_compiler.notmp}   => q{_mini_compiler(): missing the template},
+      q{tts.base.compiler._mini_compiler.noparam} => q{_mini_compiler(): missing the parameters},
+      q{tts.base.compiler._mini_compiler.opt}     => q{_mini_compiler(): options must be a hash},
+      q{tts.base.compiler._mini_compiler.param}   => q{_mini_compiler(): parameters must be a HASH},
+      q{tts.base.examine._examine_type.ftype}     => q{ARRAY does not contain the type},
+      q{tts.base.examine._examine_type.fthing}    => q{ARRAY does not contain the data},
+      q{tts.base.examine._examine_type.extra}     => q{Type array has unknown extra fields},
+      q{tts.base.examine._examine_type.unknown}   => q{Unknown first argument of %s type to compile()},
+      q{tts.base.include._include.unknown}        => q{Unknown include type: %s},
+      q{tts.base.include._interpolate.bogus_share} => q{Only SCALARs can be shared. You have tried to share a variable }
+                                                    .q{type of %s named "%s". Consider converting it to a SCALAR or try }
+                                                    .q{the monolith option to enable automatic variable sharing. }
+                                                    .q{But please read the fine manual first},
+      q{tts.base.parser._internal.id}             => q{_internal(): id is missing},
+      q{tts.base.parser._internal.rv}             => q{_internal(): id is invalid},
+      q{tts.base.parser._parse.unbalanced}        => q{%d unbalanced %s delimiter(s) in template %s},
+      q{tts.cache.id.generate.data}               => q{Can't generate id without data!},
+      q{tts.cache.id._custom.data}                => q{Can't generate id without data!},
    },
    warning => {
-      'tts.base.include.dynamic.recursion'       => qq{%s Deep recursion (>=%d) detected in the included file: %s},
+      q{tts.base.include.dynamic.recursion}       => q{%s Deep recursion (>=%d) detected in the included file: %s},
    }
 };
 
 my $DEBUG = 0; # Disabled by default
 my $DIGEST;    # Will hold digester class name.
 
-sub isaref { $_[0] && ref($_[0]) && ref($_[0]) eq 'ARRAY' };
-sub ishref { $_[0] && ref($_[0]) && ref($_[0]) eq 'HASH'  };
-sub iscref { $_[0] && ref($_[0]) && ref($_[0]) eq 'CODE'  };
+sub isaref { my $x = shift; return ref($x) eq 'ARRAY' };
+sub ishref { my $x = shift; return ref($x) eq 'HASH'  };
+sub iscref { my $x = shift; return ref($x) eq 'CODE'  };
 
 sub L {
-   my $type  = shift || croak "Type parameter to L() is missing";
-   my $id    = shift || croak "ID parameter ro L() is missing";
-   my @param = @_;
+   my($type, $id, @param) = @_;
+   croak q{Type parameter to L() is missing} if ! $type;
+   croak q{ID parameter ro L() is missing}   if ! $id;
    my $root  = $lang->{ $type } || croak "$type is not a valid L() type";
    my $value = $root->{ $id }   || croak "$id is not a valid L() ID";
    return @param ? sprintf($value, @param) : $value;
 }
 
-sub fatal { croak L( error => @_ ) }
+sub fatal {
+   my @args = @_;
+   return croak L( error => @args );
+}
 
 sub escape {
-   my $c = shift || fatal('tts.util.escape');
-   my $s = shift;
+   my($c, $s) = @_;
+   fatal('tts.util.escape') if ! $c;
    return $s if ! $s; # false or undef
    my $e = quotemeta $c;
-      $s =~ s{$e}{\\$c}xmsg;
-      $s;
+   $s =~ s{$e}{\\$c}xmsg;
+   return $s;
 }
 
 sub trim {
    my $s = shift;
    return $s if ! $s; # false or undef
-   my $extra = shift || '';
+   my $extra = shift || EMPTY_STRING;
       $s =~ s{\A \s+   }{$extra}xms;
       $s =~ s{   \s+ \z}{$extra}xms;
    return $s;
@@ -462,7 +492,7 @@ sub trim {
 sub ltrim {
    my $s = shift;
    return $s if ! $s; # false or undef
-   my $extra = shift || '';
+   my $extra = shift || EMPTY_STRING;
       $s =~ s{\A \s+ }{$extra}xms;
    return $s;
 }
@@ -470,7 +500,7 @@ sub ltrim {
 sub rtrim {
    my $s = shift;
    return $s if ! $s; # false or undef
-   my $extra = shift || '';
+   my $extra = shift || EMPTY_STRING;
       $s =~ s{ \s+ \z}{$extra}xms;
    return $s;
 }
@@ -482,7 +512,7 @@ sub DEBUG {
    $thing = shift if _is_parent_object( $thing );
 
    $DEBUG = $thing+0 if defined $thing; # must be numeric
-   $DEBUG;
+   return $DEBUG;
 }
 
 sub DIGEST {
@@ -490,13 +520,12 @@ sub DIGEST {
 
    local $SIG{__DIE__};
    # local $@;
-   my $file;
    foreach my $mod ( DIGEST_MODS ) {
-     ($file  = $mod) =~ s{::}{/}xmsog;
+     (my $file = $mod) =~ s{::}{/}xmsog;
       $file .= '.pm';
-      eval { require $file; };
-      if ( $@ ) {
-         LOG( FAILED => "$mod - $file" ) if DEBUG();
+      my $ok = eval { require $file; };
+      if ( ! $ok ) {
+         LOG( FAILED => "$mod - $file" ) if DEBUG;
          next;
       }
       $DIGEST = $mod;
@@ -504,31 +533,35 @@ sub DIGEST {
    }
 
    if ( not $DIGEST ) {
-      my @report = DIGEST_MODS;
-      my $last   = pop @report;
-      fatal( 'tts.util.digest' => join(', ', @report), $last, $@ );
+      my @report     = DIGEST_MODS;
+      my $last_error = pop @report;
+      fatal( 'tts.util.digest' => join(', ', @report), $last_error, $@ );
    }
 
-   LOG( DIGESTER => $DIGEST . ' v' . $DIGEST->VERSION ) if DEBUG();
+   LOG( DIGESTER => $DIGEST . ' v' . $DIGEST->VERSION ) if DEBUG;
    return $DIGEST->new;
 }
 
 sub LOG {
-   return MYLOG( @_ ) if defined &MYLOG;
-   my $self    = shift if ref( $_[0] );
-   my $id      = shift;
-   my $message = shift;
+   my @args = @_;
+   return MYLOG( @args ) if defined &MYLOG;
+   my $self    = ref $args[0] ? shift @args : undef;
+   my $id      = shift @args;
+   my $message = shift @args;
       $id      = 'DEBUG'        if not defined $id;
       $message = '<NO MESSAGE>' if not defined $message;
       $id      =~ s{_}{ }xmsg;
-   warn sprintf( "[ % 15s ] %s\n", $id, $message );
+   $message = sprintf q{[ % 15s ] %s}, $id, $message;
+   warn "$message\n";
+   return;
 }
 
 sub _is_parent_object {
-   return ! defined $_[0]       ? 0
-         : ref $_[0]            ? 1
-         : $_[0] eq __PACKAGE__ ? 1
-         : $_[0] eq PARENT      ? 1
+   my $test = shift;
+   return ! defined $test       ? 0
+         : ref $test            ? 1
+         : $test eq __PACKAGE__ ? 1
+         : $test eq PARENT      ? 1
          :                        0
          ;
 }
@@ -536,22 +569,23 @@ sub _is_parent_object {
 package Text::Template::Simple::Compiler::Safe;
 # Safe compiler. Totally experimental
 use strict;
+use warnings;
 use vars qw($VERSION);
 use Text::Template::Simple::Dummy;
 
-$VERSION = '0.81';
+$VERSION = '0.82';
 
-sub _compile { shift; return __PACKAGE__->_object->reval(shift) }
+sub compile { shift; return __PACKAGE__->_object->reval(shift) }
 
 sub _object {
    my $class = shift;
    if ( $class->can('object') ) {
       my $safe = $class->object;
-      if ( $safe && ref($safe) ) {
+      if ( $safe && ref $safe ) {
          return $safe if eval { $safe->isa('Safe'); 'Safe-is-OK' };
       }
-      my $end = $@ ? ': '.$@ : '.';
-      warn "Safe object failed. Falling back to default" . $end;
+      my $end = $@ ? q{: }.$@ : q{.};
+      warn 'Safe object failed. Falling back to default' . $end . "\n";
    }
    require Safe;
    my $safe = Safe->new('Text::Template::Simple::Dummy');
@@ -567,12 +601,13 @@ sub _permit {
 
 package Text::Template::Simple::Cache::ID;
 use strict;
+use warnings;
 use vars qw($VERSION);
 use overload q{""} => 'get';
 use Text::Template::Simple::Constants qw( MAX_FL RE_INVALID_CID );
 use Text::Template::Simple::Util      qw( LOG DEBUG DIGEST fatal );
 
-$VERSION = '0.81';
+$VERSION = '0.82';
 
 sub new {
    my $class = shift;
@@ -580,22 +615,32 @@ sub new {
    return $self;
 }
 
-sub get { my $self = shift; $$self }
-sub set { my $self = shift; $$self = shift if defined $_[0]; return; }
+sub get {
+   my $self = shift;
+   return ${$self};
+}
+
+sub set { ## no critic (ProhibitAmbiguousNames)
+   my $self = shift;
+   my $val  = shift;
+   ${$self} = $val if defined $val;
+   return;
+}
 
 sub generate { # cache id generator
    my($self, $data, $custom, $regex) = @_;
 
    if ( ! $data ) {
       fatal('tts.cache.id.generate.data') if ! defined $data;
-      LOG( IDGEN => "Generating ID from empty data" ) if DEBUG;
+      LOG( IDGEN => 'Generating ID from empty data' ) if DEBUG;
    }
 
    $self->set(
       $custom ? $self->_custom( $data, $regex )
               : $self->DIGEST->add( $data )->hexdigest
    );
-   $self->get;
+
+   return $self->get;
 }
 
 sub _custom {
@@ -611,20 +656,28 @@ sub _custom {
 
 sub DESTROY {
    my $self = shift || return;
-   LOG( DESTROY => ref $self ) if DEBUG();
+   LOG( DESTROY => ref $self ) if DEBUG;
    return;
 }
 
 package Text::Template::Simple::Base::Parser;
 use strict;
+use warnings;
 use vars qw($VERSION);
 
-$VERSION = '0.81';
+$VERSION = '0.82';
 
 use Text::Template::Simple::Util      qw(:all);
 use Text::Template::Simple::Constants qw(:all);
+use constant MAPKEY_NUM => 5;
 
 my %INTERNAL = __PACKAGE__->_set_internal_templates;
+
+sub _needs_object {
+   my $self = shift;
+   $self->[NEEDS_OBJECT]++;
+   return $self;
+}
 
 sub _internal {
    my $self = shift;
@@ -648,69 +701,20 @@ sub _parse {
                                           : $self->[FAKER]
                                           ;
    my $buf_hash = $self->[FAKER_HASH];
-   my $toke     = $self->connector('Tokenizer')->new(
-                     $ds, $de, $self->[PRE_CHOMP], $self->[POST_CHOMP]
-                  );
-   my $code     = '';
-   my $inside   = 0;
-
    my($mko, $mkc) = $self->_parse_mapkeys( $opt->{map_keys}, $faker, $buf_hash );
 
-   LOG( RAW => $raw ) if ( DEBUG() > 3 );
-
-   my $uth = $self->[USER_THANDLER];
+   LOG( RAW => $raw ) if DEBUG > DEBUG_LEVEL_INSANE;
 
    my $h = {
       raw     => sub { ";$faker .= q~$_[0]~;" },
-      capture => sub { ";$faker .= sub {" . $_[0] . "}->();"; },
-      code    => sub { $_[0] . ';' },
+      capture => sub { ";$faker .= sub {" . $_[0] . '}->();'; },
+      code    => sub { $_[0] . q{;} },
    };
 
    # little hack to convert delims into escaped delims for static inclusion
    $raw =~ s{\Q$ds}{$ds!}xmsg if $opt->{as_is};
 
-   # fetch and walk the tree
-   PARSER: foreach my $token ( @{ $toke->tokenize( $raw, $opt->{map_keys} ) } ) {
-      my($str, $id, $chomp, undef) = @{ $token };
-      LOG( TOKEN => $toke->_visualize_tid($id) . " => $str" ) if DEBUG() > 1;
-      next PARSER if T_DISCARD == $id || T_COMMENT == $id;
-
-      if ( T_DELIMSTART == $id ) { $inside++; next PARSER; }
-      if ( T_DELIMEND   == $id ) { $inside--; next PARSER; }
-
-      if ( T_RAW == $id || T_NOTADELIM == $id ) {
-         $code .= $h->{raw}->( $self->_chomp( $str, $chomp ) );
-      }
-
-      elsif ( T_CODE == $id ) {
-         $code .= $h->{code}->($str);
-      }
-
-      elsif ( T_CAPTURE == $id ) {
-         $code .= $h->{capture}->( $str );
-      }
-
-      elsif ( T_DYNAMIC == $id || T_STATIC == $id ) {
-         $code .= $h->{capture}->( $self->_needs_object->_include($id, $str, $opt) );
-      }
-
-      elsif ( T_MAPKEY == $id ) {
-         $code .= sprintf $mko, $mkc ? ( ($str) x 5 ) : $str;
-      }
-
-      elsif ( T_COMMAND == $id ) {
-         $code .= $h->{raw}->( $self->_parse_command( $str ) );
-      }
-
-      else {
-         LOG(
-            $uth  ? (USER_THANDLER => "$id")
-                  : (UNKNOWN_TOKEN => "Adding unknown token as RAW: $id($str)")
-         ) if DEBUG;
-         $code .= $uth ? $uth->( $self, $id ,$str, $h ) : $h->{raw}->( $str );
-      }
-
-   }
+   my($code, $inside) = $self->_walk( $raw, $opt, $h, $mko, $mkc );
 
    $self->[FILENAME] ||= '<ANON>';
 
@@ -724,18 +728,94 @@ sub _parse {
    return $self->_wrapper( $code, $opt->{cache_id}, $faker, $opt->{map_keys}, $h );
 }
 
+sub _walk {
+   my($self, $raw, $opt, $h, $mko, $mkc) = @_;
+   my $uth    = $self->[USER_THANDLER];
+   my $code   = EMPTY_STRING;
+   my $inside = 0;
+   my $toke   = $self->connector('Tokenizer')->new(
+                  @{ $self->[DELIMITERS] },
+                  $self->[PRE_CHOMP],
+                  $self->[POST_CHOMP]
+               );
+
+   # fetch and walk the tree
+   PARSER: foreach my $token ( @{ $toke->tokenize( $raw, $opt->{map_keys} ) } ) {
+      my($str, $id, $chomp, undef) = @{ $token };
+
+      LOG( TOKEN => $toke->_visualize_tid($id) . " => $str" )
+         if DEBUG >= DEBUG_LEVEL_VERBOSE;
+
+      next PARSER if T_DISCARD == $id || T_COMMENT == $id;
+
+      if ( T_DELIMSTART == $id ) { $inside++; next PARSER; }
+      if ( T_DELIMEND   == $id ) { $inside--; next PARSER; }
+
+      my $is_raw = T_RAW     == $id || T_NOTADELIM == $id;
+      my $is_inc = T_DYNAMIC == $id || T_STATIC    == $id;
+
+      $code .= $is_raw          ? $h->{raw    }->( $self->_chomp( $str, $chomp ) )
+             : T_COMMAND == $id ? $h->{raw    }->( $self->_parse_command( $str ) )
+             : T_CODE    == $id ? $h->{code   }->( $str                          )
+             : T_CAPTURE == $id ? $h->{capture}->( $str                          )
+             : $is_inc          ? $h->{capture}->( $self->_walk_inc( $opt, $id, $str) )
+             : T_MAPKEY  == $id ? $self->_walk_mapkey(  $mko, $mkc, $str         )
+             :                    $self->_walk_unknown( $h, $uth, $id, $str      )
+             ;
+   }
+   return $code, $inside;
+}
+
+sub _walk_mapkey {
+   my($self, $mko, $mkc, $str) = @_;
+   return sprintf $mko, $mkc ? ( ($str) x MAPKEY_NUM ) : $str;
+}
+
+sub _walk_inc {
+   my($self, $opt, $id, $str) = @_;
+   return $self->_needs_object->include($id, $str, $opt);
+}
+
+sub _walk_unknown {
+   my($self, $h, $uth, $id, $str) = @_;
+   if ( DEBUG ) {
+      LOG(
+         $uth  ? ( USER_THANDLER => "$id" )
+               : ( UNKNOWN_TOKEN => "Adding unknown token as RAW: $id($str)" )
+      );
+   }
+
+   return $uth ? $uth->( $self, $id ,$str, $h ) : $h->{raw}->( $str );
+}
+
 sub _parse_command {
    my $self = shift;
    my $str  = shift;
-   my($head, $raw_block) = split /;/, $str, 2;
-   my @buf  = split RE_PIPE_SPLIT, '|' . trim($head);
-   shift(@buf);
+   my($head, $raw_block) = split m{;}xms, $str, 2;
+   my @buf  = split RE_PIPE_SPLIT, q{|} . trim($head);
+   shift @buf;
    my %com  = map { trim $_ } @buf;
+
+   if ( DEBUG >= DEBUG_LEVEL_INSANE ) {
+      require Data::Dumper;
+      LOG(
+         PARSE_COMMAND => Data::Dumper::Dumper(
+                           {
+                              string  => $str,
+                              header  => $head,
+                              raw     => $raw_block,
+                              command => \%com,
+                           }
+                        )
+      );
+   }
 
    if ( $com{FILTER} ) {
       # embed into the template & NEEDS_OBJECT++ ???
-      local $self->[FILENAME] = '<ANON BLOCK>';
+      my $old = $self->[FILENAME];
+      $self->[FILENAME] = '<ANON BLOCK>';
       $self->_call_filters( \$raw_block, split RE_FILTER_SPLIT, $com{FILTER} );
+      $self->[FILENAME] = $old;
    }
 
    return $raw_block;
@@ -743,8 +823,7 @@ sub _parse_command {
 
 sub _chomp {
    # remove the unnecessary white space
-   my $self = shift;
-   my($str, $chomp) = @_;
+   my($self, $str, $chomp) = @_;
 
    # NEXT: discard: left;  right -> left
    # PREV: discard: right; left  -> right
@@ -758,12 +837,12 @@ sub _chomp {
    my $right_collapse = ( $prev & COLLAPSE_ALL ) || ( $prev & COLLAPSE_LEFT );
    my $right_chomp    = ( $prev & CHOMP_ALL    ) || ( $prev & CHOMP_LEFT    );
 
-   $str = $left_collapse  ? ltrim($str, ' ')
+   $str = $left_collapse  ? ltrim($str, q{ })
         : $left_chomp     ? ltrim($str)
         :                   $str
         ;
 
-   $str = $right_collapse ? rtrim($str, ' ')
+   $str = $right_collapse ? rtrim($str, q{ })
         : $right_chomp    ? rtrim($str)
         :                   $str
         ;
@@ -773,21 +852,15 @@ sub _chomp {
 
 sub _wrapper {
    # this'll be tricky to re-implement around a template
-   my $self     = shift;
-   my $code     = shift;
-   my $cache_id = shift;
-   my $faker    = shift;
-   my $map_keys = shift;
-   my $h        = shift;
-   my $buf_hash = $self->[FAKER_HASH];
-
-   my $wrapper    = '';
-   my $inside_inc = $self->[INSIDE_INCLUDE] != -1 ? 1 : 0;
+   my($self, $code, $cache_id, $faker, $map_keys, $h) = @_;
+   my $buf_hash   = $self->[FAKER_HASH];
+   my $wrapper    = EMPTY_STRING;
+   my $inside_inc = $self->[INSIDE_INCLUDE] != MINUS_ONE ? 1 : 0;
 
    # build the anonymous sub
    if ( ! $inside_inc ) {
       # don't duplicate these if we're including something
-      $wrapper .= "package " . DUMMY_CLASS . ";";
+      $wrapper .= 'package ' . DUMMY_CLASS . q{;};
       $wrapper .= 'use strict;' if $self->[STRICT];
    }
    $wrapper .= 'sub { ';
@@ -796,13 +869,13 @@ sub _wrapper {
       --$self->[NEEDS_OBJECT];
       $wrapper .= 'my ' . $self->[FAKER_SELF] . ' = shift;';
    }
-   $wrapper .= $self->[HEADER].';'             if $self->[HEADER];
+   $wrapper .= $self->[HEADER].q{;}            if $self->[HEADER];
    $wrapper .= "my $faker = '';";
    $wrapper .= $self->_add_stack( $cache_id )  if $self->[STACK];
    $wrapper .= "my $buf_hash = {\@_};"         if $map_keys;
    $wrapper .= $self->_add_sigwarn if $self->[CAPTURE_WARNINGS];
    $wrapper .= "\n#line 1 " .  $self->[FILENAME] . "\n";
-   $wrapper .= $code . ";";
+   $wrapper .= $code . q{;};
    $wrapper .= $self->_dump_sigwarn($h) if $self->[CAPTURE_WARNINGS];
    $wrapper .= "return $faker;";
    $wrapper .= '}';
@@ -813,7 +886,7 @@ sub _wrapper {
                         $self->_internal('fragment'),
                         { FRAGMENT => $self->_tidy($wrapper) }
                      )
-   ) if DEBUG > 1;
+   ) if DEBUG >= DEBUG_LEVEL_VERBOSE;
    #LOG( OUTPUT => $wrapper );
    # reset
    $self->[DEEP_RECURSION] = 0; # reset
@@ -822,7 +895,7 @@ sub _wrapper {
 
 sub _parse_mapkeys {
    my($self, $map_keys, $faker, $buf_hash) = @_;
-   return undef, undef if ! $map_keys;
+   return( undef, undef ) if ! $map_keys;
 
    my $mkc = $map_keys eq 'check';
    my $mki = $map_keys eq 'init';
@@ -869,7 +942,7 @@ sub _dump_sigwarn {
 sub _add_stack {
    my $self    = shift;
    my $cs_name = shift || '<ANON TEMPLATE>';
-   my $stack   = $self->[STACK] || '';
+   my $stack   = $self->[STACK] || EMPTY_STRING;
 
    return if lc($stack) eq 'off';
 
@@ -878,7 +951,7 @@ sub _add_stack {
                : $stack
                ;
 
-   my($type, $channel) = split /:/, $check;
+   my($type, $channel) = split m{:}xms, $check;
    $channel = ! $channel             ? 'warn'
             :   $channel eq 'buffer' ? $self->[FAKER] . ' .= '
             :                          'warn'
@@ -892,8 +965,9 @@ sub _add_stack {
 }
 
 sub _set_internal_templates {
+   return
    # we need string eval in this template to catch syntax errors
-   sub_include => q~
+   sub_include => <<'TEMPLATE_CONSTANT',
       <%OBJECT%>->_compile(
          do {
             local $@;
@@ -918,9 +992,9 @@ sub _set_internal_templates {
             _share   => [<%SHARE%>],
          }
       )
-   ~,
+TEMPLATE_CONSTANT
 
-   no_monolith => q*
+   no_monolith => <<'TEMPLATE_CONSTANT',
       <%OBJECT%>->compile(
          q~<%FILE%>~,
          undef,
@@ -929,10 +1003,10 @@ sub _set_internal_templates {
             _sub_inc => q~<%TYPE%>~,
          }
       );
-   *,
+TEMPLATE_CONSTANT
 
    # see _parse()
-   map_keys_check => q(
+   map_keys_check => <<'TEMPLATE_CONSTANT',
       <%BUF%> .= exists <%HASH%>->{"<%KEY%>"}
                ? (
                   defined <%HASH%>->{"<%KEY%>"}
@@ -941,24 +1015,24 @@ sub _set_internal_templates {
                   )
                : "[ERROR] Invalid key: <%KEY%>"
                ;
-   ),
+TEMPLATE_CONSTANT
 
-   map_keys_init => q(
+   map_keys_init => <<'TEMPLATE_CONSTANT',
       <%BUF%> .= <%HASH%>->{"<%KEY%>"} || '';
-   ),
+TEMPLATE_CONSTANT
 
-   map_keys_default => q(
+   map_keys_default => <<'TEMPLATE_CONSTANT',
       <%BUF%> .= <%HASH%>->{"<%KEY%>"};
-   ),
+TEMPLATE_CONSTANT
 
-   add_sigwarn => q(
+   add_sigwarn => <<'TEMPLATE_CONSTANT',
       my <%BUF%>;
       local $SIG{__WARN__} = sub {
          push @{ <%BUF%> }, $_[0];
       };
-   ),
+TEMPLATE_CONSTANT
 
-   dump_sigwarn => q(
+   dump_sigwarn => <<'TEMPLATE_CONSTANT',
       join("\n",
             map {
                s{ \A \s+    }{}xms;
@@ -966,7 +1040,7 @@ sub _set_internal_templates {
                "[warning] $_\n"
             } @{ <%BUF%> }
          );
-   ),
+TEMPLATE_CONSTANT
 
    compile_error => <<'TEMPLATE_CONSTANT',
 Error compiling code fragment (cache id: <%CID%>):
@@ -994,7 +1068,7 @@ TEMPLATE_CONSTANT
 # END TIDIED FRAGMENT
 TEMPLATE_CONSTANT
 
-   disk_cache_comment => <<"TEMPLATE_CONSTANT",
+   disk_cache_comment => <<'TEMPLATE_CONSTANT',
 # !!!   W A R N I N G      W A R N I N G      W A R N I N G   !!!
 # This file was automatically generated by <%NAME%> on <%DATE%>.
 # This file is a compiled template cache.
@@ -1005,11 +1079,12 @@ TEMPLATE_CONSTANT
 
 package Text::Template::Simple::Base::Include;
 use strict;
+use warnings;
 use vars qw($VERSION);
 use Text::Template::Simple::Util qw(:all);
 use Text::Template::Simple::Constants qw(:all);
 
-$VERSION = '0.81';
+$VERSION = '0.82';
 
 sub _include_no_monolith {
    # no monolith eh?
@@ -1018,8 +1093,8 @@ sub _include_no_monolith {
    my $rv   =  $self->_mini_compiler(
                   $self->_internal('no_monolith') => {
                      OBJECT => $self->[FAKER_SELF],
-                     FILE   => escape('~' => $file),
-                     TYPE   => escape('~' => $type),
+                     FILE   => escape(q{~} => $file),
+                     TYPE   => escape(q{~} => $type),
                   } => {
                      flatten => 1,
                   }
@@ -1031,14 +1106,14 @@ sub _include_no_monolith {
 sub _include_static {
    my($self, $file, $text, $err, $opt) = @_;
    return $self->[MONOLITH]
-        ? 'q~' . escape('~' => $text) . '~;'
+        ? 'q~' . escape(q{~} => $text) . q{~;}
         : $self->_include_no_monolith( T_STATIC, $file, $opt )
         ;
 }
 
 sub _include_dynamic {
    my($self, $file, $text, $err, $opt) = @_;
-   my $rv   = '';
+   my $rv   = EMPTY_STRING;
 
    ++$self->[INSIDE_INCLUDE];
    $self->[COUNTER_INCLUDE] ||= {};
@@ -1051,12 +1126,12 @@ sub _include_dynamic {
       LOG( DEEP_RECURSION => $file ) if DEBUG;
       my $w = L( warning => 'tts.base.include.dynamic.recursion',
                             $err, MAX_RECURSION, $file );
-      $rv .= sprintf "q~%s~", escape( '~' => $w );
+      $rv .= sprintf 'q~%s~', escape( q{~} => $w );
    }
    else {
       # local stuff is for file name access through $0 in templates
       $rv .= $self->[MONOLITH]
-           ? do { local $self->[FILENAME] = $file; $self->_parse( $text ) }
+           ? $self->_include_dynamic_monolith( $file, $text )
            : $self->_include_no_monolith( T_DYNAMIC, $file, $opt )
            ;
    }
@@ -1065,8 +1140,16 @@ sub _include_dynamic {
    return $rv;
 }
 
+sub _include_dynamic_monolith {
+   my($self,$file, $text) = @_;
+   my $old = $self->[FILENAME];
+   $self->[FILENAME] = $file;
+   my $result = $self->_parse( $text );
+   $self->[FILENAME] = $old;
+   return $result;
+}
 
-sub _include {
+sub include {
    my $self       = shift;
    my $type       = shift || 0;
    my $file       = shift;
@@ -1090,15 +1173,15 @@ sub _include {
    else {
       $interpolate = 1; # just guessing ...
       return "qq~$err Interpolated includes don't work under monolith option. "
-            ."Please disable monolith and use the 'SHARE' directive in the"
+            .q{Please disable monolith and use the 'SHARE' directive in the}
             ." include command: $file~"
          if $self->[MONOLITH];
    }
 
-   return "q~$err '" . escape('~' => $file) . "' is a directory~"
+   return "q~$err '" . escape(q{~} => $file) . q{' is a directory~}
       if $self->io->is_dir( $file );
 
-   if ( DEBUG() ) {
+   if ( DEBUG ) {
       require Text::Template::Simple::Tokenizer;
       my $toke =  Text::Template::Simple::Tokenizer->new(
                      @{ $self->[DELIMITERS] },
@@ -1111,12 +1194,11 @@ sub _include {
    if ( $interpolate ) {
       my $rv = $self->_interpolate( $file, $type );
       $self->[NEEDS_OBJECT]++;
-      LOG(INTERPOLATE_INC => "TYPE: $type; DATA: $file; RV: $rv") if DEBUG();
+      LOG(INTERPOLATE_INC => "TYPE: $type; DATA: $file; RV: $rv") if DEBUG;
       return $rv;
    }
 
-   my $text;
-   eval { $text = $self->io->slurp($file); };
+   my $text = eval { $self->io->slurp($file); };
    return "q~$err $@~" if $@;
 
    my $meth = '_include_' . ($is_dynamic ? 'dynamic' : 'static');
@@ -1140,7 +1222,7 @@ sub _interpolate {
    # die "You can not pass parameters to static includes"
    #    if $inc{PARAM} && T_STATIC  == $type;
 
-   my $filter = $inc{FILTER} ? escape( q{'} => $inc{FILTER} ) : '';
+   my $filter = $inc{FILTER} ? escape( q{'} => $inc{FILTER} ) : EMPTY_STRING;
 
    if ( $inc{SHARE} ) {
       my @vars = map { trim $_ } split RE_FILTER_SPLIT, $inc{SHARE};
@@ -1154,16 +1236,16 @@ sub _interpolate {
       foreach my $var ( @vars ) {
          if ( $var !~ m{ \A \$ }xms ) {
             my($char) = $var =~ m{ \A (.) }xms;
-            my $type  = $type{ $char } || '<UNKNOWN>';
-            fatal('tts.base.include._interpolate.bogus_share', $type, $var);
+            my $type_name  = $type{ $char } || '<UNKNOWN>';
+            fatal('tts.base.include._interpolate.bogus_share', $type_name, $var);
          }
          $var =~ tr/;//d;
          push @buf, $var;
       }
-      $inc{SHARE} = join ',', @buf;
+      $inc{SHARE} = join q{,}, @buf;
    }
 
-   my $share = $inc{SHARE} ? sprintf(qq{'%s', %s}, ($inc{SHARE}) x 2) : 'undef';
+   my $share = $inc{SHARE} ? sprintf(q{'%s', %s}, ($inc{SHARE}) x 2) : 'undef';
    my $rv = $self->_mini_compiler(
                $self->_internal('sub_include') => {
                   OBJECT      => $self->[FAKER_SELF],
@@ -1188,17 +1270,18 @@ sub _include_error {
              : T_STATIC  == $type ? 'static'
              :                      'unknown'
              ;
-   my $title = '[ ' . $val . ' include error ]';
+   my $title = sprintf '[ %s include error ]', $val;
    return $title;
 }
 
 package Text::Template::Simple::Base::Examine;
 use strict;
+use warnings;
 use vars qw($VERSION);
 use Text::Template::Simple::Util qw(:all);
 use Text::Template::Simple::Constants qw(:all);
 
-$VERSION = '0.81';
+$VERSION = '0.82';
 
 sub _examine {
    my $self   = shift;
@@ -1228,17 +1311,15 @@ sub _examine {
       }
    }
 
-   LOG( EXAMINE => $self->[TYPE]."; LENGTH: ".length($rv) ) if DEBUG();
+   LOG( EXAMINE => sprintf q{%s; LENGTH: %s}, $self->[TYPE], length $rv ) if DEBUG;
    return $rv;
 }
 
 sub _examine_glob {
-   my $self = shift;
-   my $TMP  = shift;
-   my $ref  = ref $TMP;
-   fatal( 'tts.base.examine.notglob' => $ref ) if $ref ne 'GLOB';
-   fatal( 'tts.base.examine.notfh'           ) if not  fileno $TMP;
-   return $self->io->slurp( $TMP );
+   my($self, $thing) = @_;
+   fatal( 'tts.base.examine.notglob' => ref $thing ) if ref $thing ne 'GLOB';
+   fatal( 'tts.base.examine.notfh' ) if ! fileno $thing;
+   return $self->io->slurp( $thing );
 }
 
 sub _examine_type {
@@ -1246,44 +1327,87 @@ sub _examine_type {
    my $TMP  = shift;
    my $ref  = ref $TMP;
 
-   return ''   => $TMP if ! $ref;
-   return GLOB => $TMP if   $ref eq 'GLOB';
+   return EMPTY_STRING ,  $TMP if ! $ref;
+   return GLOB         => $TMP if   $ref eq 'GLOB';
 
    if ( isaref( $TMP ) ) {
       my $ftype  = shift @{ $TMP } || fatal('tts.base.examine._examine_type.ftype');
       my $fthing = shift @{ $TMP } || fatal('tts.base.examine._examine_type.fthing');
-      fatal('tts.base.examine._examine_type.extra') if @{ $TMP } > 0;
+      fatal('tts.base.examine._examine_type.extra') if @{ $TMP };
       return uc $ftype, $fthing;
    }
 
-   fatal('tts.base.examine._examine_type.unknown', $ref);
+   return fatal('tts.base.examine._examine_type.unknown', $ref);
 }
 
 package Text::Template::Simple::Base::Compiler;
 use strict;
+use warnings;
 use vars qw($VERSION);
 use Text::Template::Simple::Util qw(:all);
 use Text::Template::Simple::Constants qw(:all);
 
-$VERSION = '0.81';
+$VERSION = '0.82';
 
-sub _compiler { shift->[SAFE] ? COMPILER_SAFE : COMPILER }
+sub _init_compile_opts {
+   my $self = shift;
+   my $opt  = shift || {};
+
+   fatal('tts.base.compiler._compile.opt')   if not ishref($opt  );
+
+   # set defaults
+   $opt->{id}       ||= EMPTY_STRING; # id is AUTO
+   $opt->{map_keys} ||= 0;  # use normal behavior
+   $opt->{chkmt}    ||= 0;  # check mtime of file template?
+   $opt->{_sub_inc} ||= 0;  # are we called from a dynamic include op?
+   $opt->{_filter}  ||= EMPTY_STRING; # any filters?
+
+   # first element is the shared names. if it's not defined, then there
+   # are no shared variables from top level
+   delete $opt->{_share}
+      if isaref($opt->{_share}) && ! defined $opt->{_share}[0];
+
+   $opt->{as_is} = $opt->{_sub_inc} && $opt->{_sub_inc} == T_STATIC;
+
+   return $opt;
+}
+
+sub _validate_chkmt {
+   my($self, $chkmt_ref, $tmpx) = @_;
+   ${$chkmt_ref} = $self->[TYPE] eq 'FILE'
+                 ? (stat $tmpx)[STAT_MTIME]
+                 : do {
+                     DEBUG && LOG( DISABLE_MT =>
+                                    'Disabling chkmt. Template is not a file');
+                     0;
+                  };
+   return;
+}
+
+sub _compile_cache {
+   my($self, $tmp, $opt, $id_ref, $code_ref) = @_;
+   my $method   = $opt->{id};
+   my $auto_id  = ! $method || $method eq 'AUTO';
+   ${ $id_ref } = $self->connector('Cache::ID')->new->generate(
+                     $auto_id ? ( $tmp ) : ( $method, 'custom' )
+                  );
+
+   # prevent overwriting the compiled version in cache
+   # since we need the non-compiled version
+   ${ $id_ref } .= '_1' if $opt->{as_is};
+
+   ${ $code_ref } = $self->cache->hit( ${$id_ref}, $opt->{chkmt} );
+   LOG( CACHE_HIT =>  ${$id_ref} ) if DEBUG && ${$code_ref};
+   return;
+}
 
 sub _compile {
    my $self  = shift;
    my $tmpx  = shift || fatal('tts.base.compiler._compile.notmp');
    my $param = shift || [];
-   my $opt   = shift || {};
+   my $opt   = $self->_init_compile_opts( shift );
 
-   fatal('tts.base.compiler._compile.param') if not isaref($param);
-   fatal('tts.base.compiler._compile.opt')   if not ishref($opt  );
-
-   # set defaults
-   $opt->{id}       ||= ''; # id is AUTO
-   $opt->{map_keys} ||= 0;  # use normal behavior
-   $opt->{chkmt}    ||= 0;  # check mtime of file template?
-   $opt->{_sub_inc} ||= 0;  # are we called from a dynamic include op?
-   $opt->{_filter}  ||= ''; # any filters?
+   fatal('tts.base.compiler._compile.param') if ! isaref($param);
 
    my $tmp = $self->_examine( $tmpx );
    return $tmp if $self->[TYPE] eq 'ERROR';
@@ -1299,43 +1423,14 @@ sub _compile {
       $self->[NEEDS_OBJECT]++; # interpolated includes will need that
    }
 
-   if ( $opt->{chkmt} ) {
-      $opt->{chkmt} = $self->[TYPE] eq 'FILE' ? (stat $tmpx)[STAT_MTIME]
-                    : do {
-                        DEBUG && LOG(DISABLE_MT =>
-                                     "Disabling chkmt. Template is not a file");
-                        0;
-                     }
-   }
+   $self->_validate_chkmt( \$opt->{chkmt}, $tmpx ) if $opt->{chkmt};
 
    LOG( COMPILE => $opt->{id} ) if DEBUG && defined $opt->{id};
 
-   my($CODE, $ok);
-   my $cache_id = '';
+   my $cache_id = EMPTY_STRING;
 
-   my $as_is = $opt->{_sub_inc} && $opt->{_sub_inc} == T_STATIC;
-
-   # first element is the shared names. if it's not defined, then there
-   # are no shared variables from top level
-   delete $opt->{_share}
-      if isaref($opt->{_share}) && ! defined $opt->{_share}[0];
-
-   if ( $self->[CACHE] ) {
-      my $method = $opt->{id};
-      my @args   = (! $method || $method eq 'AUTO') ? ( $tmp              )
-                 :                                    ( $method, 'custom' )
-                 ;
-      $cache_id  = $self->connector('Cache::ID')->new->generate( @args );
-
-      # prevent overwriting the compiled version in cache
-      # since we need the non-compiled version
-      $cache_id .= '_1' if $as_is;
-
-      if ( $CODE = $self->cache->hit( $cache_id, $opt->{chkmt} ) ) {
-         LOG( CACHE_HIT =>  $cache_id ) if DEBUG();
-         $ok = 1;
-      }
-   }
+   my($CODE);
+   $self->_compile_cache( $tmp, $opt, \$cache_id, \$CODE ) if $self->[CACHE];
 
    $self->cache->id( $cache_id ); # if $cache_id;
    $self->[FILENAME] = $self->[TYPE] eq 'FILE' ? $tmpx : $self->cache->id;
@@ -1346,25 +1441,7 @@ sub _compile {
       SHARED_VARS => "Adding shared variables ($shead) from a dynamic include"
    ) if DEBUG && $shead;
 
-   if ( not $ok ) {
-      # we have a cache miss; parse and compile
-      LOG( CACHE_MISS => $cache_id ) if DEBUG();
-
-      my $shared;
-      if ( $shead ) {
-         my $param = join ',', ('shift') x @sparam;
-         $shared = sprintf qq~my(%s) = (%s);~, $shead, $param;
-      }
-
-      local $self->[HEADER] = do {
-         my $old = $self->[HEADER] || '';
-         $shared . ';' . $old
-      } if $shared;
-
-      my %popt   = ( %{ $opt }, cache_id => $cache_id, as_is => $as_is );
-      my $parsed = $self->_parse( $tmp, \%popt );
-      $CODE      = $self->cache->populate( $cache_id, $parsed, $opt->{chkmt} );
-   }
+   $CODE = $self->_cache_miss( $cache_id, $shead, \@sparam, $opt, $tmp ) if ! $CODE;
 
    my @args;
    push @args, $self   if $self->[NEEDS_OBJECT]; # must be the first
@@ -1379,16 +1456,34 @@ sub _compile {
    return $out;
 }
 
+sub _cache_miss {
+   my($self, $cache_id, $shead, $sparam, $opt, $tmp) = @_;
+   # we have a cache miss; parse and compile
+   LOG( CACHE_MISS => $cache_id ) if DEBUG;
+
+   my $restore_header;
+   if ( $shead ) {
+      my $param_x = join q{,}, ('shift') x @{ $sparam };
+      my $shared  = sprintf q~my(%s) = (%s);~, $shead, $param_x;
+      $restore_header = $self->[HEADER];
+      $self->[HEADER] = $shared . q{;} . ( $self->[HEADER] || EMPTY_STRING );
+   }
+
+   my %popt   = ( %{ $opt }, cache_id => $cache_id, as_is => $opt->{as_is} );
+   my $parsed = $self->_parse( $tmp, \%popt );
+   my $CODE      = $self->cache->populate( $cache_id, $parsed, $opt->{chkmt} );
+   $self->[HEADER] = $restore_header if $shead;
+   return $CODE;
+}
+
 sub _call_filters {
-   my $self    = shift;
-   my $oref    = shift;
-   my @filters = @_;
-   my $fname   = $self->[FILENAME];
+   my($self, $oref, @filters) = @_;
+   my $fname = $self->[FILENAME];
 
    APPLY_FILTERS: foreach my $filter ( @filters ) {
-      my $fref = DUMMY_CLASS->can( "filter_" . $filter );
+      my $fref = DUMMY_CLASS->can( 'filter_' . $filter );
       if ( ! $fref ) {
-         $$oref .= "\n[ filter warning ] Can not apply undefined filter"
+         ${$oref} .= "\n[ filter warning ] Can not apply undefined filter"
                 .  " $filter to $fname\n";
          next;
       }
@@ -1402,10 +1497,12 @@ sub _wrap_compile {
    my $self   = shift;
    my $parsed = shift or fatal('tts.base.compiler._wrap_compile.parsed');
    LOG( CACHE_ID => $self->cache->id ) if $self->[WARN_IDS] && $self->cache->id;
-   LOG( COMPILER => $self->[SAFE] ? 'Safe' : 'Normal' ) if DEBUG();
+   LOG( COMPILER => $self->[SAFE] ? 'Safe' : 'Normal' ) if DEBUG;
    my($CODE, $error);
 
-   $CODE = $self->_compiler->_compile($parsed);
+   my $compiler = $self->[SAFE] ? COMPILER_SAFE : COMPILER;
+
+   $CODE = $compiler->compile( $parsed );
 
    if( $error = $@ ) {
       my $error2;
@@ -1426,7 +1523,8 @@ sub _mini_compiler {
    fatal('tts.base.compiler._mini_compiler.param') if ! ishref($param);
 
    foreach my $var ( keys %{ $param } ) {
-      $template =~ s[<%\Q$var\E%>][$param->{$var}]xmsg;
+      my $str = $param->{$var};
+      $template =~ s{<%\Q$var\E%>}{$str}xmsg;
    }
 
    $template =~ s{\s+}{ }xmsg if $opt->{flatten}; # remove extra spaces
@@ -1435,9 +1533,10 @@ sub _mini_compiler {
 
 package Text::Template::Simple::Tokenizer;
 use strict;
+use warnings;
 use vars qw($VERSION);
 
-$VERSION = '0.81';
+$VERSION = '0.82';
 
 use constant CMD_CHAR             =>  0;
 use constant CMD_ID               =>  1;
@@ -1451,7 +1550,7 @@ use constant SUBSTR_OFFSET_SECOND =>  1;
 use constant SUBSTR_LENGTH        =>  1;
 
 use Text::Template::Simple::Util      qw( LOG DEBUG fatal );
-use Text::Template::Simple::Constants qw( :chomp :directive :token );
+use Text::Template::Simple::Constants qw( :all );
 
 my @COMMANDS = ( # default command list
    # cmd            id
@@ -1471,7 +1570,7 @@ sub new {
    $self->[ID_DE]         = shift || fatal('tts.tokenizer.new.de');
    $self->[ID_PRE_CHOMP]  = shift || CHOMP_NONE;
    $self->[ID_POST_CHOMP] = shift || CHOMP_NONE;
-   $self;
+   return $self;
 }
 
 sub tokenize {
@@ -1479,13 +1578,13 @@ sub tokenize {
    my($self, $tmp, $map_keys) = @_;
 
    return $self->_empty_token( $tmp ) if ! $tmp;
-   
+
    my($ds, $de)   = ($self->[ID_DS], $self->[ID_DE]);
    my($qds, $qde) = map { quotemeta $_ } $ds, $de;
 
    my(@tokens, $inside);
 
-   OUT_TOKEN: foreach my $i ( split /($qds)/, $tmp ) {
+   OUT_TOKEN: foreach my $i ( split /($qds)/xms, $tmp ) {
 
       if ( $i eq $ds ) {
          push @tokens, [ $i, T_DELIMSTART, [], undef ];
@@ -1493,11 +1592,13 @@ sub tokenize {
          next OUT_TOKEN;
       }
 
-      IN_TOKEN: foreach my $j ( split /($qde)/, $i ) {
+      IN_TOKEN: foreach my $j ( split /($qde)/xms, $i ) {
          if ( $j eq $de ) {
-            my $last = $tokens[LAST_TOKEN];
-            if ( T_NOTADELIM == $last->[TOKEN_ID] ) {
-               $last->[TOKEN_STR] = $self->tilde( $last->[TOKEN_STR] . $de );
+            my $last_token = $tokens[LAST_TOKEN];
+            if ( T_NOTADELIM == $last_token->[TOKEN_ID] ) {
+               $last_token->[TOKEN_STR] = $self->tilde(
+                                             $last_token->[TOKEN_STR] . $de
+                                          );
             }
             else {
                push @tokens, [ $j, T_DELIMEND, [], undef ];
@@ -1514,8 +1615,15 @@ sub tokenize {
    return \@tokens;
 }
 
-sub tilde { shift; Text::Template::Simple::Util::escape( '~' => @_ ) }
-sub quote { shift; Text::Template::Simple::Util::escape( '"' => @_ ) }
+sub tilde {
+   my(undef, @args) = @_;
+   return Text::Template::Simple::Util::escape( q{~} => @args );
+}
+
+sub quote {
+   my(undef, @args) = @_;
+   return Text::Template::Simple::Util::escape( q{"} => @args )
+}
 
 sub _empty_token {
    my $self = shift;
@@ -1531,12 +1639,14 @@ sub _empty_token {
 
 sub _get_command_chars {
    my($self, $str) = @_;
-   my($first, $second, $last) = ('') x 3;
+   my($first_cmd, $second_cmd, $last_cmd);
    # $first is the left-cmd, $last is the right-cmd. $second is the extra
-   $first  = substr $str, SUBSTR_OFFSET_FIRST , SUBSTR_LENGTH if $str ne '';
-   $second = substr $str, SUBSTR_OFFSET_SECOND, SUBSTR_LENGTH if $str ne '';
-   $last   = substr $str, length($str) - 1    , SUBSTR_LENGTH if $str ne '';
-   return $first, $second, $last;
+   $first_cmd  = substr $str, SUBSTR_OFFSET_FIRST , SUBSTR_LENGTH if $str ne EMPTY_STRING;
+   $second_cmd = substr $str, SUBSTR_OFFSET_SECOND, SUBSTR_LENGTH if $str ne EMPTY_STRING;
+   $last_cmd   = substr $str, length($str) - 1    , SUBSTR_LENGTH if $str ne EMPTY_STRING;
+   return $first_cmd  || EMPTY_STRING,
+          $second_cmd || EMPTY_STRING,
+          $last_cmd   || EMPTY_STRING;
 }
 
 sub _user_commands {
@@ -1546,9 +1656,9 @@ sub _user_commands {
 }
 
 sub _token_for_command {
-   my($self, $tree, $map_keys, $str, $last, $second, $cmd, $inside) = @_;
-   my($copen, $cclose, $ctoken) = $self->_chomp_token( $second, $last );
-   my $len  = length($str);
+   my($self, $tree, $map_keys, $str, $last_cmd, $second_cmd, $cmd, $inside) = @_;
+   my($copen, $cclose, $ctoken) = $self->_chomp_token( $second_cmd, $last_cmd );
+   my $len  = length $str;
    my $cb   = $map_keys ? 'quote' : $cmd->[CMD_CB];
    my $soff = $copen ? 2 : 1;
    my $slen = $len - ($cclose ? $soff+1 : 1);
@@ -1559,7 +1669,7 @@ sub _token_for_command {
       $tree->[LAST_TOKEN][TOKEN_ID] = T_DISCARD;
    }
 
-   my $needs_chomp = defined($ctoken);
+   my $needs_chomp = defined $ctoken;
    $self->_chomp_prev($tree, $ctoken) if $needs_chomp;
 
    my $id  = $map_keys ? T_RAW              : $cmd->[CMD_ID];
@@ -1574,13 +1684,13 @@ sub _token_for_command {
 }
 
 sub _token_for_code {
-   my($self, $tree, $map_keys, $str, $last, $first) = @_;
-   my($copen, $cclose, $ctoken) = $self->_chomp_token( $first, $last );
-   my $len  = length($str);
+   my($self, $tree, $map_keys, $str, $last_cmd, $first_cmd) = @_;
+   my($copen, $cclose, $ctoken) = $self->_chomp_token( $first_cmd, $last_cmd );
+   my $len  = length $str;
    my $soff = $copen ? 1 : 0;
    my $slen = $len - ( $cclose ? $soff+1 : 0 );
 
-   my $needs_chomp = defined($ctoken);
+   my $needs_chomp = defined $ctoken;
    $self->_chomp_prev($tree, $ctoken) if $needs_chomp;
 
    return   [
@@ -1593,15 +1703,15 @@ sub _token_for_code {
 
 sub _token_code {
    my($self, $str, $inside, $map_keys, $tree) = @_;
-   my($first, $second, $last) = $self->_get_command_chars( $str );
+   my($first_cmd, $second_cmd, $last_cmd) = $self->_get_command_chars( $str );
 
    if ( $inside ) {
-      my @common = ($tree, $map_keys, $str, $last);
+      my @common = ($tree, $map_keys, $str, $last_cmd);
       foreach my $cmd ( @COMMANDS, $self->_user_commands ) {
-         next if $first ne $cmd->[CMD_CHAR];
-         return $self->_token_for_command( @common, $second, $cmd, $inside );
+         next if $first_cmd ne $cmd->[CMD_CHAR];
+         return $self->_token_for_command( @common, $second_cmd, $cmd, $inside );
       }
-      return $self->_token_for_code( @common, $first );
+      return $self->_token_for_code( @common, $first_cmd );
    }
 
    my $prev = $tree->[PREVIOUS_TOKEN];
@@ -1615,24 +1725,24 @@ sub _token_code {
 }
 
 sub _chomp_token {
-   my($self, $open, $close) = @_;
+   my($self, $open_tok, $close_tok) = @_;
    my($pre, $post) = ( $self->[ID_PRE_CHOMP], $self->[ID_POST_CHOMP] );
    my $c      = CHOMP_NONE;
 
-   my $copen  = $open  eq DIR_CHOMP_NONE ? -1
-              : $open  eq DIR_COLLAPSE   ? do { $c |=  COLLAPSE_LEFT; 1 }
-              : $pre   &  COLLAPSE_ALL   ? do { $c |=  COLLAPSE_LEFT; 1 }
-              : $pre   &  CHOMP_ALL      ? do { $c |=     CHOMP_LEFT; 1 }
-              : $open  eq DIR_CHOMP      ? do { $c |=     CHOMP_LEFT; 1 }
-              :                            0
+   my $copen  = $open_tok  eq DIR_CHOMP_NONE ? MINUS_ONE
+              : $open_tok  eq DIR_COLLAPSE   ? do { $c |=  COLLAPSE_LEFT; 1 }
+              : $pre       &  COLLAPSE_ALL   ? do { $c |=  COLLAPSE_LEFT; 1 }
+              : $pre       &  CHOMP_ALL      ? do { $c |=     CHOMP_LEFT; 1 }
+              : $open_tok  eq DIR_CHOMP      ? do { $c |=     CHOMP_LEFT; 1 }
+              :                                0
               ;
 
-   my $cclose = $close eq DIR_CHOMP_NONE ? -1
-              : $close eq DIR_COLLAPSE   ? do { $c |= COLLAPSE_RIGHT; 1 }
-              : $post  &  COLLAPSE_ALL   ? do { $c |= COLLAPSE_RIGHT; 1 }
-              : $post  &  CHOMP_ALL      ? do { $c |=    CHOMP_RIGHT; 1 }
-              : $close eq DIR_CHOMP      ? do { $c |=    CHOMP_RIGHT; 1 }
-              :                            0
+   my $cclose = $close_tok eq DIR_CHOMP_NONE ? MINUS_ONE
+              : $close_tok eq DIR_COLLAPSE   ? do { $c |= COLLAPSE_RIGHT; 1 }
+              : $post      &  COLLAPSE_ALL   ? do { $c |= COLLAPSE_RIGHT; 1 }
+              : $post      &  CHOMP_ALL      ? do { $c |=    CHOMP_RIGHT; 1 }
+              : $close_tok eq DIR_CHOMP      ? do { $c |=    CHOMP_RIGHT; 1 }
+              :                                0
               ;
 
    my $cboth  = $copen > 0 && $cclose > 0;
@@ -1663,7 +1773,7 @@ sub _get_symbols {
    my $self  = shift;
    my $regex = shift || fatal('tts.tokenizer._get_symbols.regex');
    no strict qw( refs );
-   return grep { $_ =~ $regex } keys %{ ref($self) . '::' };
+   return grep { $_ =~ $regex } keys %{ ref($self) . q{::} };
 }
 
 sub _visualize_chomp {
@@ -1676,7 +1786,7 @@ sub _visualize_chomp {
               map  { [ $_, $self->$_() ] }
               $self->_get_symbols( qr{ \A (?: CHOMP|COLLAPSE ) }xms );
 
-   return @test ? join( ',', @test ) : 'undef';
+   return @test ? join( q{,}, @test ) : 'undef';
 }
 
 sub _visualize_tid {
@@ -1710,12 +1820,10 @@ sub _debug_tokens {
 
    foreach my $t ( @{ $tokens } ) {
       $buf .=  $self->_debug_tokens_row(
-                  $self->_visualize_tid( $t->[TOKEN_ID] ),
+                  $self->_visualize_tid( $t->[TOKEN_ID]  ),
                   $self->_visualize_ws(  $t->[TOKEN_STR] ),
-                  map {
-                     my $c = $self->_visualize_chomp( $_ );
-                     $c eq 'undef' ? '' : $c
-                  }
+                  map { $_ eq 'undef' ? EMPTY_STRING : $_ }
+                  map { $self->_visualize_chomp( $_ )     }
                   $t->[TOKEN_CHOMP][TOKEN_CHOMP_NEXT],
                   $t->[TOKEN_CHOMP][TOKEN_CHOMP_PREV],
                   $t->[TOKEN_TRIGGER]
@@ -1736,8 +1844,7 @@ HEAD
 }
 
 sub _debug_tokens_row {
-   my $self = shift;
-   my @params = @_;
+   my($self, @params) = @_;
    return sprintf <<'DUMP', @params;
 ID        : %s
 STRING    : %s
@@ -1750,12 +1857,13 @@ DUMP
 
 sub DESTROY {
    my $self = shift || return;
-   LOG( DESTROY => ref $self ) if DEBUG();
+   LOG( DESTROY => ref $self ) if DEBUG;
    return;
 }
 
 package Text::Template::Simple::IO;
 use strict;
+use warnings;
 use vars qw($VERSION);
 use File::Spec;
 use Text::Template::Simple::Constants qw(:all);
@@ -1764,7 +1872,7 @@ use constant MY_IO_LAYER      => 0;
 use constant MY_INCLUDE_PATHS => 1;
 use constant MY_TAINT_MODE    => 2;
 
-$VERSION = '0.81';
+$VERSION = '0.82';
 
 sub new {
    my $class = shift;
@@ -1776,7 +1884,7 @@ sub new {
    $self->[MY_IO_LAYER]      = $layer if defined $layer;
    $self->[MY_INCLUDE_PATHS] = [ @{ $paths } ] if $paths; # copy
    $self->[MY_TAINT_MODE]    = $tmode;
-   $self;
+   return $self;
 }
 
 sub validate {
@@ -1792,12 +1900,12 @@ sub validate {
       if ( IS_WINDOWS ) {
          $wdir = Win32::GetFullPathName( $path );
          if( Win32::GetLastError() ) {
-            LOG( FAIL => "Win32::GetFullPathName( $path ): $^E" ) if DEBUG();
-            $wdir = ''; # die "Win32::GetFullPathName: $^E";
+            LOG( FAIL => "Win32::GetFullPathName( $path ): $^E" ) if DEBUG;
+            $wdir = EMPTY_STRING; # die "Win32::GetFullPathName: $^E";
          }
          else {
             my $ok = -e $wdir && -d _;
-            $wdir  = '' if not $ok;
+            $wdir  = EMPTY_STRING if not $ok;
          }
       }
 
@@ -1807,7 +1915,7 @@ sub validate {
       return $path;
    }
 
-   fatal('tts.io.validate.file');
+   return fatal('tts.io.validate.file');
 }
 
 sub layer {
@@ -1825,7 +1933,7 @@ sub slurp {
    my $self = shift;
    my $file = shift;
    my($fh, $seek);
-   LOG(IO_SLURP => $file) if DEBUG();
+   LOG(IO_SLURP => $file) if DEBUG;
 
    # perl 5.5.3 compat: we need to check if it's a ref first
    if ( ref $file && fileno $file ) {
@@ -1849,7 +1957,10 @@ sub slurp {
 
    my $tmp = do { local $/; my $rv = <$fh>; $rv };
    flock $fh, Fcntl::LOCK_UN() if IS_FLOCK;
-   close $fh if ! $seek; # close only if we opened this
+   if ( ! $seek ) {
+      # close only if we opened this
+      close $fh or die "Unable to close filehandle: $!\n";
+   }
    return $tmp;
 }
 
@@ -1873,12 +1984,12 @@ sub _handle_looks_safe {
    # Read check is disabled by default
    # Mode is always 0666 on Windows, so all tests below are disabled on Windows
    # unless you force them to run
-   LOG( FILE_MODE => sprintf "%04o", $i->mode & 07777) if DEBUG;
+   LOG( FILE_MODE => sprintf '%04o', $i->mode & FTYPE_MASK) if DEBUG;
 
    my $bypass   = IS_WINDOWS && ! ( $tmode & TAINT_CHECK_WINDOWS ) ? 1 : 0;
-   my $go_write = $bypass ? 0 : $i->mode & 022;
+   my $go_write = $bypass ? 0 : $i->mode & FMODE_GO_WRITABLE;
    my $go_read  = ! $bypass && ( $tmode & TAINT_CHECK_FH_READ )
-                ? $i->mode & 066
+                ? $i->mode & FMODE_GO_READABLE
                 : 0;
 
    LOG( TAINT => "tmode:$tmode; bypass:$bypass; "
@@ -1919,17 +2030,17 @@ sub file_exists {
 sub _looks_like_file {
    my $self = shift;
    my $file = shift || return;
-   return     ref $file               ? 0
-         :        $file =~ RE_NONFILE ? 0
-         : length $file >= 255        ? 0
-         :     -e $file               ? 1
-         :                              0
+   return     ref $file                    ? 0
+         :        $file =~ RE_NONFILE      ? 0
+         : length $file >= MAX_PATH_LENGTH ? 0
+         :     -e $file                    ? 1
+         :                                   0
          ;
 }
 
 sub DESTROY {
    my $self = shift;
-   LOG( DESTROY => ref $self ) if DEBUG();
+   LOG( DESTROY => ref $self ) if DEBUG;
    return;
 }
 
@@ -1941,32 +2052,39 @@ package Text::Template::Simple::Dummy;
 # and share package variables under strict (safe mode can
 # have problems though). See the Pod for more info.
 use strict;
+use warnings;
 use vars qw($VERSION);
 use Text::Template::Simple::Caller;
 use Text::Template::Simple::Util qw();
 
-$VERSION = '0.81';
+$VERSION = '0.82';
 
 sub stack { # just a wrapper
    my $opt = shift || {};
    Text::Template::Simple::Util::fatal('tts.caller.stack.hash')
       if ! Text::Template::Simple::Util::ishref($opt);
    $opt->{frame} = 1;
-   Text::Template::Simple::Caller->stack( $opt );
+   return Text::Template::Simple::Caller->stack( $opt );
 }
 
 package Text::Template::Simple::Compiler;
 # the "normal" compiler
 use strict;
+use warnings;
 use vars qw($VERSION);
 use Text::Template::Simple::Dummy;
 
-$VERSION = '0.81';
+$VERSION = '0.82';
 
-sub _compile { shift; return eval shift }
+sub compile {
+    shift;
+    my $code = eval shift;
+    return $code;
+}
 
 package Text::Template::Simple::Caller;
 use strict;
+use warnings;
 use vars qw($VERSION);
 use constant PACKAGE    => 0;
 use constant FILENAME   => 1;
@@ -1978,23 +2096,24 @@ use constant EVALTEXT   => 6;
 use constant IS_REQUIRE => 7;
 use constant HINTS      => 8;
 use constant BITMASK    => 9;
-use Text::Template::Simple::Util qw( ishref fatal );
+use Text::Template::Simple::Util      qw( ishref fatal );
+use Text::Template::Simple::Constants qw( EMPTY_STRING );
 
-$VERSION = '0.81';
+$VERSION = '0.82';
 
 sub stack {
    my $self    = shift;
    my $opt     = shift || {};
    fatal('tts.caller.stack.hash') if ! ishref($opt);
    my $frame   = $opt->{frame} || 0;
-   my $type    = $opt->{type}  || '';
+   my $type    = $opt->{type}  || EMPTY_STRING;
    my(@callers, $context);
 
    TRACE: while ( my @c = caller ++$frame ) {
 
       INITIALIZE: foreach my $id ( 0 .. $#c ) {
          next INITIALIZE if $id == WANTARRAY; # can be undef
-         $c[$id] ||= '';
+         $c[$id] ||= EMPTY_STRING;
       }
 
       $context = defined $c[WANTARRAY] ?  ( $c[WANTARRAY] ? 'LIST' : 'SCALAR' )
@@ -2024,7 +2143,7 @@ sub stack {
       return $self->$method( $opt, \@callers );
    }
 
-   fatal('tts.caller.stack.type', $type);
+   return fatal('tts.caller.stack.type', $type);
 }
 
 sub _string {
@@ -2033,7 +2152,7 @@ sub _string {
    my $callers = shift;
    my $is_html = shift;
 
-   my $name = $opt->{name} ? "FOR $opt->{name} " : "";
+   my $name = $opt->{name} ? "FOR $opt->{name} " : EMPTY_STRING;
    my $rv   = qq{[ DUMPING CALLER STACK $name]\n\n};
 
    foreach my $c ( reverse @{$callers} ) {
@@ -2049,16 +2168,33 @@ sub _string {
 }
 
 sub _html_comment {
-   shift->_string( @_, 'add html comment' );
+   my($self, @args) = @_;
+   return $self->_string( @args, 'add html comment' );
 }
 
 sub _html_table {
    my $self    = shift;
    my $opt     = shift;
    my $callers = shift;
-   my $rv      = q{
+   my $rv      = EMPTY_STRING;
+
+   foreach my $c ( reverse @{ $callers } ) {
+      $self->_html_table_blank_check( $c ); # modifies  in place
+      $rv .= $self->_html_table_row(  $c )
+   }
+
+   return $self->_html_table_wrap( $rv );
+}
+
+sub _html_table_wrap {
+   my($self, $content) = @_;
+   return <<"HTML";
    <div id="ttsc-wrapper">
-   <table border="1" cellpadding="1" cellspacing="2" id="ttsc-dump">
+   <table border      = "1"
+          cellpadding = "1"
+          cellspacing = "2"
+          id          = "ttsc-dump"
+      >
       <tr>
          <td class="ttsc-title">CONTEXT</td>
          <td class="ttsc-title">SUB</td>
@@ -2070,76 +2206,79 @@ sub _html_table {
          <td class="ttsc-title">HINTS</td>
          <td class="ttsc-title">BITMASK</td>
       </tr>
-   };
+      $content
+      </table>
+   </div>
+HTML
+}
 
-   foreach my $c ( reverse @{$callers} ) {
-      $self->_html_table_blank_check( $c ); # modifies  in place
-      $rv .= qq{
-      <tr>
-         <td class="ttsc-value">$c->{context}</td>
-         <td class="ttsc-value">$c->{sub}</td>
-         <td class="ttsc-value">$c->{line}</td>
-         <td class="ttsc-value">$c->{file}</td>
-         <td class="ttsc-value">$c->{hasargs}</td>
-         <td class="ttsc-value">$c->{isreq}</td>
-         <td class="ttsc-value">$c->{evaltext}</td>
-         <td class="ttsc-value">$c->{hints}</td>
-         <td class="ttsc-value">$c->{bitmask}</td>
-      </tr>
-      };
-   }
-
-   return $rv . q{</table></div>};
+sub _html_table_row {
+   my($self,$c) = @_;
+   return <<"HTML";
+   <tr>
+      <td class="ttsc-value">$c->{context}</td>
+      <td class="ttsc-value">$c->{sub}</td>
+      <td class="ttsc-value">$c->{line}</td>
+      <td class="ttsc-value">$c->{file}</td>
+      <td class="ttsc-value">$c->{hasargs}</td>
+      <td class="ttsc-value">$c->{isreq}</td>
+      <td class="ttsc-value">$c->{evaltext}</td>
+      <td class="ttsc-value">$c->{hints}</td>
+      <td class="ttsc-value">$c->{bitmask}</td>
+   </tr>
+HTML
 }
 
 sub _html_table_blank_check {
    my $self   = shift;
    my $struct = shift;
    foreach my $id ( keys %{ $struct }) {
-      if ( not defined $struct->{ $id } or $struct->{ $id } eq '' ) {
+      if ( not defined $struct->{ $id } or $struct->{ $id } eq EMPTY_STRING ) {
          $struct->{ $id } = '&#160;';
       }
    }
+   return;
 }
 
 sub _text_table {
    my $self    = shift;
    my $opt     = shift;
    my $callers = shift;
-   eval { require Text::Table; };
-   fatal('tts.caller._text_table.module', $@) if $@;
+   my $ok      = eval { require Text::Table; 1; };
+   fatal('tts.caller._text_table.module', $@) if ! $ok;
 
    my $table = Text::Table->new( qw(
                   | CONTEXT    | SUB      | LINE  | FILE    | HASARGS
                   | IS_REQUIRE | EVALTEXT | HINTS | BITMASK |
                ));
 
+   my $pipe = q{|};
    foreach my $c ( reverse @{$callers} ) {
       $table->load(
          [
-           '|', $c->{context},
-           '|', $c->{sub},
-           '|', $c->{line},
-           '|', $c->{file},
-           '|', $c->{hasargs},
-           '|', $c->{isreq},
-           '|', $c->{evaltext},
-           '|', $c->{hints},
-           '|', $c->{bitmask},
-           '|'
+           $pipe, $c->{context},
+           $pipe, $c->{sub},
+           $pipe, $c->{line},
+           $pipe, $c->{file},
+           $pipe, $c->{hasargs},
+           $pipe, $c->{isreq},
+           $pipe, $c->{evaltext},
+           $pipe, $c->{hints},
+           $pipe, $c->{bitmask},
+           $pipe
          ],
       );
    }
 
-   my $name = $opt->{name} ? "FOR $opt->{name} " : "";
+   my $name = $opt->{name} ? "FOR $opt->{name} " : EMPTY_STRING;
    my $top  = qq{| DUMPING CALLER STACK $name |\n};
 
-   my $rv   = "\n" . ( '-' x (length($top) - 1) ) . "\n" . $top
-            . $table->rule( '-', '+')
+   my $rv   = qq{\n} . ( q{-} x (length($top) - 1) ) . qq{\n} . $top
+            . $table->rule( qw( - + ) )
             . $table->title
-            . $table->rule( '-', '+')
+            . $table->rule( qw( - + ) )
             . $table->body
-            . $table->rule( '-', '+')
+            . $table->rule( qw( - + ) )
             ;
 
    return $rv;
@@ -2147,13 +2286,13 @@ sub _text_table {
 
 package Text::Template::Simple::Cache;
 use strict;
+use warnings;
 use vars qw($VERSION);
-use constant CACHE_PARENT => 0;
 use Text::Template::Simple::Constants qw(:all);
-use Text::Template::Simple::Util qw( DEBUG LOG ishref fatal );
+use Text::Template::Simple::Util      qw( DEBUG LOG ishref fatal );
 use Carp qw( croak );
 
-$VERSION = '0.81';
+$VERSION = '0.82';
 
 my $CACHE = {}; # in-memory template cache
 
@@ -2163,13 +2302,14 @@ sub new {
    my $self   = [undef];
    bless $self, $class;
    $self->[CACHE_PARENT] = $parent;
-   $self;
+   return $self;
 }
 
 sub id {
    my $self = shift;
-   $self->[CACHE_PARENT][CID] = shift if @_;
-   $self->[CACHE_PARENT][CID];
+   my $val  = shift;
+   $self->[CACHE_PARENT][CID] = $val if $val;
+   return $self->[CACHE_PARENT][CID];
 }
 
 sub type {
@@ -2180,7 +2320,7 @@ sub type {
                            : 'OFF';
 }
 
-sub reset {
+sub reset { ## no critic (ProhibitBuiltinHomonyms)
    my $self   = shift;
    my $parent = $self->[CACHE_PARENT];
    %{$CACHE}  = ();
@@ -2188,21 +2328,24 @@ sub reset {
    if ( $parent->[CACHE] && $parent->[CACHE_DIR] ) {
 
       my $cdir = $parent->[CACHE_DIR];
-      local  *CDIRH;
-      opendir CDIRH, $cdir or fatal( 'tts.cache.opendir' => $cdir, $! );
+      require Symbol;
+      my $CDIRH = Symbol::gensym();
+      opendir $CDIRH, $cdir or fatal( 'tts.cache.opendir' => $cdir, $! );
       require File::Spec;
       my $ext = quotemeta CACHE_EXT;
       my $file;
 
-      while ( defined( $file = readdir CDIRH ) ) {
-         next if $file !~ m{ ( .* $ext) \z}xmsi;
-         $file = File::Spec->catfile( $parent->[CACHE_DIR], $1 );
-         LOG( UNLINK => $file ) if DEBUG();
-         unlink $file;
+      while ( defined( $file = readdir $CDIRH ) ) {
+         if ( $file =~ m{ ( .* $ext) \z}xmsi ) {
+            $file = File::Spec->catfile( $parent->[CACHE_DIR], $1 );
+            LOG( UNLINK => $file ) if DEBUG;
+            unlink $file;
+         }
       }
 
-      closedir CDIRH;
+      closedir $CDIRH;
    }
+   return;
 }
 
 sub dumper {
@@ -2210,7 +2353,7 @@ sub dumper {
    my $type  = shift || 'structure';
    my $param = shift || {};
    fatal('tts.cache.dumper.hash')        if not ishref $param;
-   my %valid = map { $_, $_ } qw( ids structure );
+   my %valid = map { ($_, $_) } qw( ids structure );
    fatal('tts.cache.dumper.type', $type) if not $valid{ $type };
    my $method = '_dump_' . $type;
    return $self->$method( $param ); # TODO: modify the methods to accept HASH
@@ -2220,7 +2363,7 @@ sub _dump_ids {
    my $self   = shift;
    my $parent = $self->[CACHE_PARENT];
    my $p      = shift;
-   my $VAR    = $p->{varname} || '$CACHE_IDS';
+   my $VAR    = $p->{varname} || q{$} . q{CACHE_IDS};
    my @rv;
 
    if ( $parent->[CACHE_DIR] ) {
@@ -2228,16 +2371,21 @@ sub _dump_ids {
       require File::Find;
       require File::Spec;
       my $ext = quotemeta CACHE_EXT;
+      my $re  = qr{ (.+?) $ext \z }xms;
       my($id, @list);
 
-      my $wanted = sub {
-         return if $_ !~ m{ (.+?) $ext \z }xms;
-         $id      = $1;
-         $id      =~ s{.*[\\/]}{};
-         push @list, $id;
-      };
-
-      File::Find::find({wanted => $wanted, no_chdir => 1}, $parent->[CACHE_DIR]);
+      File::Find::find(
+         {
+            no_chdir => 1,
+            wanted   => sub {
+                           if ( $_ =~ $re ) {
+                              ($id = $1) =~ s{.*[\\/]}{}xms;
+                              push @list, $id;
+                           }
+                        },
+         },
+         $parent->[CACHE_DIR]
+      );
 
       @rv = sort @list;
 
@@ -2255,7 +2403,7 @@ sub _dump_structure {
    my $self    = shift;
    my $parent  = $self->[CACHE_PARENT];
    my $p       = shift;
-   my $VAR     = $p->{varname} || '$CACHE';
+   my $VAR     = $p->{varname} || q{$} . q{CACHE};
    my $deparse = $p->{no_deparse} ? 0 : 1;
    require Data::Dumper;
    my $d;
@@ -2266,13 +2414,13 @@ sub _dump_structure {
    else {
       $d = Data::Dumper->new( [ $CACHE ], [ $VAR ]);
       if ( $deparse ) {
-         fatal('tts.cache.dumper' => $Data::Dumper::VERSION) if !$d->can('Deparse');
+         fatal('tts.cache.dumper' => $Data::Dumper::VERSION)
+            if !$d->can('Deparse');
          $d->Deparse(1);
       }
    }
 
-   my $str;
-   eval { $str = $d->Dump; };
+   my $str = eval { $d->Dump; };
 
    if ( my $error = $@ ) {
       if ( $deparse && $error =~ RE_DUMP_ERROR ) {
@@ -2297,19 +2445,21 @@ sub _dump_disk_cache {
    require File::Spec;
    my $self    = shift;
    my $parent  = $self->[CACHE_PARENT];
-   my $ext     = quotemeta CACHE_EXT;
    my $pattern = quotemeta DISK_CACHE_MARKER;
-   my(%disk_cache, $id, $content, $ok, $_temp, $line);
+   my $ext     = quotemeta CACHE_EXT;
+   my $re      = qr{(.+?) $ext \z}xms;
+   my(%disk_cache);
 
-   my $wanted = sub {
-      return if $_ !~ m{(.+?) $ext \z}xms;
-      $id      = $1;
-      $id      =~ s{.*[\\/]}{};
-      $content = $parent->io->slurp( File::Spec->canonpath($_) );
-      $ok      = 0;  # reset
-      $_temp   = ''; # reset
+   my $process = sub {
+      my $file  = $_;
+      my @match = $file =~ $re;
+      return if ! @match;
+      (my $id = $match[0]) =~ s{.*[\\/]}{}xms;
+      my $content = $parent->io->slurp( File::Spec->canonpath($file) );
+      my $ok      = 0;  # reset
+      my $_temp   = EMPTY_STRING; # reset
 
-      foreach $line ( split /\n/, $content ) {
+      foreach my $line ( split m{\n}xms, $content ) {
          if ( $line =~ m{$pattern}xmso ) {
             $ok = 1;
             next;
@@ -2319,12 +2469,18 @@ sub _dump_disk_cache {
       }
 
       $disk_cache{ $id } = {
-         MTIME => (stat $_)[STAT_MTIME],
+         MTIME => (stat $file)[STAT_MTIME],
          CODE  => $_temp,
       };
    };
- 
-   File::Find::find({ wanted => $wanted, no_chdir => 1 }, $parent->[CACHE_DIR]);
+
+   File::Find::find(
+      {
+         no_chdir => 1,
+         wanted   => $process,
+      },
+      $parent->[CACHE_DIR]
+   );
    return \%disk_cache;
 }
 
@@ -2353,15 +2509,14 @@ sub size {
       local $SIG{__DIE__};
       if ( eval { require Devel::Size; 1; } ) {
          my $dsv = Devel::Size->VERSION;
-         LOG( DEBUG => "Devel::Size v$dsv is loaded." )
-            if DEBUG();
-         fatal('tts.cache.develsize.buggy', $dsv) if $dsv < 0.72;
+         LOG( DEBUG => "Devel::Size v$dsv is loaded." ) if DEBUG;
+         fatal('tts.cache.develsize.buggy', $dsv) if $dsv < DEVEL_SIZE_VERSION;
          my $size = eval { Devel::Size::total_size( $CACHE ) };
          fatal('tts.cache.develsize.total', $@) if $@;
          return $size;
       }
       else {
-         warn "Failed to load Devel::Size: $@";
+         warn "Failed to load Devel::Size: $@\n";
          return 0;
       }
 
@@ -2369,17 +2524,17 @@ sub size {
 }
 
 sub has {
-   my $self   = shift;
+   my($self, @args ) = @_;
+   fatal('tts.cache.pformat') if @args % 2;
+   my %opt    = @args;
    my $parent = $self->[CACHE_PARENT];
 
    if ( not $parent->[CACHE] ) {
-      LOG( DEBUG => "Cache is disabled!") if DEBUG();
+      LOG( DEBUG => 'Cache is disabled!') if DEBUG;
       return;
    }
 
-   fatal('tts.cache.pformat') if @_ % 2;
 
-   my %opt = @_;
    my $id  = $parent->connector('Cache::ID')->new;
    my $cid = $opt{id}   ? $id->generate($opt{id}  , 'custom')
            : $opt{data} ? $id->generate($opt{data}          )
@@ -2410,154 +2565,172 @@ sub _is_meta_version_old {
 sub hit {
    # TODO: return $CODE, $META;
    my $self     = shift;
-   my $parent   = $self->[CACHE_PARENT];
    my $cache_id = shift;
    my $chkmt    = shift || 0;
-   my($CODE, $error);
 
-   if ( my $cdir = $parent->[CACHE_DIR] ) {
-      require File::Spec;
-      my $cache = File::Spec->catfile( $cdir, $cache_id . CACHE_EXT );
+   my $method = $self->[CACHE_PARENT][CACHE_DIR] ? '_hit_disk' : '_hit_memory';
+   return $self->$method( $cache_id, $chkmt );
+}
 
-      if ( -e $cache && not -d _ && -f _ ) {
-         my $disk_cache = $parent->io->slurp($cache);
-         my %meta;
-         if ( $disk_cache =~ m{ \A \#META: (.+?) \n }xms ) {
-            %meta = $self->_get_meta( $1 );
-            fatal('tts.cache.hit.meta', $@) if $@;
-         }
-         if ( $self->_is_meta_version_old( $meta{VERSION} ) ) {
-            my $id = $parent->[FILENAME] || $cache_id;
-            warn "(This messeage will only appear once) $id was compiled with"
-                ." an old version of " . PARENT . ". Resetting cache.";
-            return;
-         }
-         if ( my $mtime = $meta{CHKMT} ) {
-            if ( $mtime != $chkmt ) {
-               LOG( MTIME_DIFF => "\tOLD: $mtime\n\t\tNEW: $chkmt")
-                  if DEBUG();
-               return; # i.e.: Update cache
-            }
-         }
-
-         ($CODE, $error) = $parent->_wrap_compile($disk_cache);
-         $parent->[NEEDS_OBJECT] = $meta{NEEDS_OBJECT} if $meta{NEEDS_OBJECT};
-         $parent->[FAKER_SELF]   = $meta{FAKER_SELF}   if $meta{FAKER_SELF};
-
-         fatal('tts.cache.hit.cache', $error) if $error;
-         LOG( FILE_CACHE => '' ) if DEBUG();
-         #$parent->[COUNTER]++;
-         return $CODE;
+sub _hit_memory {
+   my($self, $cache_id, $chkmt) = @_;
+   if ( $chkmt ) {
+      my $mtime = $CACHE->{$cache_id}{MTIME} || 0;
+      if ( $mtime != $chkmt ) {
+         LOG( MTIME_DIFF => "\tOLD: $mtime\n\t\tNEW: $chkmt" ) if DEBUG;
+         return; # i.e.: Update cache
       }
-
    }
-   else {
-      if ( $chkmt ) {
-         my $mtime = $CACHE->{$cache_id}{MTIME} || 0;
+   LOG( MEM_CACHE => EMPTY_STRING ) if DEBUG;
+   return $CACHE->{$cache_id}->{CODE};
+}
 
-         if ( $mtime != $chkmt ) {
-            LOG( MTIME_DIFF => "\tOLD: $mtime\n\t\tNEW: $chkmt" ) if DEBUG();
-            return; # i.e.: Update cache
-         }
+sub _hit_disk {
+   my($self, $cache_id, $chkmt) = @_;
+   my $parent = $self->[CACHE_PARENT];
+   my $cdir   = $parent->[CACHE_DIR];
+   require File::Spec;
+   my $cache = File::Spec->catfile( $cdir, $cache_id . CACHE_EXT );
+   my $ok    = -e $cache && ! -d _ && -f _;
+   return if not $ok;
 
+   my $disk_cache = $parent->io->slurp($cache);
+   my %meta;
+   if ( $disk_cache =~ m{ \A \#META: (.+?) \n }xms ) {
+      %meta = $self->_get_meta( $1 );
+      fatal('tts.cache.hit.meta', $@) if $@;
+   }
+   if ( $self->_is_meta_version_old( $meta{VERSION} ) ) {
+      my $id = $parent->[FILENAME] || $cache_id;
+      warn "(This messeage will only appear once) $id was compiled with"
+          .' an old version of ' . PARENT . ". Resetting cache.\n";
+      return;
+   }
+   if ( my $mtime = $meta{CHKMT} ) {
+      if ( $mtime != $chkmt ) {
+         LOG( MTIME_DIFF => "\tOLD: $mtime\n\t\tNEW: $chkmt") if DEBUG;
+         return; # i.e.: Update cache
       }
-      LOG( MEM_CACHE => '' ) if DEBUG();
-      return $CACHE->{$cache_id}->{CODE};
    }
-   return;
+
+   my($CODE, $error) = $parent->_wrap_compile($disk_cache);
+   $parent->[NEEDS_OBJECT] = $meta{NEEDS_OBJECT} if $meta{NEEDS_OBJECT};
+   $parent->[FAKER_SELF]   = $meta{FAKER_SELF}   if $meta{FAKER_SELF};
+
+   fatal('tts.cache.hit.cache', $error) if $error;
+   LOG( FILE_CACHE => EMPTY_STRING )    if DEBUG;
+   #$parent->[COUNTER]++;
+   return $CODE;
 }
 
 sub populate {
-   my $self     = shift;
-   my $parent   = $self->[CACHE_PARENT];
-   my $cache_id = shift;
-   my $parsed   = shift;
-   my $chkmt    = shift;
-   my($CODE, $error);
+   my($self, $cache_id, $parsed, $chkmt) = @_;
+   my $parent = $self->[CACHE_PARENT];
+   my $target = ! $parent->[CACHE]     ? '_populate_no_cache'
+              :   $parent->[CACHE_DIR] ? '_populate_disk'
+              :                          '_populate_memory'
+              ;
 
-   if ( $parent->[CACHE] ) {
-      if ( my $cdir = $parent->[CACHE_DIR] ) {
-         require File::Spec;
-         require Fcntl;
-         require IO::File;
-
-         my %meta = (
-            CHKMT        => $chkmt,
-            NEEDS_OBJECT => $parent->[NEEDS_OBJECT],
-            FAKER_SELF   => $parent->[FAKER_SELF],
-            VERSION      => PARENT->VERSION,
-         );
-
-         my $cache = File::Spec->catfile( $cdir, $cache_id . CACHE_EXT);
-         my $fh    = IO::File->new;
-         $fh->open($cache, '>') or fatal('tts.cache.populate.write', $cache, $!);
-         flock $fh, Fcntl::LOCK_EX() if IS_FLOCK;
-         $parent->io->layer($fh);
-         my $warn =  $parent->_mini_compiler(
-                        $parent->_internal('disk_cache_comment'),
-                        {
-                           NAME => PARENT->_class_id,
-                           DATE => scalar localtime time,
-                        }
-                     );
-         print $fh '#META:' . $self->_set_meta(\%meta) . "\n", $warn, $parsed; 
-         flock $fh, Fcntl::LOCK_UN() if IS_FLOCK;
-         close $fh;
-         chmod(CACHE_FMODE, $cache) || fatal('tts.cache.populate.chmod');
-
-         ($CODE, $error) = $parent->_wrap_compile($parsed);
-         LOG( DISK_POPUL => $cache_id ) if DEBUG() > 2;
-      } 
-      else {
-         $CACHE->{ $cache_id } = {}; # init
-         ($CODE, $error)                       = $parent->_wrap_compile($parsed);
-         $CACHE->{ $cache_id }->{CODE}         = $CODE;
-         $CACHE->{ $cache_id }->{MTIME}        = $chkmt if $chkmt;
-         $CACHE->{ $cache_id }->{NEEDS_OBJECT} = $parent->[NEEDS_OBJECT];
-         $CACHE->{ $cache_id }->{FAKER_SELF}   = $parent->[FAKER_SELF];
-         LOG( MEM_POPUL => $cache_id ) if DEBUG() > 2;
-      }
-   }
-   else {
-      ($CODE, $error) = $parent->_wrap_compile($parsed); # cache is disabled
-      LOG( NC_POPUL => $cache_id ) if DEBUG() > 2;
-   }
-
-   if ( $error ) {
-      my $cid    = $cache_id ? $cache_id : 'N/A';
-      my $tidied = $parent->_tidy( $parsed );
-      croak $parent->[VERBOSE_ERRORS]
-            ? $parent->_mini_compiler( $parent->_internal('compile_error'), {
-               CID => $cid,
-               ERROR => $error,
-               PARSED => $parsed,
-               TIDIED => $tidied,
-                                                                        } )
-            : $error
-            ;
-   }
-
-   $parent->[COUNTER]++;
+   my($CODE, $error) = $self->$target( $parsed, $cache_id, $chkmt );
+   $self->_populate_error( $parsed, $cache_id, $error ) if $error;
+   ++$parent->[COUNTER];
    return $CODE;
+}
+
+sub _populate_error {
+   my($self, $parsed, $cache_id, $error);
+   my $parent   = $self->[CACHE_PARENT];
+   croak $parent->[VERBOSE_ERRORS]
+         ?  $parent->_mini_compiler(
+               $parent->_internal('compile_error'),
+               {
+                  CID    => $cache_id ? $cache_id : 'N/A',
+                  ERROR  => $error,
+                  PARSED => $parsed,
+                  TIDIED => $parent->_tidy( $parsed ),
+               }
+            )
+         : $error
+         ;
+}
+
+sub _populate_no_cache {
+   # cache is disabled
+   my($self, $parsed, $cache_id, $chkmt) = @_;
+   my($CODE, $error) = $self->[CACHE_PARENT]->_wrap_compile($parsed);
+   LOG( NC_POPUL => $cache_id ) if DEBUG >= DEBUG_LEVEL_INSANE;
+   return $CODE, $error;
+}
+
+sub _populate_memory {
+   my($self, $parsed, $cache_id, $chkmt) = @_;
+   my $parent = $self->[CACHE_PARENT];
+   $CACHE->{ $cache_id } = {}; # init
+   my($CODE, $error)                     = $parent->_wrap_compile($parsed);
+   $CACHE->{ $cache_id }->{CODE}         = $CODE;
+   $CACHE->{ $cache_id }->{MTIME}        = $chkmt if $chkmt;
+   $CACHE->{ $cache_id }->{NEEDS_OBJECT} = $parent->[NEEDS_OBJECT];
+   $CACHE->{ $cache_id }->{FAKER_SELF}   = $parent->[FAKER_SELF];
+   LOG( MEM_POPUL => $cache_id ) if DEBUG >= DEBUG_LEVEL_INSANE;
+   return $CODE, $error;
+}
+
+sub _populate_disk {
+   my($self, $parsed, $cache_id, $chkmt) = @_;
+
+   require File::Spec;
+   require Fcntl;
+   require IO::File;
+
+   my $parent = $self->[CACHE_PARENT];
+   my %meta   = (
+      CHKMT        => $chkmt,
+      NEEDS_OBJECT => $parent->[NEEDS_OBJECT],
+      FAKER_SELF   => $parent->[FAKER_SELF],
+      VERSION      => PARENT->VERSION,
+   );
+
+   my $cache = File::Spec->catfile( $parent->[CACHE_DIR], $cache_id . CACHE_EXT);
+   my $fh    = IO::File->new;
+   $fh->open($cache, '>') or fatal('tts.cache.populate.write', $cache, $!);
+   flock $fh, Fcntl::LOCK_EX() if IS_FLOCK;
+   $parent->io->layer($fh);
+   my $warn =  $parent->_mini_compiler(
+                  $parent->_internal('disk_cache_comment'),
+                  {
+                     NAME => PARENT->class_id,
+                     DATE => scalar localtime time,
+                  }
+               );
+   my $ok = print { $fh } '#META:' . $self->_set_meta(\%meta) . "\n",
+                          $warn,
+                          $parsed;
+   flock $fh, Fcntl::LOCK_UN() if IS_FLOCK;
+   close $fh or croak "Unable to close filehandle: $!";
+   chmod(CACHE_FMODE, $cache) || fatal('tts.cache.populate.chmod');
+
+   my($CODE, $error) = $parent->_wrap_compile($parsed);
+   LOG( DISK_POPUL => $cache_id ) if DEBUG >= DEBUG_LEVEL_INSANE;
+   return $CODE, $error;
 }
 
 sub _get_meta {
    my $self = shift;
    my $raw  = shift;
-   my %meta = map { split /:/, $_ } split /\|/, $raw;
+   my %meta = map { split m{:}xms, $_ } split m{\|}xms, $raw;
    return %meta;
 }
 
 sub _set_meta {
    my $self = shift;
    my $meta = shift;
-   my $rv   = join '|', map { $_ . ':' . $meta->{ $_ } } keys %{ $meta };
+   my $rv   = join q{|}, map { $_ . q{:} . $meta->{ $_ } } keys %{ $meta };
    return $rv;
 }
 
 sub DESTROY {
    my $self = shift;
-   LOG( DESTROY => ref $self ) if DEBUG();
+   LOG( DESTROY => ref $self ) if DEBUG;
    $self->[CACHE_PARENT] = undef;
    @{$self} = ();
    return;
@@ -2565,9 +2738,10 @@ sub DESTROY {
 
 package Text::Template::Simple;
 use strict;
-use vars qw($VERSION);
+use warnings;
+use vars qw( $VERSION );
 
-$VERSION = '0.81';
+$VERSION = '0.82';
 
 use File::Spec;
 use Text::Template::Simple::Constants qw(:all);
@@ -2596,21 +2770,21 @@ my %CONNECTOR = ( # Default classes list
 );
 
 my %DEFAULT = ( # default object attributes
-   delimiters       => [ DELIMS ], # default delimiters
-   cache            =>  0,    # use cache or not
-   cache_dir        => '',    # will use hdd intead of memory for caching...
-   strict           =>  1,    # set to false for toleration to un-declared vars
-   safe             =>  0,    # use safe compartment?
-   header           =>  0,    # template header. i.e. global codes.
-   add_args         => '',    # will unshift template argument list. ARRAYref.
-   warn_ids         =>  0,    # warn template ids?
-   capture_warnings =>  0,    # bool
-   iolayer          => '',    # I/O layer for filehandles
-   stack            => '',    # dump caller stack?
-   user_thandler    => undef, # user token handler callback
-   monolith         =>  0,    # use monolithic template & cache ?
-   include_paths    => [],    # list of template dirs
-   verbose_errors   =>  0,    # bool
+   delimiters       => [ DELIMS ],   # default delimiters
+   cache            =>  0,           # use cache or not
+   cache_dir        => EMPTY_STRING, # will use hdd intead of memory for caching...
+   strict           =>  1,           # set to false for toleration to un-declared vars
+   safe             =>  0,           # use safe compartment?
+   header           =>  0,           # template header. i.e. global codes.
+   add_args         => EMPTY_STRING, # will unshift template argument list. ARRAYref.
+   warn_ids         =>  0,           # warn template ids?
+   capture_warnings =>  0,           # bool
+   iolayer          => EMPTY_STRING, # I/O layer for filehandles
+   stack            => EMPTY_STRING, # dump caller stack?
+   user_thandler    => undef,        # user token handler callback
+   monolith         =>  0,           # use monolithic template & cache ?
+   include_paths    => [],           # list of template dirs
+   verbose_errors   =>  0,           # bool
    pre_chomp        => CHOMP_NONE,
    post_chomp       => CHOMP_NONE,
    taint_mode       => TAINT_CHECK_NORMAL,
@@ -2619,16 +2793,16 @@ my %DEFAULT = ( # default object attributes
 my @EXPORT_OK = qw( tts );
 
 sub import {
-   my $class = shift;
+   my($class, @args) = @_;
+   return if ! @args;
    my $caller = caller;
-   my @args   = @_ or return;
-   my %ok     = map { $_, $_ } @EXPORT_OK;
+   my %ok     = map { ($_, $_) } @EXPORT_OK;
 
    no strict qw( refs );
    foreach my $name ( @args ) {
       fatal('tts.main.import.invalid', $name, $class) if ! $ok{$name};
       fatal('tts.main.import.undef',   $name, $class) if ! defined &{ $name   };
-      my $target = $caller . '::' . $name;
+      my $target = $caller . q{::} . $name;
       fatal('tts.main.import.redefine', $name, $caller) if defined &{ $target };
       *{ $target } = \&{ $name }; # install
    }
@@ -2639,17 +2813,17 @@ sub import {
 sub tts {
    my @args = @_;
    fatal('tts.main.tts.args') if ! @args;
-   my @new  = ishref($args[0]) ? %{ shift(@args) } : ();
+   my @new  = ishref($args[0]) ? %{ shift @args } : ();
    return __PACKAGE__->new( @new )->compile( @args );
 }
 
 sub new {
-   my $class = shift;
-   my %param = scalar(@_) % 2 ? () : (@_);
+   my($class, @args) = @_;
+   my %param = @args % 2 ? () : (@args);
    my $self  = [ map { undef } 0 .. MAXOBJFIELD ];
    bless $self, $class;
 
-   LOG( CONSTRUCT => $self->_class_id . " @ ".(scalar localtime time) )
+   LOG( CONSTRUCT => $self->class_id . q{ @ } . (scalar localtime time) )
       if DEBUG();
 
    my($fid, $fval);
@@ -2662,7 +2836,7 @@ sub new {
    }
 
    foreach my $bogus ( keys %param ) {
-      warn "'$bogus' is not a known parameter. Did you make a typo?";
+      warn "'$bogus' is not a known parameter. Did you make a typo?\n";
    }
 
    $self->_init;
@@ -2675,12 +2849,12 @@ sub connector {
    return $CONNECTOR{ $id } || fatal('tts.main.connector.invalid', $id);
 }
 
-sub cache { shift->[CACHE_OBJECT] }
-sub io    { shift->[IO_OBJECT]    }
+sub cache { return shift->[CACHE_OBJECT] }
+sub io    { return shift->[IO_OBJECT]    }
 
 sub compile {
-   my $self  = shift;
-   my $rv    = $self->_compile( @_ );
+   my($self, @args) = @_;
+   my $rv    = $self->_compile( @args );
    # we need to reset this to prevent false positives
    # the trick is: this is set in _compile() and sub includes call _compile()
    # instead of compile(), so it will only be reset here
@@ -2702,12 +2876,12 @@ sub _init {
    fatal('tts.main.dsws')         if $d->[DELIM_START] =~ m{\s}xms;
    fatal('tts.main.dews')         if $d->[DELIM_END]   =~ m{\s}xms;
 
-   $self->[TYPE]           = '';
+   $self->[TYPE]           = EMPTY_STRING;
    $self->[COUNTER]        = 0;
    $self->[FAKER]          = $self->_output_buffer_var;
    $self->[FAKER_HASH]     = $self->_output_buffer_var('hash');
    $self->[FAKER_SELF]     = $self->_output_buffer_var('self');
-   $self->[INSIDE_INCLUDE] = -1; # must be -1 not 0
+   $self->[INSIDE_INCLUDE] = MINUS_ONE; # must be -1 not 0
    $self->[NEEDS_OBJECT]   =  0; # the template needs $self ?
    $self->[DEEP_RECURSION] =  0; # recursion detector
 
@@ -2741,16 +2915,16 @@ sub _output_buffer_var {
             :                    \my $fake
             ;
    $id  = "$id";
-   $id .= int( rand($$) ); # . rand() . time;
+   $id .= int rand $$; # . rand() . time;
    $id  =~ tr/a-zA-Z_0-9//cd;
    $id  =~ s{SCALAR}{SELF}xms if $type eq 'self';
-   return '$' . $id;
+   return q{$} . $id;
 }
 
-sub _class_id {
+sub class_id {
    my $self = shift;
    my $class = ref($self) || $self;
-   return sprintf( "%s v%s", $class, $self->VERSION() );
+   return sprintf q{%s v%s}, $class, $self->VERSION;
 }
 
 sub _tidy {
@@ -2759,8 +2933,8 @@ sub _tidy {
 
    TEST_TIDY: {
       local($@, $SIG{__DIE__});
-      eval { require Perl::Tidy; };
-      if ( $@ ) { # :(
+      my $ok = eval { require Perl::Tidy; 1; };
+      if ( ! $ok ) { # :(
          $code =~ s{;}{;\n}xmsgo; # new lines makes it easy to debug
          return $code;
       }
@@ -2779,12 +2953,6 @@ sub _tidy {
 
    LOG( TIDY_WARNING => $stderr ) if $stderr;
    return $buf;
-}
-
-sub _needs_object {
-   my $self = shift;
-   $self->[NEEDS_OBJECT]++;
-   return $self;
 }
 
 sub DESTROY {
@@ -2829,8 +2997,8 @@ generated with an automatic build tool. If you experience problems
 with this version, please install and use the supported standard
 version. This version is B<NOT SUPPORTED>.
 
-This document describes version C<0.81> of C<Text::Template::Simple>
-released on C<13 September 2009>.
+This document describes version C<0.82> of C<Text::Template::Simple>
+released on C<30 May 2010>.
 
 This is a simple template module. There is no extra template/mini 
 language. Instead, it uses Perl as the template language. Templates
@@ -3179,6 +3347,8 @@ Note that you can not use any variables in these blocks. They are static.
 
 =head2 cache
 
+=head2 class_id
+
 =head2 compile
 
 =head2 connector
@@ -3254,12 +3424,12 @@ Burak Gursoy <burak@cpan.org>.
 
 =head1 COPYRIGHT
 
-Copyright 2004 - 2009 Burak Gursoy. All rights reserved.
+Copyright 2004 - 2010 Burak Gursoy. All rights reserved.
 
 =head1 LICENSE
 
 This library is free software; you can redistribute it and/or modify 
-it under the same terms as Perl itself, either Perl version 5.10.0 or, 
+it under the same terms as Perl itself, either Perl version 5.10.1 or, 
 at your option, any later version of Perl 5 you may have available.
 
 =cut

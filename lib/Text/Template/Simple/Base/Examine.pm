@@ -1,10 +1,11 @@
 package Text::Template::Simple::Base::Examine;
 use strict;
+use warnings;
 use vars qw($VERSION);
 use Text::Template::Simple::Util qw(:all);
 use Text::Template::Simple::Constants qw(:all);
 
-$VERSION = '0.81';
+$VERSION = '0.82';
 
 sub _examine {
    my $self   = shift;
@@ -34,17 +35,15 @@ sub _examine {
       }
    }
 
-   LOG( EXAMINE => $self->[TYPE]."; LENGTH: ".length($rv) ) if DEBUG();
+   LOG( EXAMINE => sprintf q{%s; LENGTH: %s}, $self->[TYPE], length $rv ) if DEBUG;
    return $rv;
 }
 
 sub _examine_glob {
-   my $self = shift;
-   my $TMP  = shift;
-   my $ref  = ref $TMP;
-   fatal( 'tts.base.examine.notglob' => $ref ) if $ref ne 'GLOB';
-   fatal( 'tts.base.examine.notfh'           ) if not  fileno $TMP;
-   return $self->io->slurp( $TMP );
+   my($self, $thing) = @_;
+   fatal( 'tts.base.examine.notglob' => ref $thing ) if ref $thing ne 'GLOB';
+   fatal( 'tts.base.examine.notfh' ) if ! fileno $thing;
+   return $self->io->slurp( $thing );
 }
 
 sub _examine_type {
@@ -52,17 +51,17 @@ sub _examine_type {
    my $TMP  = shift;
    my $ref  = ref $TMP;
 
-   return ''   => $TMP if ! $ref;
-   return GLOB => $TMP if   $ref eq 'GLOB';
+   return EMPTY_STRING ,  $TMP if ! $ref;
+   return GLOB         => $TMP if   $ref eq 'GLOB';
 
    if ( isaref( $TMP ) ) {
       my $ftype  = shift @{ $TMP } || fatal('tts.base.examine._examine_type.ftype');
       my $fthing = shift @{ $TMP } || fatal('tts.base.examine._examine_type.fthing');
-      fatal('tts.base.examine._examine_type.extra') if @{ $TMP } > 0;
+      fatal('tts.base.examine._examine_type.extra') if @{ $TMP };
       return uc $ftype, $fthing;
    }
 
-   fatal('tts.base.examine._examine_type.unknown', $ref);
+   return fatal('tts.base.examine._examine_type.unknown', $ref);
 }
 
 1;
@@ -79,8 +78,8 @@ Private module.
 
 =head1 DESCRIPTION
 
-This document describes version C<0.81> of C<Text::Template::Simple::Base::Examine>
-released on C<13 September 2009>.
+This document describes version C<0.82> of C<Text::Template::Simple::Base::Examine>
+released on C<30 May 2010>.
 
 Private module.
 
@@ -90,12 +89,12 @@ Burak Gursoy <burak@cpan.org>.
 
 =head1 COPYRIGHT
 
-Copyright 2004 - 2009 Burak Gursoy. All rights reserved.
+Copyright 2004 - 2010 Burak Gursoy. All rights reserved.
 
 =head1 LICENSE
 
 This library is free software; you can redistribute it and/or modify 
-it under the same terms as Perl itself, either Perl version 5.10.0 or, 
+it under the same terms as Perl itself, either Perl version 5.10.1 or, 
 at your option, any later version of Perl 5 you may have available.
 
 =cut

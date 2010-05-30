@@ -1,8 +1,9 @@
 package Text::Template::Simple::Tokenizer;
 use strict;
+use warnings;
 use vars qw($VERSION);
 
-$VERSION = '0.81';
+$VERSION = '0.82';
 
 use constant CMD_CHAR             =>  0;
 use constant CMD_ID               =>  1;
@@ -16,7 +17,7 @@ use constant SUBSTR_OFFSET_SECOND =>  1;
 use constant SUBSTR_LENGTH        =>  1;
 
 use Text::Template::Simple::Util      qw( LOG DEBUG fatal );
-use Text::Template::Simple::Constants qw( :chomp :directive :token );
+use Text::Template::Simple::Constants qw( :all );
 
 my @COMMANDS = ( # default command list
    # cmd            id
@@ -36,7 +37,7 @@ sub new {
    $self->[ID_DE]         = shift || fatal('tts.tokenizer.new.de');
    $self->[ID_PRE_CHOMP]  = shift || CHOMP_NONE;
    $self->[ID_POST_CHOMP] = shift || CHOMP_NONE;
-   $self;
+   return $self;
 }
 
 sub tokenize {
@@ -44,13 +45,13 @@ sub tokenize {
    my($self, $tmp, $map_keys) = @_;
 
    return $self->_empty_token( $tmp ) if ! $tmp;
-   
+
    my($ds, $de)   = ($self->[ID_DS], $self->[ID_DE]);
    my($qds, $qde) = map { quotemeta $_ } $ds, $de;
 
    my(@tokens, $inside);
 
-   OUT_TOKEN: foreach my $i ( split /($qds)/, $tmp ) {
+   OUT_TOKEN: foreach my $i ( split /($qds)/xms, $tmp ) {
 
       if ( $i eq $ds ) {
          push @tokens, [ $i, T_DELIMSTART, [], undef ];
@@ -58,11 +59,13 @@ sub tokenize {
          next OUT_TOKEN;
       }
 
-      IN_TOKEN: foreach my $j ( split /($qde)/, $i ) {
+      IN_TOKEN: foreach my $j ( split /($qde)/xms, $i ) {
          if ( $j eq $de ) {
-            my $last = $tokens[LAST_TOKEN];
-            if ( T_NOTADELIM == $last->[TOKEN_ID] ) {
-               $last->[TOKEN_STR] = $self->tilde( $last->[TOKEN_STR] . $de );
+            my $last_token = $tokens[LAST_TOKEN];
+            if ( T_NOTADELIM == $last_token->[TOKEN_ID] ) {
+               $last_token->[TOKEN_STR] = $self->tilde(
+                                             $last_token->[TOKEN_STR] . $de
+                                          );
             }
             else {
                push @tokens, [ $j, T_DELIMEND, [], undef ];
@@ -79,8 +82,15 @@ sub tokenize {
    return \@tokens;
 }
 
-sub tilde { shift; Text::Template::Simple::Util::escape( '~' => @_ ) }
-sub quote { shift; Text::Template::Simple::Util::escape( '"' => @_ ) }
+sub tilde {
+   my(undef, @args) = @_;
+   return Text::Template::Simple::Util::escape( q{~} => @args );
+}
+
+sub quote {
+   my(undef, @args) = @_;
+   return Text::Template::Simple::Util::escape( q{"} => @args )
+}
 
 sub _empty_token {
    my $self = shift;
@@ -96,12 +106,14 @@ sub _empty_token {
 
 sub _get_command_chars {
    my($self, $str) = @_;
-   my($first, $second, $last) = ('') x 3;
+   my($first_cmd, $second_cmd, $last_cmd);
    # $first is the left-cmd, $last is the right-cmd. $second is the extra
-   $first  = substr $str, SUBSTR_OFFSET_FIRST , SUBSTR_LENGTH if $str ne '';
-   $second = substr $str, SUBSTR_OFFSET_SECOND, SUBSTR_LENGTH if $str ne '';
-   $last   = substr $str, length($str) - 1    , SUBSTR_LENGTH if $str ne '';
-   return $first, $second, $last;
+   $first_cmd  = substr $str, SUBSTR_OFFSET_FIRST , SUBSTR_LENGTH if $str ne EMPTY_STRING;
+   $second_cmd = substr $str, SUBSTR_OFFSET_SECOND, SUBSTR_LENGTH if $str ne EMPTY_STRING;
+   $last_cmd   = substr $str, length($str) - 1    , SUBSTR_LENGTH if $str ne EMPTY_STRING;
+   return $first_cmd  || EMPTY_STRING,
+          $second_cmd || EMPTY_STRING,
+          $last_cmd   || EMPTY_STRING;
 }
 
 sub _user_commands {
@@ -111,9 +123,9 @@ sub _user_commands {
 }
 
 sub _token_for_command {
-   my($self, $tree, $map_keys, $str, $last, $second, $cmd, $inside) = @_;
-   my($copen, $cclose, $ctoken) = $self->_chomp_token( $second, $last );
-   my $len  = length($str);
+   my($self, $tree, $map_keys, $str, $last_cmd, $second_cmd, $cmd, $inside) = @_;
+   my($copen, $cclose, $ctoken) = $self->_chomp_token( $second_cmd, $last_cmd );
+   my $len  = length $str;
    my $cb   = $map_keys ? 'quote' : $cmd->[CMD_CB];
    my $soff = $copen ? 2 : 1;
    my $slen = $len - ($cclose ? $soff+1 : 1);
@@ -124,7 +136,7 @@ sub _token_for_command {
       $tree->[LAST_TOKEN][TOKEN_ID] = T_DISCARD;
    }
 
-   my $needs_chomp = defined($ctoken);
+   my $needs_chomp = defined $ctoken;
    $self->_chomp_prev($tree, $ctoken) if $needs_chomp;
 
    my $id  = $map_keys ? T_RAW              : $cmd->[CMD_ID];
@@ -139,13 +151,13 @@ sub _token_for_command {
 }
 
 sub _token_for_code {
-   my($self, $tree, $map_keys, $str, $last, $first) = @_;
-   my($copen, $cclose, $ctoken) = $self->_chomp_token( $first, $last );
-   my $len  = length($str);
+   my($self, $tree, $map_keys, $str, $last_cmd, $first_cmd) = @_;
+   my($copen, $cclose, $ctoken) = $self->_chomp_token( $first_cmd, $last_cmd );
+   my $len  = length $str;
    my $soff = $copen ? 1 : 0;
    my $slen = $len - ( $cclose ? $soff+1 : 0 );
 
-   my $needs_chomp = defined($ctoken);
+   my $needs_chomp = defined $ctoken;
    $self->_chomp_prev($tree, $ctoken) if $needs_chomp;
 
    return   [
@@ -158,15 +170,15 @@ sub _token_for_code {
 
 sub _token_code {
    my($self, $str, $inside, $map_keys, $tree) = @_;
-   my($first, $second, $last) = $self->_get_command_chars( $str );
+   my($first_cmd, $second_cmd, $last_cmd) = $self->_get_command_chars( $str );
 
    if ( $inside ) {
-      my @common = ($tree, $map_keys, $str, $last);
+      my @common = ($tree, $map_keys, $str, $last_cmd);
       foreach my $cmd ( @COMMANDS, $self->_user_commands ) {
-         next if $first ne $cmd->[CMD_CHAR];
-         return $self->_token_for_command( @common, $second, $cmd, $inside );
+         next if $first_cmd ne $cmd->[CMD_CHAR];
+         return $self->_token_for_command( @common, $second_cmd, $cmd, $inside );
       }
-      return $self->_token_for_code( @common, $first );
+      return $self->_token_for_code( @common, $first_cmd );
    }
 
    my $prev = $tree->[PREVIOUS_TOKEN];
@@ -180,24 +192,24 @@ sub _token_code {
 }
 
 sub _chomp_token {
-   my($self, $open, $close) = @_;
+   my($self, $open_tok, $close_tok) = @_;
    my($pre, $post) = ( $self->[ID_PRE_CHOMP], $self->[ID_POST_CHOMP] );
    my $c      = CHOMP_NONE;
 
-   my $copen  = $open  eq DIR_CHOMP_NONE ? -1
-              : $open  eq DIR_COLLAPSE   ? do { $c |=  COLLAPSE_LEFT; 1 }
-              : $pre   &  COLLAPSE_ALL   ? do { $c |=  COLLAPSE_LEFT; 1 }
-              : $pre   &  CHOMP_ALL      ? do { $c |=     CHOMP_LEFT; 1 }
-              : $open  eq DIR_CHOMP      ? do { $c |=     CHOMP_LEFT; 1 }
-              :                            0
+   my $copen  = $open_tok  eq DIR_CHOMP_NONE ? MINUS_ONE
+              : $open_tok  eq DIR_COLLAPSE   ? do { $c |=  COLLAPSE_LEFT; 1 }
+              : $pre       &  COLLAPSE_ALL   ? do { $c |=  COLLAPSE_LEFT; 1 }
+              : $pre       &  CHOMP_ALL      ? do { $c |=     CHOMP_LEFT; 1 }
+              : $open_tok  eq DIR_CHOMP      ? do { $c |=     CHOMP_LEFT; 1 }
+              :                                0
               ;
 
-   my $cclose = $close eq DIR_CHOMP_NONE ? -1
-              : $close eq DIR_COLLAPSE   ? do { $c |= COLLAPSE_RIGHT; 1 }
-              : $post  &  COLLAPSE_ALL   ? do { $c |= COLLAPSE_RIGHT; 1 }
-              : $post  &  CHOMP_ALL      ? do { $c |=    CHOMP_RIGHT; 1 }
-              : $close eq DIR_CHOMP      ? do { $c |=    CHOMP_RIGHT; 1 }
-              :                            0
+   my $cclose = $close_tok eq DIR_CHOMP_NONE ? MINUS_ONE
+              : $close_tok eq DIR_COLLAPSE   ? do { $c |= COLLAPSE_RIGHT; 1 }
+              : $post      &  COLLAPSE_ALL   ? do { $c |= COLLAPSE_RIGHT; 1 }
+              : $post      &  CHOMP_ALL      ? do { $c |=    CHOMP_RIGHT; 1 }
+              : $close_tok eq DIR_CHOMP      ? do { $c |=    CHOMP_RIGHT; 1 }
+              :                                0
               ;
 
    my $cboth  = $copen > 0 && $cclose > 0;
@@ -228,7 +240,7 @@ sub _get_symbols {
    my $self  = shift;
    my $regex = shift || fatal('tts.tokenizer._get_symbols.regex');
    no strict qw( refs );
-   return grep { $_ =~ $regex } keys %{ ref($self) . '::' };
+   return grep { $_ =~ $regex } keys %{ ref($self) . q{::} };
 }
 
 sub _visualize_chomp {
@@ -241,7 +253,7 @@ sub _visualize_chomp {
               map  { [ $_, $self->$_() ] }
               $self->_get_symbols( qr{ \A (?: CHOMP|COLLAPSE ) }xms );
 
-   return @test ? join( ',', @test ) : 'undef';
+   return @test ? join( q{,}, @test ) : 'undef';
 }
 
 sub _visualize_tid {
@@ -275,12 +287,10 @@ sub _debug_tokens {
 
    foreach my $t ( @{ $tokens } ) {
       $buf .=  $self->_debug_tokens_row(
-                  $self->_visualize_tid( $t->[TOKEN_ID] ),
+                  $self->_visualize_tid( $t->[TOKEN_ID]  ),
                   $self->_visualize_ws(  $t->[TOKEN_STR] ),
-                  map {
-                     my $c = $self->_visualize_chomp( $_ );
-                     $c eq 'undef' ? '' : $c
-                  }
+                  map { $_ eq 'undef' ? EMPTY_STRING : $_ }
+                  map { $self->_visualize_chomp( $_ )     }
                   $t->[TOKEN_CHOMP][TOKEN_CHOMP_NEXT],
                   $t->[TOKEN_CHOMP][TOKEN_CHOMP_PREV],
                   $t->[TOKEN_TRIGGER]
@@ -301,8 +311,7 @@ HEAD
 }
 
 sub _debug_tokens_row {
-   my $self = shift;
-   my @params = @_;
+   my($self, @params) = @_;
    return sprintf <<'DUMP', @params;
 ID        : %s
 STRING    : %s
@@ -315,7 +324,7 @@ DUMP
 
 sub DESTROY {
    my $self = shift || return;
-   LOG( DESTROY => ref $self ) if DEBUG();
+   LOG( DESTROY => ref $self ) if DEBUG;
    return;
 }
 
@@ -342,8 +351,8 @@ Text::Template::Simple::Tokenizer - Tokenizer
 
 =head1 DESCRIPTION
 
-This document describes version C<0.81> of C<Text::Template::Simple::Tokenizer>
-released on C<13 September 2009>.
+This document describes version C<0.82> of C<Text::Template::Simple::Tokenizer>
+released on C<30 May 2010>.
 
 Tokenizes the input with the defined delimiter pair.
 
@@ -375,12 +384,12 @@ Burak Gursoy <burak@cpan.org>.
 
 =head1 COPYRIGHT
 
-Copyright 2004 - 2009 Burak Gursoy. All rights reserved.
+Copyright 2004 - 2010 Burak Gursoy. All rights reserved.
 
 =head1 LICENSE
 
 This library is free software; you can redistribute it and/or modify 
-it under the same terms as Perl itself, either Perl version 5.10.0 or, 
+it under the same terms as Perl itself, either Perl version 5.10.1 or, 
 at your option, any later version of Perl 5 you may have available.
 
 =cut

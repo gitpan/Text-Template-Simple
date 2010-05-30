@@ -1,29 +1,29 @@
 #!/usr/bin/env perl -w
 use strict;
+use warnings;
 use Test::More qw( no_plan );
 use Text::Template::Simple;
-use constant FILE => File::Spec->catfile( qw( t data ), '028-dynamic.tts' );
 
 my $t = Text::Template::Simple->new();
 
-my $got = $t->compile( FILE );
+my $got = $t->compile( File::Spec->catfile( qw( t data ), '028-dynamic.tts' ) );
 my $expect = 'Dynamic: KLF-->Perl ROCKS!<--MUMULAND';
 
-ok($got eq $expect, "Dynamic include got params");
+is($got, $expect, 'Dynamic include got params' );
 
 package Text::Template::Simple::Dummy;
 use strict;
 
-sub filter_FooBar {
+sub filter_foobar {
     my $self = shift;
     my $oref = shift;
-    $$oref   = "-->$$oref<--";
+    ${$oref} = sprintf '-->%s<--', ${$oref};
     return;
 }
 
-sub filter_Baz {
+sub filter_baz {
     my $self = shift;
     my $oref = shift;
-    $$oref   = "KLF".$$oref."MUMULAND";
+    ${$oref} = sprintf 'KLF%sMUMULAND', ${$oref};
     return;
 }

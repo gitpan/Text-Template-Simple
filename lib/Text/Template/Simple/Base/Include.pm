@@ -1,10 +1,11 @@
 package Text::Template::Simple::Base::Include;
 use strict;
+use warnings;
 use vars qw($VERSION);
 use Text::Template::Simple::Util qw(:all);
 use Text::Template::Simple::Constants qw(:all);
 
-$VERSION = '0.81';
+$VERSION = '0.82';
 
 sub _include_no_monolith {
    # no monolith eh?
@@ -13,8 +14,8 @@ sub _include_no_monolith {
    my $rv   =  $self->_mini_compiler(
                   $self->_internal('no_monolith') => {
                      OBJECT => $self->[FAKER_SELF],
-                     FILE   => escape('~' => $file),
-                     TYPE   => escape('~' => $type),
+                     FILE   => escape(q{~} => $file),
+                     TYPE   => escape(q{~} => $type),
                   } => {
                      flatten => 1,
                   }
@@ -26,14 +27,14 @@ sub _include_no_monolith {
 sub _include_static {
    my($self, $file, $text, $err, $opt) = @_;
    return $self->[MONOLITH]
-        ? 'q~' . escape('~' => $text) . '~;'
+        ? 'q~' . escape(q{~} => $text) . q{~;}
         : $self->_include_no_monolith( T_STATIC, $file, $opt )
         ;
 }
 
 sub _include_dynamic {
    my($self, $file, $text, $err, $opt) = @_;
-   my $rv   = '';
+   my $rv   = EMPTY_STRING;
 
    ++$self->[INSIDE_INCLUDE];
    $self->[COUNTER_INCLUDE] ||= {};
@@ -46,12 +47,12 @@ sub _include_dynamic {
       LOG( DEEP_RECURSION => $file ) if DEBUG;
       my $w = L( warning => 'tts.base.include.dynamic.recursion',
                             $err, MAX_RECURSION, $file );
-      $rv .= sprintf "q~%s~", escape( '~' => $w );
+      $rv .= sprintf 'q~%s~', escape( q{~} => $w );
    }
    else {
       # local stuff is for file name access through $0 in templates
       $rv .= $self->[MONOLITH]
-           ? do { local $self->[FILENAME] = $file; $self->_parse( $text ) }
+           ? $self->_include_dynamic_monolith( $file, $text )
            : $self->_include_no_monolith( T_DYNAMIC, $file, $opt )
            ;
    }
@@ -60,8 +61,16 @@ sub _include_dynamic {
    return $rv;
 }
 
+sub _include_dynamic_monolith {
+   my($self,$file, $text) = @_;
+   my $old = $self->[FILENAME];
+   $self->[FILENAME] = $file;
+   my $result = $self->_parse( $text );
+   $self->[FILENAME] = $old;
+   return $result;
+}
 
-sub _include {
+sub include {
    my $self       = shift;
    my $type       = shift || 0;
    my $file       = shift;
@@ -85,15 +94,15 @@ sub _include {
    else {
       $interpolate = 1; # just guessing ...
       return "qq~$err Interpolated includes don't work under monolith option. "
-            ."Please disable monolith and use the 'SHARE' directive in the"
+            .q{Please disable monolith and use the 'SHARE' directive in the}
             ." include command: $file~"
          if $self->[MONOLITH];
    }
 
-   return "q~$err '" . escape('~' => $file) . "' is a directory~"
+   return "q~$err '" . escape(q{~} => $file) . q{' is a directory~}
       if $self->io->is_dir( $file );
 
-   if ( DEBUG() ) {
+   if ( DEBUG ) {
       require Text::Template::Simple::Tokenizer;
       my $toke =  Text::Template::Simple::Tokenizer->new(
                      @{ $self->[DELIMITERS] },
@@ -106,12 +115,11 @@ sub _include {
    if ( $interpolate ) {
       my $rv = $self->_interpolate( $file, $type );
       $self->[NEEDS_OBJECT]++;
-      LOG(INTERPOLATE_INC => "TYPE: $type; DATA: $file; RV: $rv") if DEBUG();
+      LOG(INTERPOLATE_INC => "TYPE: $type; DATA: $file; RV: $rv") if DEBUG;
       return $rv;
    }
 
-   my $text;
-   eval { $text = $self->io->slurp($file); };
+   my $text = eval { $self->io->slurp($file); };
    return "q~$err $@~" if $@;
 
    my $meth = '_include_' . ($is_dynamic ? 'dynamic' : 'static');
@@ -135,7 +143,7 @@ sub _interpolate {
    # die "You can not pass parameters to static includes"
    #    if $inc{PARAM} && T_STATIC  == $type;
 
-   my $filter = $inc{FILTER} ? escape( q{'} => $inc{FILTER} ) : '';
+   my $filter = $inc{FILTER} ? escape( q{'} => $inc{FILTER} ) : EMPTY_STRING;
 
    if ( $inc{SHARE} ) {
       my @vars = map { trim $_ } split RE_FILTER_SPLIT, $inc{SHARE};
@@ -149,16 +157,16 @@ sub _interpolate {
       foreach my $var ( @vars ) {
          if ( $var !~ m{ \A \$ }xms ) {
             my($char) = $var =~ m{ \A (.) }xms;
-            my $type  = $type{ $char } || '<UNKNOWN>';
-            fatal('tts.base.include._interpolate.bogus_share', $type, $var);
+            my $type_name  = $type{ $char } || '<UNKNOWN>';
+            fatal('tts.base.include._interpolate.bogus_share', $type_name, $var);
          }
          $var =~ tr/;//d;
          push @buf, $var;
       }
-      $inc{SHARE} = join ',', @buf;
+      $inc{SHARE} = join q{,}, @buf;
    }
 
-   my $share = $inc{SHARE} ? sprintf(qq{'%s', %s}, ($inc{SHARE}) x 2) : 'undef';
+   my $share = $inc{SHARE} ? sprintf(q{'%s', %s}, ($inc{SHARE}) x 2) : 'undef';
    my $rv = $self->_mini_compiler(
                $self->_internal('sub_include') => {
                   OBJECT      => $self->[FAKER_SELF],
@@ -183,7 +191,7 @@ sub _include_error {
              : T_STATIC  == $type ? 'static'
              :                      'unknown'
              ;
-   my $title = '[ ' . $val . ' include error ]';
+   my $title = sprintf '[ %s include error ]', $val;
    return $title;
 }
 
@@ -199,10 +207,14 @@ Text::Template::Simple::Base::Include - Base class for Text::Template::Simple
 
 Private module.
 
+=head1 METHODS
+
+=head2 include
+
 =head1 DESCRIPTION
 
-This document describes version C<0.81> of C<Text::Template::Simple::Base::Include>
-released on C<13 September 2009>.
+This document describes version C<0.82> of C<Text::Template::Simple::Base::Include>
+released on C<30 May 2010>.
 
 Private module.
 
@@ -212,12 +224,12 @@ Burak Gursoy <burak@cpan.org>.
 
 =head1 COPYRIGHT
 
-Copyright 2004 - 2009 Burak Gursoy. All rights reserved.
+Copyright 2004 - 2010 Burak Gursoy. All rights reserved.
 
 =head1 LICENSE
 
 This library is free software; you can redistribute it and/or modify 
-it under the same terms as Perl itself, either Perl version 5.10.0 or, 
+it under the same terms as Perl itself, either Perl version 5.10.1 or, 
 at your option, any later version of Perl 5 you may have available.
 
 =cut

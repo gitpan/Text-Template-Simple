@@ -2,6 +2,7 @@
 use constant TAINTMODE => 1;
 #!/usr/bin/env perl -w
 use strict;
+use warnings;
 use Test::More qw( no_plan );
 use Text::Template::Simple;
 use Text::Template::Simple::Constants qw( :chomp );
@@ -29,18 +30,18 @@ my $got    = $t->compile( $test );
 
 ok( $got eq $expect, "'$got' eq '$expect'" );
 
-ok( $t->compile(    "| <%-  %> |")     eq "| |"   );
-ok( $t->compile(    "| <%- -%> |")     eq "||"    );
-ok( $t->compile(    "|\n <%~  %> |")   eq "|  |"  );
-ok( $t->compile(    "|\n <%~ ~%> \n|") eq "|  |"  );
-ok( $t->compile(    "|\n <%~  -%> |")  eq "| |"   );
-ok( $t->compile(    "|\n <%- ~%> \n|") eq "| |"   );
+ok( $t->compile(     q{| <%-  %> |})     eq q{| |}   , 'Chomping 1' );
+ok( $t->compile(     q{| <%- -%> |})     eq q{||}    , 'Chomping 2' );
+ok( $t->compile(    qq{|\n <%~  %> |})   eq q{|  |}  , 'Chomping 3' );
+ok( $t->compile(    qq{|\n <%~ ~%> \n|}) eq q{|  |}  , 'Chomping 4' );
+ok( $t->compile(    qq{|\n <%~  -%> |})  eq q{| |}   , 'Chomping 5' );
+ok( $t->compile(    qq{|\n <%- ~%> \n|}) eq q{| |}   , 'Chomping 6' );
 
-ok( $pre->compile(  "| <%  %> |")      eq "| |"   );
-ok( $post->compile( "| <%  %> |")      eq "| |"   );
-ok( $prec->compile( "|  <%  %>  |")    eq "|   |" );
-ok( $postc->compile("|  <%  %>  |")    eq "|   |" );
-ok( $both->compile( "| <%  %> |")      eq "||"    );
-ok( $bothc->compile("|  <%  %>  |")    eq "|  |"  );
+ok( $pre->compile(   q{| <%  %> |})      eq q{| |}   , 'Chomping 7' );
+ok( $post->compile(  q{| <%  %> |})      eq q{| |}   , 'Chomping 8' );
+ok( $prec->compile(  q{|  <%  %>  |})    eq q{|   |} , 'Chomping 9' );
+ok( $postc->compile( q{|  <%  %>  |})    eq q{|   |} , 'Chomping 10' );
+ok( $both->compile(  q{| <%  %> |})      eq q{||}    , 'Chomping 11' );
+ok( $bothc->compile( q{|  <%  %>  |})    eq q{|  |}  , 'Chomping 12' );
 
 # TODO: this test currently does not cover the full chomping interface

@@ -1,5 +1,6 @@
 #!/usr/bin/env perl -w
 use strict;
+use warnings;
 use Test::More qw( no_plan );
 use Text::Template::Simple;
 use Text::Template::Simple::Constants qw(:all);
@@ -21,15 +22,14 @@ can_ok( 'Text::Template::Simple',
             compile
             connector
             _init
-            _class_id
+            class_id
             _output_buffer_var
             _examine
-            _compiler
             _wrap_compile
             _tidy
             _parse
             _add_stack
-            _include
+            include
             DESTROY
         /
     );
@@ -84,12 +84,12 @@ can_ok( 'Text::Template::Simple::Dummy',
     );
 can_ok( 'Text::Template::Simple::Compiler',
         qw/
-            _compile
+            compile
         /
     );
 can_ok( 'Text::Template::Simple::Compiler::Safe',
         qw/
-            _compile
+            compile
             _object
             _permit
         /

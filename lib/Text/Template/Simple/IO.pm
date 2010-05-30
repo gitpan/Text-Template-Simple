@@ -1,5 +1,6 @@
 package Text::Template::Simple::IO;
 use strict;
+use warnings;
 use vars qw($VERSION);
 use File::Spec;
 use Text::Template::Simple::Constants qw(:all);
@@ -8,7 +9,7 @@ use constant MY_IO_LAYER      => 0;
 use constant MY_INCLUDE_PATHS => 1;
 use constant MY_TAINT_MODE    => 2;
 
-$VERSION = '0.81';
+$VERSION = '0.82';
 
 sub new {
    my $class = shift;
@@ -20,7 +21,7 @@ sub new {
    $self->[MY_IO_LAYER]      = $layer if defined $layer;
    $self->[MY_INCLUDE_PATHS] = [ @{ $paths } ] if $paths; # copy
    $self->[MY_TAINT_MODE]    = $tmode;
-   $self;
+   return $self;
 }
 
 sub validate {
@@ -36,12 +37,12 @@ sub validate {
       if ( IS_WINDOWS ) {
          $wdir = Win32::GetFullPathName( $path );
          if( Win32::GetLastError() ) {
-            LOG( FAIL => "Win32::GetFullPathName( $path ): $^E" ) if DEBUG();
-            $wdir = ''; # die "Win32::GetFullPathName: $^E";
+            LOG( FAIL => "Win32::GetFullPathName( $path ): $^E" ) if DEBUG;
+            $wdir = EMPTY_STRING; # die "Win32::GetFullPathName: $^E";
          }
          else {
             my $ok = -e $wdir && -d _;
-            $wdir  = '' if not $ok;
+            $wdir  = EMPTY_STRING if not $ok;
          }
       }
 
@@ -51,7 +52,7 @@ sub validate {
       return $path;
    }
 
-   fatal('tts.io.validate.file');
+   return fatal('tts.io.validate.file');
 }
 
 sub layer {
@@ -69,7 +70,7 @@ sub slurp {
    my $self = shift;
    my $file = shift;
    my($fh, $seek);
-   LOG(IO_SLURP => $file) if DEBUG();
+   LOG(IO_SLURP => $file) if DEBUG;
 
    # perl 5.5.3 compat: we need to check if it's a ref first
    if ( ref $file && fileno $file ) {
@@ -93,7 +94,10 @@ sub slurp {
 
    my $tmp = do { local $/; my $rv = <$fh>; $rv };
    flock $fh, Fcntl::LOCK_UN() if IS_FLOCK;
-   close $fh if ! $seek; # close only if we opened this
+   if ( ! $seek ) {
+      # close only if we opened this
+      close $fh or die "Unable to close filehandle: $!\n";
+   }
    return $tmp;
 }
 
@@ -117,12 +121,12 @@ sub _handle_looks_safe {
    # Read check is disabled by default
    # Mode is always 0666 on Windows, so all tests below are disabled on Windows
    # unless you force them to run
-   LOG( FILE_MODE => sprintf "%04o", $i->mode & 07777) if DEBUG;
+   LOG( FILE_MODE => sprintf '%04o', $i->mode & FTYPE_MASK) if DEBUG;
 
    my $bypass   = IS_WINDOWS && ! ( $tmode & TAINT_CHECK_WINDOWS ) ? 1 : 0;
-   my $go_write = $bypass ? 0 : $i->mode & 022;
+   my $go_write = $bypass ? 0 : $i->mode & FMODE_GO_WRITABLE;
    my $go_read  = ! $bypass && ( $tmode & TAINT_CHECK_FH_READ )
-                ? $i->mode & 066
+                ? $i->mode & FMODE_GO_READABLE
                 : 0;
 
    LOG( TAINT => "tmode:$tmode; bypass:$bypass; "
@@ -163,17 +167,17 @@ sub file_exists {
 sub _looks_like_file {
    my $self = shift;
    my $file = shift || return;
-   return     ref $file               ? 0
-         :        $file =~ RE_NONFILE ? 0
-         : length $file >= 255        ? 0
-         :     -e $file               ? 1
-         :                              0
+   return     ref $file                    ? 0
+         :        $file =~ RE_NONFILE      ? 0
+         : length $file >= MAX_PATH_LENGTH ? 0
+         :     -e $file                    ? 1
+         :                                   0
          ;
 }
 
 sub DESTROY {
    my $self = shift;
-   LOG( DESTROY => ref $self ) if DEBUG();
+   LOG( DESTROY => ref $self ) if DEBUG;
    return;
 }
 
@@ -191,8 +195,8 @@ TODO
 
 =head1 DESCRIPTION
 
-This document describes version C<0.81> of C<Text::Template::Simple::IO>
-released on C<13 September 2009>.
+This document describes version C<0.82> of C<Text::Template::Simple::IO>
+released on C<30 May 2010>.
 
 TODO
 
@@ -235,12 +239,12 @@ Burak Gursoy <burak@cpan.org>.
 
 =head1 COPYRIGHT
 
-Copyright 2004 - 2009 Burak Gursoy. All rights reserved.
+Copyright 2004 - 2010 Burak Gursoy. All rights reserved.
 
 =head1 LICENSE
 
 This library is free software; you can redistribute it and/or modify 
-it under the same terms as Perl itself, either Perl version 5.10.0 or, 
+it under the same terms as Perl itself, either Perl version 5.10.1 or, 
 at your option, any later version of Perl 5 you may have available.
 
 =cut

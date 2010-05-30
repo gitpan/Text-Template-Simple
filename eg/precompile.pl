@@ -15,13 +15,16 @@
 ########################################################################
 use strict;
 use warnings;
+use vars qw( $VERSION );
 use Cwd;
 use File::Find;
 use File::Spec::Functions qw( catfile );
 use Text::Template::Simple;
 
-my $source_dir = "/full/path/to/original/templates";
-my $cache_dir  = "/full/path/to/cache/directory";
+$VERSION = '0.10';
+
+my $source_dir = '/full/path/to/original/templates';
+my $cache_dir  = '/full/path/to/cache/directory';
 my $extension  = qr{ [.]tts \z }xms; # the extension of files to compile
 
 my $cwd = getcwd;
@@ -29,7 +32,7 @@ chdir $source_dir;
 
 my $t = Text::Template::Simple->new( cache => 1, cache_dir => $cache_dir );
 
-find { no_chdir => 1, wanted => \&search_and_compile }, '.';
+find { no_chdir => 1, wanted => \&search_and_compile }, q{.};
 
 chdir $cwd; # restore
 
@@ -38,9 +41,12 @@ sub search_and_compile {
     return if $_ !~ $extension;
     my $file = catfile $_;
     warn "COMPILING: $file\n";
-    eval {
+    my $rv = eval {
         $t->compile( $file, undef, { chkmt => 1 } );
     };
     return if ! $@;
     warn "ERROR: $@\n"; # recoverable
+    return;
 }
+
+1;

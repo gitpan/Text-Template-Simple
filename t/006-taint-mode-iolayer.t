@@ -2,11 +2,12 @@
 use constant TAINTMODE => 1;
 #!/usr/bin/env perl -w
 use strict;
+use warnings;
 use Test::More qw( no_plan );
-use Text::Template::Simple; 
+use Text::Template::Simple;
 
-ok( simple() , "Simple test 1" );
-ok( simple2(), "Simple test 2" );
+ok( simple() , 'Simple test 1' );
+ok( simple2(), 'Simple test 2' );
 
 sub simple {
    my $template = Text::Template::Simple->new(

@@ -5,9 +5,15 @@
             # Digest::MD5 does not seem to compile under 5.5.3
             # However, MD5 is only the minimum requirement anyway.
             # See DIGEST_MODS constant for a list of supported/lternative modules.
+            # warnings::compat is the warnings pragma emulation for older perls
             $] < 5.006
-            ? ( 'Digest::Perl::MD5' => 0      )
-            : ( 'Digest::MD5'       => '1.00' )
+            ?   (
+                    'Digest::Perl::MD5' => 0,
+                    'warnings::compat'  => 0,
+                )
+            :   (
+                    'Digest::MD5'       => '1.00',
+                )
         ),
     },
     build_requires => {

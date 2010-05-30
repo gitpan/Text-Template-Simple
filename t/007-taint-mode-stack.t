@@ -2,28 +2,31 @@
 use constant TAINTMODE => 1;
 #!/usr/bin/env perl -w
 use strict;
+use warnings;
 use Test::More qw( no_plan );
 use Text::Template::Simple;
+use Carp qw( croak );
 
 local $SIG{__WARN__} = sub { # silence stack dumps
-   return if $_[0] =~ m{DUMPING CALLER STACK FOR}s;
-   return if $_[0] =~ m{Caller stack type}s;
-   return if $_[0] =~ m{\Qttsc-wrapper};
-   warn $_[0];
+   my $msg = shift;
+   return if $msg =~ m{DUMPING \s CALLER \s STACK \s FOR}xms;
+   return if $msg =~ m{Caller \s stack \s type}xms;
+   return if $msg =~ m{\Qttsc-wrapper}xms;
+   warn "$msg\n";
 };
 
-ok( simple('string'      ), "String Dumper");
-ok( simple('html_comment'), "HTML Comment Dumper");
-ok( simple('html_table'  ), "HTML Table Dumper");
+ok( simple('string'      ), 'String Dumper');
+ok( simple('html_comment'), 'HTML Comment Dumper');
+ok( simple('html_table'  ), 'HTML Table Dumper');
 
-eval { require Text::Table; };
+my $ok = eval { require Text::Table; 1; };
 
 if ( ! $@ ) {
-   ok(simple('text_table'), "Text Table Dumper");
+   ok(simple('text_table'), 'Text Table Dumper');
 }
 
 sub simple {
-   my $type = shift || die "type?";
+   my $type = shift || croak 'type?';
    my $template = Text::Template::Simple->new(
       header   => q~my $foo = shift; my $bar = shift;~,
       add_args => ['bar',['baz']],

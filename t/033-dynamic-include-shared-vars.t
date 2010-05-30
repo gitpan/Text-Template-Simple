@@ -1,5 +1,6 @@
 #!/usr/bin/env perl -w
 use strict;
+use warnings;
 use Test::More qw( no_plan );
 use Text::Template::Simple;
 
@@ -17,6 +18,6 @@ Foo is 42
 $bar after: I love Text::Template::Simple
 WANTED
 
-chomp( $expected );
+chomp $expected;
 
 is( $got, $expected, 'Shared variables seem to work as intended');

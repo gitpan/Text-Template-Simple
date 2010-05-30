@@ -1,13 +1,21 @@
 package Text::Template::Simple::Base::Parser;
 use strict;
+use warnings;
 use vars qw($VERSION);
 
-$VERSION = '0.81';
+$VERSION = '0.82';
 
 use Text::Template::Simple::Util      qw(:all);
 use Text::Template::Simple::Constants qw(:all);
+use constant MAPKEY_NUM => 5;
 
 my %INTERNAL = __PACKAGE__->_set_internal_templates;
+
+sub _needs_object {
+   my $self = shift;
+   $self->[NEEDS_OBJECT]++;
+   return $self;
+}
 
 sub _internal {
    my $self = shift;
@@ -31,69 +39,20 @@ sub _parse {
                                           : $self->[FAKER]
                                           ;
    my $buf_hash = $self->[FAKER_HASH];
-   my $toke     = $self->connector('Tokenizer')->new(
-                     $ds, $de, $self->[PRE_CHOMP], $self->[POST_CHOMP]
-                  );
-   my $code     = '';
-   my $inside   = 0;
-
    my($mko, $mkc) = $self->_parse_mapkeys( $opt->{map_keys}, $faker, $buf_hash );
 
-   LOG( RAW => $raw ) if ( DEBUG() > 3 );
-
-   my $uth = $self->[USER_THANDLER];
+   LOG( RAW => $raw ) if DEBUG > DEBUG_LEVEL_INSANE;
 
    my $h = {
       raw     => sub { ";$faker .= q~$_[0]~;" },
-      capture => sub { ";$faker .= sub {" . $_[0] . "}->();"; },
-      code    => sub { $_[0] . ';' },
+      capture => sub { ";$faker .= sub {" . $_[0] . '}->();'; },
+      code    => sub { $_[0] . q{;} },
    };
 
    # little hack to convert delims into escaped delims for static inclusion
    $raw =~ s{\Q$ds}{$ds!}xmsg if $opt->{as_is};
 
-   # fetch and walk the tree
-   PARSER: foreach my $token ( @{ $toke->tokenize( $raw, $opt->{map_keys} ) } ) {
-      my($str, $id, $chomp, undef) = @{ $token };
-      LOG( TOKEN => $toke->_visualize_tid($id) . " => $str" ) if DEBUG() > 1;
-      next PARSER if T_DISCARD == $id || T_COMMENT == $id;
-
-      if ( T_DELIMSTART == $id ) { $inside++; next PARSER; }
-      if ( T_DELIMEND   == $id ) { $inside--; next PARSER; }
-
-      if ( T_RAW == $id || T_NOTADELIM == $id ) {
-         $code .= $h->{raw}->( $self->_chomp( $str, $chomp ) );
-      }
-
-      elsif ( T_CODE == $id ) {
-         $code .= $h->{code}->($str);
-      }
-
-      elsif ( T_CAPTURE == $id ) {
-         $code .= $h->{capture}->( $str );
-      }
-
-      elsif ( T_DYNAMIC == $id || T_STATIC == $id ) {
-         $code .= $h->{capture}->( $self->_needs_object->_include($id, $str, $opt) );
-      }
-
-      elsif ( T_MAPKEY == $id ) {
-         $code .= sprintf $mko, $mkc ? ( ($str) x 5 ) : $str;
-      }
-
-      elsif ( T_COMMAND == $id ) {
-         $code .= $h->{raw}->( $self->_parse_command( $str ) );
-      }
-
-      else {
-         LOG(
-            $uth  ? (USER_THANDLER => "$id")
-                  : (UNKNOWN_TOKEN => "Adding unknown token as RAW: $id($str)")
-         ) if DEBUG;
-         $code .= $uth ? $uth->( $self, $id ,$str, $h ) : $h->{raw}->( $str );
-      }
-
-   }
+   my($code, $inside) = $self->_walk( $raw, $opt, $h, $mko, $mkc );
 
    $self->[FILENAME] ||= '<ANON>';
 
@@ -107,18 +66,94 @@ sub _parse {
    return $self->_wrapper( $code, $opt->{cache_id}, $faker, $opt->{map_keys}, $h );
 }
 
+sub _walk {
+   my($self, $raw, $opt, $h, $mko, $mkc) = @_;
+   my $uth    = $self->[USER_THANDLER];
+   my $code   = EMPTY_STRING;
+   my $inside = 0;
+   my $toke   = $self->connector('Tokenizer')->new(
+                  @{ $self->[DELIMITERS] },
+                  $self->[PRE_CHOMP],
+                  $self->[POST_CHOMP]
+               );
+
+   # fetch and walk the tree
+   PARSER: foreach my $token ( @{ $toke->tokenize( $raw, $opt->{map_keys} ) } ) {
+      my($str, $id, $chomp, undef) = @{ $token };
+
+      LOG( TOKEN => $toke->_visualize_tid($id) . " => $str" )
+         if DEBUG >= DEBUG_LEVEL_VERBOSE;
+
+      next PARSER if T_DISCARD == $id || T_COMMENT == $id;
+
+      if ( T_DELIMSTART == $id ) { $inside++; next PARSER; }
+      if ( T_DELIMEND   == $id ) { $inside--; next PARSER; }
+
+      my $is_raw = T_RAW     == $id || T_NOTADELIM == $id;
+      my $is_inc = T_DYNAMIC == $id || T_STATIC    == $id;
+
+      $code .= $is_raw          ? $h->{raw    }->( $self->_chomp( $str, $chomp ) )
+             : T_COMMAND == $id ? $h->{raw    }->( $self->_parse_command( $str ) )
+             : T_CODE    == $id ? $h->{code   }->( $str                          )
+             : T_CAPTURE == $id ? $h->{capture}->( $str                          )
+             : $is_inc          ? $h->{capture}->( $self->_walk_inc( $opt, $id, $str) )
+             : T_MAPKEY  == $id ? $self->_walk_mapkey(  $mko, $mkc, $str         )
+             :                    $self->_walk_unknown( $h, $uth, $id, $str      )
+             ;
+   }
+   return $code, $inside;
+}
+
+sub _walk_mapkey {
+   my($self, $mko, $mkc, $str) = @_;
+   return sprintf $mko, $mkc ? ( ($str) x MAPKEY_NUM ) : $str;
+}
+
+sub _walk_inc {
+   my($self, $opt, $id, $str) = @_;
+   return $self->_needs_object->include($id, $str, $opt);
+}
+
+sub _walk_unknown {
+   my($self, $h, $uth, $id, $str) = @_;
+   if ( DEBUG ) {
+      LOG(
+         $uth  ? ( USER_THANDLER => "$id" )
+               : ( UNKNOWN_TOKEN => "Adding unknown token as RAW: $id($str)" )
+      );
+   }
+
+   return $uth ? $uth->( $self, $id ,$str, $h ) : $h->{raw}->( $str );
+}
+
 sub _parse_command {
    my $self = shift;
    my $str  = shift;
-   my($head, $raw_block) = split /;/, $str, 2;
-   my @buf  = split RE_PIPE_SPLIT, '|' . trim($head);
-   shift(@buf);
+   my($head, $raw_block) = split m{;}xms, $str, 2;
+   my @buf  = split RE_PIPE_SPLIT, q{|} . trim($head);
+   shift @buf;
    my %com  = map { trim $_ } @buf;
+
+   if ( DEBUG >= DEBUG_LEVEL_INSANE ) {
+      require Data::Dumper;
+      LOG(
+         PARSE_COMMAND => Data::Dumper::Dumper(
+                           {
+                              string  => $str,
+                              header  => $head,
+                              raw     => $raw_block,
+                              command => \%com,
+                           }
+                        )
+      );
+   }
 
    if ( $com{FILTER} ) {
       # embed into the template & NEEDS_OBJECT++ ???
-      local $self->[FILENAME] = '<ANON BLOCK>';
+      my $old = $self->[FILENAME];
+      $self->[FILENAME] = '<ANON BLOCK>';
       $self->_call_filters( \$raw_block, split RE_FILTER_SPLIT, $com{FILTER} );
+      $self->[FILENAME] = $old;
    }
 
    return $raw_block;
@@ -126,8 +161,7 @@ sub _parse_command {
 
 sub _chomp {
    # remove the unnecessary white space
-   my $self = shift;
-   my($str, $chomp) = @_;
+   my($self, $str, $chomp) = @_;
 
    # NEXT: discard: left;  right -> left
    # PREV: discard: right; left  -> right
@@ -141,12 +175,12 @@ sub _chomp {
    my $right_collapse = ( $prev & COLLAPSE_ALL ) || ( $prev & COLLAPSE_LEFT );
    my $right_chomp    = ( $prev & CHOMP_ALL    ) || ( $prev & CHOMP_LEFT    );
 
-   $str = $left_collapse  ? ltrim($str, ' ')
+   $str = $left_collapse  ? ltrim($str, q{ })
         : $left_chomp     ? ltrim($str)
         :                   $str
         ;
 
-   $str = $right_collapse ? rtrim($str, ' ')
+   $str = $right_collapse ? rtrim($str, q{ })
         : $right_chomp    ? rtrim($str)
         :                   $str
         ;
@@ -156,21 +190,15 @@ sub _chomp {
 
 sub _wrapper {
    # this'll be tricky to re-implement around a template
-   my $self     = shift;
-   my $code     = shift;
-   my $cache_id = shift;
-   my $faker    = shift;
-   my $map_keys = shift;
-   my $h        = shift;
-   my $buf_hash = $self->[FAKER_HASH];
-
-   my $wrapper    = '';
-   my $inside_inc = $self->[INSIDE_INCLUDE] != -1 ? 1 : 0;
+   my($self, $code, $cache_id, $faker, $map_keys, $h) = @_;
+   my $buf_hash   = $self->[FAKER_HASH];
+   my $wrapper    = EMPTY_STRING;
+   my $inside_inc = $self->[INSIDE_INCLUDE] != MINUS_ONE ? 1 : 0;
 
    # build the anonymous sub
    if ( ! $inside_inc ) {
       # don't duplicate these if we're including something
-      $wrapper .= "package " . DUMMY_CLASS . ";";
+      $wrapper .= 'package ' . DUMMY_CLASS . q{;};
       $wrapper .= 'use strict;' if $self->[STRICT];
    }
    $wrapper .= 'sub { ';
@@ -179,13 +207,13 @@ sub _wrapper {
       --$self->[NEEDS_OBJECT];
       $wrapper .= 'my ' . $self->[FAKER_SELF] . ' = shift;';
    }
-   $wrapper .= $self->[HEADER].';'             if $self->[HEADER];
+   $wrapper .= $self->[HEADER].q{;}            if $self->[HEADER];
    $wrapper .= "my $faker = '';";
    $wrapper .= $self->_add_stack( $cache_id )  if $self->[STACK];
    $wrapper .= "my $buf_hash = {\@_};"         if $map_keys;
    $wrapper .= $self->_add_sigwarn if $self->[CAPTURE_WARNINGS];
    $wrapper .= "\n#line 1 " .  $self->[FILENAME] . "\n";
-   $wrapper .= $code . ";";
+   $wrapper .= $code . q{;};
    $wrapper .= $self->_dump_sigwarn($h) if $self->[CAPTURE_WARNINGS];
    $wrapper .= "return $faker;";
    $wrapper .= '}';
@@ -196,7 +224,7 @@ sub _wrapper {
                         $self->_internal('fragment'),
                         { FRAGMENT => $self->_tidy($wrapper) }
                      )
-   ) if DEBUG > 1;
+   ) if DEBUG >= DEBUG_LEVEL_VERBOSE;
    #LOG( OUTPUT => $wrapper );
    # reset
    $self->[DEEP_RECURSION] = 0; # reset
@@ -205,7 +233,7 @@ sub _wrapper {
 
 sub _parse_mapkeys {
    my($self, $map_keys, $faker, $buf_hash) = @_;
-   return undef, undef if ! $map_keys;
+   return( undef, undef ) if ! $map_keys;
 
    my $mkc = $map_keys eq 'check';
    my $mki = $map_keys eq 'init';
@@ -252,7 +280,7 @@ sub _dump_sigwarn {
 sub _add_stack {
    my $self    = shift;
    my $cs_name = shift || '<ANON TEMPLATE>';
-   my $stack   = $self->[STACK] || '';
+   my $stack   = $self->[STACK] || EMPTY_STRING;
 
    return if lc($stack) eq 'off';
 
@@ -261,7 +289,7 @@ sub _add_stack {
                : $stack
                ;
 
-   my($type, $channel) = split /:/, $check;
+   my($type, $channel) = split m{:}xms, $check;
    $channel = ! $channel             ? 'warn'
             :   $channel eq 'buffer' ? $self->[FAKER] . ' .= '
             :                          'warn'
@@ -275,8 +303,9 @@ sub _add_stack {
 }
 
 sub _set_internal_templates {
+   return
    # we need string eval in this template to catch syntax errors
-   sub_include => q~
+   sub_include => <<'TEMPLATE_CONSTANT',
       <%OBJECT%>->_compile(
          do {
             local $@;
@@ -301,9 +330,9 @@ sub _set_internal_templates {
             _share   => [<%SHARE%>],
          }
       )
-   ~,
+TEMPLATE_CONSTANT
 
-   no_monolith => q*
+   no_monolith => <<'TEMPLATE_CONSTANT',
       <%OBJECT%>->compile(
          q~<%FILE%>~,
          undef,
@@ -312,10 +341,10 @@ sub _set_internal_templates {
             _sub_inc => q~<%TYPE%>~,
          }
       );
-   *,
+TEMPLATE_CONSTANT
 
    # see _parse()
-   map_keys_check => q(
+   map_keys_check => <<'TEMPLATE_CONSTANT',
       <%BUF%> .= exists <%HASH%>->{"<%KEY%>"}
                ? (
                   defined <%HASH%>->{"<%KEY%>"}
@@ -324,24 +353,24 @@ sub _set_internal_templates {
                   )
                : "[ERROR] Invalid key: <%KEY%>"
                ;
-   ),
+TEMPLATE_CONSTANT
 
-   map_keys_init => q(
+   map_keys_init => <<'TEMPLATE_CONSTANT',
       <%BUF%> .= <%HASH%>->{"<%KEY%>"} || '';
-   ),
+TEMPLATE_CONSTANT
 
-   map_keys_default => q(
+   map_keys_default => <<'TEMPLATE_CONSTANT',
       <%BUF%> .= <%HASH%>->{"<%KEY%>"};
-   ),
+TEMPLATE_CONSTANT
 
-   add_sigwarn => q(
+   add_sigwarn => <<'TEMPLATE_CONSTANT',
       my <%BUF%>;
       local $SIG{__WARN__} = sub {
          push @{ <%BUF%> }, $_[0];
       };
-   ),
+TEMPLATE_CONSTANT
 
-   dump_sigwarn => q(
+   dump_sigwarn => <<'TEMPLATE_CONSTANT',
       join("\n",
             map {
                s{ \A \s+    }{}xms;
@@ -349,7 +378,7 @@ sub _set_internal_templates {
                "[warning] $_\n"
             } @{ <%BUF%> }
          );
-   ),
+TEMPLATE_CONSTANT
 
    compile_error => <<'TEMPLATE_CONSTANT',
 Error compiling code fragment (cache id: <%CID%>):
@@ -377,7 +406,7 @@ TEMPLATE_CONSTANT
 # END TIDIED FRAGMENT
 TEMPLATE_CONSTANT
 
-   disk_cache_comment => <<"TEMPLATE_CONSTANT",
+   disk_cache_comment => <<'TEMPLATE_CONSTANT',
 # !!!   W A R N I N G      W A R N I N G      W A R N I N G   !!!
 # This file was automatically generated by <%NAME%> on <%DATE%>.
 # This file is a compiled template cache.
@@ -400,8 +429,8 @@ Private module.
 
 =head1 DESCRIPTION
 
-This document describes version C<0.81> of C<Text::Template::Simple::Base::Parser>
-released on C<13 September 2009>.
+This document describes version C<0.82> of C<Text::Template::Simple::Base::Parser>
+released on C<30 May 2010>.
 
 Private module.
 
@@ -423,9 +452,8 @@ and when it is placed to the right delimiter, it'll affect the next RAW token.
 If the previous or next is not raw, nothing will happen. You need to swap sides
 when handling the chomping. i.e.: left chomping affects the right side of the
 RAW, and right chomping affects the left side of the RAW. _chomp() method in
-the parser swaps sides to handle chomping.
-See Text::Template::Simple::Tokenizer to have an idea on how pre-parsing
-happens.
+the parser swaps sides to handle chomping. See Text::Template::Simple::Tokenizer
+to have an idea on how pre-parsing happens.
 
 =end CHOMPING
 
@@ -435,12 +463,12 @@ Burak Gursoy <burak@cpan.org>.
 
 =head1 COPYRIGHT
 
-Copyright 2004 - 2009 Burak Gursoy. All rights reserved.
+Copyright 2004 - 2010 Burak Gursoy. All rights reserved.
 
 =head1 LICENSE
 
 This library is free software; you can redistribute it and/or modify 
-it under the same terms as Perl itself, either Perl version 5.10.0 or, 
+it under the same terms as Perl itself, either Perl version 5.10.1 or, 
 at your option, any later version of Perl 5 you may have available.
 
 =cut

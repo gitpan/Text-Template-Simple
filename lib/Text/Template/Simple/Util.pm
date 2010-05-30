@@ -1,33 +1,30 @@
 package Text::Template::Simple::Util;
 use strict;
+use warnings;
 use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-use Text::Template::Simple::Constants qw( :info DIGEST_MODS );
+use Text::Template::Simple::Constants qw( :info DIGEST_MODS EMPTY_STRING );
 use Carp qw( croak );
+use base qw( Exporter );
 
-$VERSION = '0.81';
+$VERSION = '0.82';
 
 BEGIN {
    if ( IS_WINDOWS ) {
       local $@; # perl 5.5.4 does not seem to have a Win32.pm
-      eval { require Win32; Win32->import; };
+      my $ok = eval { require Win32; Win32->import; 1; };
    }
 
    # create a wrapper for binmode() 
    if ( NEW_PERL ) {
       # older perl binmode() does not accept a second param
-      eval q/
-         sub binary_mode {
-            my($fh, $layer) = @_;
-            binmode $fh, ':' . $layer;
-         }
-      /;
-      # should never happen
-      die "Error compiling binary_mode(): $@" if $@;
+      *binary_mode = sub {
+         my($fh, $layer) = @_;
+         binmode $fh, q{:} . $layer;
+      };
    }
    else {
       *binary_mode = sub { binmode $_[0] };
    }
-   @ISA         = qw( Exporter );
    %EXPORT_TAGS = (
       macro => [qw( isaref      ishref iscref                  )],
       util  => [qw( binary_mode DIGEST trim rtrim ltrim escape )],
@@ -38,115 +35,116 @@ BEGIN {
    @EXPORT           =  @EXPORT_OK;
 }
 
-BEGIN { require Exporter; }
-
 my $lang = {
    error => {
-      'tts.base.examine.notglob'                 => "Unknown template parameter passed as %s reference! Supported types are GLOB, PATH and STRING.",
-      'tts.base.examine.notfh'                   => "This GLOB is not a filehandle",
-      'tts.main.cdir'                            => "Cache dir %s does not exist!",
-      'tts.main.bogus_args'                      => "Malformed add_args parameter! 'add_args' must be an arrayref!",
-      'tts.main.bogus_delims'                    => "Malformed delimiters parameter! 'delimiters' must be a two element arrayref!",
-      'tts.cache.opendir'                        => "Can not open cache dir (%s) for reading: %s",
-      'tts.util.digest'                          => "Can not load a digest module. Disable cache or install one of these (%s or %s). Last error was: %s",
-      'tts.cache.dumper'                         => "Can not dump in-memory cache! Your version of Data::Dumper (%s) does not implement the Deparse() method. Please upgrade this module!",
-      'tts.cache.pformat'                        => "Parameters must be in 'param => value' format",
-      'tts.cache.incache'                        => "I need an 'id' or a 'data' parameter for cache check!",
-      'tts.main.dslen'                           => 'Start delimiter is smaller than 2 characters',
-      'tts.main.delen'                           => 'End delimiter is smaller than 2 characters',
-      'tts.main.dsws'                            => 'Start delimiter contains whitespace',
-      'tts.main.dews'                            => 'End delimiter contains whitespace',
-      'tts.main.import.invalid'                  => "%s isn't a valid import parameter for %s",
-      'tts.main.import.undef'                    => '%s is not defined in %s',
-      'tts.main.import.redefine'                 => '%s is already defined in %s',
-      'tts.main.tts.args'                        => 'Nothing to compile!',
-      'tts.main.connector.args'                  => 'connector(): id is missing',
-      'tts.main.connector.invalid'               => 'connector(): invalid id: %s',
-      'tts.main.init.thandler'                   => 'user_thandler parameter must be a CODE reference',
-      'tts.main.init.include'                    => 'include_paths parameter must be a ARRAY reference',
-      'tts.util.escape'                          => 'Missing the character to escape',
-      'tts.tokenizer.new.ds'                     => 'Start delimiter is missing',
-      'tts.tokenizer.new.de'                     => 'End delimiter is missing',
-      'tts.tokenizer.tokenize.tmp'               => 'Template string is missing',
-      'tts.tokenizer._get_symbols.regex'         => 'Regex is missing',
-      'tts.io.validate.type'                     => 'No type specified',
-      'tts.io.validate.path'                     => 'No path specified',
-      'tts.io.validate.file'                     => 'validate(file) is not yet implemented',
-      'tts.io.layer.fh'                          => 'Filehandle is absent',
-      'tts.io.slurp.open'                        => "Error opening '%s' for reading: %s",
-      'tts.io.slurp.taint'                       => "Can't untaint FH",
-      'tts.io.hls.invalid'                       => 'FH is either absent or invalid',
-      'tts.caller.stack.hash'                    => 'Parameters to stack() must be a HASH',
-      'tts.caller.stack.type'                    => 'Unknown caller stack type: %s',
-      'tts.caller._text_table.module'            => "Caller stack type 'text_table' requires Text::Table: %s",
-      'tts.cache.new.parent'                     => 'Parent object is missing',
-      'tts.cache.dumper.hash'                    => 'Parameters to dumper() must be a HASHref',
-      'tts.cache.dumper.type'                    => "Dumper type '%s' is not valid",
-      'tts.cache.develsize.buggy'                => 'Your Devel::Size version (%s) has a known bug. Upgrade Devel::Size to 0.72 or newer or do not use the size() method',
-      'tts.cache.develsize.total'                => 'Devel::Size::total_size(): %s',
-      'tts.cache.hit.meta'                       => 'Can not get meta data: %s',
-      'tts.cache.hit.cache'                      => 'Error loading from disk cache: %s',
-      'tts.cache.populate.write'                 => 'Error writing disk-cache %s : %s',
-      'tts.cache.populate.chmod'                 => 'Can not change file mode',
-      'tts.base.compiler._compile.notmp'         => 'No template specified',
-      'tts.base.compiler._compile.param'         => 'params must be an arrayref!',
-      'tts.base.compiler._compile.opt'           => 'opts must be a hashref!',
-      'tts.base.compiler._wrap_compile.parsed'   => 'nothing to compile',
-      'tts.base.compiler._mini_compiler.notmp'   => '_mini_compiler(): missing the template',
-      'tts.base.compiler._mini_compiler.noparam' => '_mini_compiler(): missing the parameters',
-      'tts.base.compiler._mini_compiler.opt'     => '_mini_compiler(): options must be a hash',
-      'tts.base.compiler._mini_compiler.param'   => '_mini_compiler(): parameters must be a HASH',
-      'tts.base.examine._examine_type.ftype'     => 'ARRAY does not contain the type',
-      'tts.base.examine._examine_type.fthing'    => 'ARRAY does not contain the data',
-      'tts.base.examine._examine_type.extra'     => 'Type array has unknown extra fields',
-      'tts.base.examine._examine_type.unknown'   => 'Unknown first argument of %s type to compile()',
-      'tts.base.include._include.unknown'        => 'Unknown include type: %s',
-      'tts.base.include._interpolate.bogus_share' => 'Only SCALARs can be shared. You have tried to share a variable '
-                                                    .'type of %s named "%s". Consider converting it to a SCALAR or try '
-                                                    .'the monolith option to enable automatic variable sharing. '
-                                                    .'But please read the fine manual first',
-      'tts.base.parser._internal.id'             => '_internal(): id is missing',
-      'tts.base.parser._internal.rv'             => '_internal(): id is invalid',
-      'tts.base.parser._parse.unbalanced'        => '%d unbalanced %s delimiter(s) in template %s',
-      'tts.cache.id.generate.data'               => "Can't generate id without data!",
-      'tts.cache.id._custom.data'                => "Can't generate id without data!",
+      q{tts.base.examine.notglob}                 => q{Unknown template parameter passed as %s reference! Supported types are GLOB, PATH and STRING.},
+      q{tts.base.examine.notfh}                   => q{This GLOB is not a filehandle},
+      q{tts.main.cdir}                            => q{Cache dir %s does not exist!},
+      q{tts.main.bogus_args}                      => q{Malformed add_args parameter! 'add_args' must be an arrayref!},
+      q{tts.main.bogus_delims}                    => q{Malformed delimiters parameter! 'delimiters' must be a two element arrayref!},
+      q{tts.cache.opendir}                        => q{Can not open cache dir (%s) for reading: %s},
+      q{tts.util.digest}                          => q{Can not load a digest module. Disable cache or install one of these (%s or %s). Last error was: %s},
+      q{tts.cache.dumper}                         => q{Can not dump in-memory cache! Your version of Data::Dumper (%s) does not implement the Deparse() method. Please upgrade this module!},
+      q{tts.cache.pformat}                        => q{Parameters must be in 'param => value' format},
+      q{tts.cache.incache}                        => q{I need an 'id' or a 'data' parameter for cache check!},
+      q{tts.main.dslen}                           => q{Start delimiter is smaller than 2 characters},
+      q{tts.main.delen}                           => q{End delimiter is smaller than 2 characters},
+      q{tts.main.dsws}                            => q{Start delimiter contains whitespace},
+      q{tts.main.dews}                            => q{End delimiter contains whitespace},
+      q{tts.main.import.invalid}                  => q{%s isn't a valid import parameter for %s},
+      q{tts.main.import.undef}                    => q{%s is not defined in %s},
+      q{tts.main.import.redefine}                 => q{%s is already defined in %s},
+      q{tts.main.tts.args}                        => q{Nothing to compile!},
+      q{tts.main.connector.args}                  => q{connector(): id is missing},
+      q{tts.main.connector.invalid}               => q{connector(): invalid id: %s},
+      q{tts.main.init.thandler}                   => q{user_thandler parameter must be a CODE reference},
+      q{tts.main.init.include}                    => q{include_paths parameter must be a ARRAY reference},
+      q{tts.util.escape}                          => q{Missing the character to escape},
+      q{tts.tokenizer.new.ds}                     => q{Start delimiter is missing},
+      q{tts.tokenizer.new.de}                     => q{End delimiter is missing},
+      q{tts.tokenizer.tokenize.tmp}               => q{Template string is missing},
+      q{tts.tokenizer._get_symbols.regex}         => q{Regex is missing},
+      q{tts.io.validate.type}                     => q{No type specified},
+      q{tts.io.validate.path}                     => q{No path specified},
+      q{tts.io.validate.file}                     => q{validate(file) is not yet implemented},
+      q{tts.io.layer.fh}                          => q{Filehandle is absent},
+      q{tts.io.slurp.open}                        => q{Error opening '%s' for reading: %s},
+      q{tts.io.slurp.taint}                       => q{Can't untaint FH},
+      q{tts.io.hls.invalid}                       => q{FH is either absent or invalid},
+      q{tts.caller.stack.hash}                    => q{Parameters to stack() must be a HASH},
+      q{tts.caller.stack.type}                    => q{Unknown caller stack type: %s},
+      q{tts.caller._text_table.module}            => q{Caller stack type 'text_table' requires Text::Table: %s},
+      q{tts.cache.new.parent}                     => q{Parent object is missing},
+      q{tts.cache.dumper.hash}                    => q{Parameters to dumper() must be a HASHref},
+      q{tts.cache.dumper.type}                    => q{Dumper type '%s' is not valid},
+      q{tts.cache.develsize.buggy}                => q{Your Devel::Size version (%s) has a known bug. Upgrade Devel::Size to 0.72 or newer or do not use the size() method},
+      q{tts.cache.develsize.total}                => q{Devel::Size::total_size(): %s},
+      q{tts.cache.hit.meta}                       => q{Can not get meta data: %s},
+      q{tts.cache.hit.cache}                      => q{Error loading from disk cache: %s},
+      q{tts.cache.populate.write}                 => q{Error writing disk-cache %s : %s},
+      q{tts.cache.populate.chmod}                 => q{Can not change file mode},
+      q{tts.base.compiler._compile.notmp}         => q{No template specified},
+      q{tts.base.compiler._compile.param}         => q{params must be an arrayref!},
+      q{tts.base.compiler._compile.opt}           => q{opts must be a hashref!},
+      q{tts.base.compiler._wrap_compile.parsed}   => q{nothing to compile},
+      q{tts.base.compiler._mini_compiler.notmp}   => q{_mini_compiler(): missing the template},
+      q{tts.base.compiler._mini_compiler.noparam} => q{_mini_compiler(): missing the parameters},
+      q{tts.base.compiler._mini_compiler.opt}     => q{_mini_compiler(): options must be a hash},
+      q{tts.base.compiler._mini_compiler.param}   => q{_mini_compiler(): parameters must be a HASH},
+      q{tts.base.examine._examine_type.ftype}     => q{ARRAY does not contain the type},
+      q{tts.base.examine._examine_type.fthing}    => q{ARRAY does not contain the data},
+      q{tts.base.examine._examine_type.extra}     => q{Type array has unknown extra fields},
+      q{tts.base.examine._examine_type.unknown}   => q{Unknown first argument of %s type to compile()},
+      q{tts.base.include._include.unknown}        => q{Unknown include type: %s},
+      q{tts.base.include._interpolate.bogus_share} => q{Only SCALARs can be shared. You have tried to share a variable }
+                                                    .q{type of %s named "%s". Consider converting it to a SCALAR or try }
+                                                    .q{the monolith option to enable automatic variable sharing. }
+                                                    .q{But please read the fine manual first},
+      q{tts.base.parser._internal.id}             => q{_internal(): id is missing},
+      q{tts.base.parser._internal.rv}             => q{_internal(): id is invalid},
+      q{tts.base.parser._parse.unbalanced}        => q{%d unbalanced %s delimiter(s) in template %s},
+      q{tts.cache.id.generate.data}               => q{Can't generate id without data!},
+      q{tts.cache.id._custom.data}                => q{Can't generate id without data!},
    },
    warning => {
-      'tts.base.include.dynamic.recursion'       => qq{%s Deep recursion (>=%d) detected in the included file: %s},
+      q{tts.base.include.dynamic.recursion}       => q{%s Deep recursion (>=%d) detected in the included file: %s},
    }
 };
 
 my $DEBUG = 0; # Disabled by default
 my $DIGEST;    # Will hold digester class name.
 
-sub isaref { $_[0] && ref($_[0]) && ref($_[0]) eq 'ARRAY' };
-sub ishref { $_[0] && ref($_[0]) && ref($_[0]) eq 'HASH'  };
-sub iscref { $_[0] && ref($_[0]) && ref($_[0]) eq 'CODE'  };
+sub isaref { my $x = shift; return ref($x) eq 'ARRAY' };
+sub ishref { my $x = shift; return ref($x) eq 'HASH'  };
+sub iscref { my $x = shift; return ref($x) eq 'CODE'  };
 
 sub L {
-   my $type  = shift || croak "Type parameter to L() is missing";
-   my $id    = shift || croak "ID parameter ro L() is missing";
-   my @param = @_;
+   my($type, $id, @param) = @_;
+   croak q{Type parameter to L() is missing} if ! $type;
+   croak q{ID parameter ro L() is missing}   if ! $id;
    my $root  = $lang->{ $type } || croak "$type is not a valid L() type";
    my $value = $root->{ $id }   || croak "$id is not a valid L() ID";
    return @param ? sprintf($value, @param) : $value;
 }
 
-sub fatal { croak L( error => @_ ) }
+sub fatal {
+   my @args = @_;
+   return croak L( error => @args );
+}
 
 sub escape {
-   my $c = shift || fatal('tts.util.escape');
-   my $s = shift;
+   my($c, $s) = @_;
+   fatal('tts.util.escape') if ! $c;
    return $s if ! $s; # false or undef
    my $e = quotemeta $c;
-      $s =~ s{$e}{\\$c}xmsg;
-      $s;
+   $s =~ s{$e}{\\$c}xmsg;
+   return $s;
 }
 
 sub trim {
    my $s = shift;
    return $s if ! $s; # false or undef
-   my $extra = shift || '';
+   my $extra = shift || EMPTY_STRING;
       $s =~ s{\A \s+   }{$extra}xms;
       $s =~ s{   \s+ \z}{$extra}xms;
    return $s;
@@ -155,7 +153,7 @@ sub trim {
 sub ltrim {
    my $s = shift;
    return $s if ! $s; # false or undef
-   my $extra = shift || '';
+   my $extra = shift || EMPTY_STRING;
       $s =~ s{\A \s+ }{$extra}xms;
    return $s;
 }
@@ -163,7 +161,7 @@ sub ltrim {
 sub rtrim {
    my $s = shift;
    return $s if ! $s; # false or undef
-   my $extra = shift || '';
+   my $extra = shift || EMPTY_STRING;
       $s =~ s{ \s+ \z}{$extra}xms;
    return $s;
 }
@@ -175,7 +173,7 @@ sub DEBUG {
    $thing = shift if _is_parent_object( $thing );
 
    $DEBUG = $thing+0 if defined $thing; # must be numeric
-   $DEBUG;
+   return $DEBUG;
 }
 
 sub DIGEST {
@@ -183,13 +181,12 @@ sub DIGEST {
 
    local $SIG{__DIE__};
    # local $@;
-   my $file;
    foreach my $mod ( DIGEST_MODS ) {
-     ($file  = $mod) =~ s{::}{/}xmsog;
+     (my $file = $mod) =~ s{::}{/}xmsog;
       $file .= '.pm';
-      eval { require $file; };
-      if ( $@ ) {
-         LOG( FAILED => "$mod - $file" ) if DEBUG();
+      my $ok = eval { require $file; };
+      if ( ! $ok ) {
+         LOG( FAILED => "$mod - $file" ) if DEBUG;
          next;
       }
       $DIGEST = $mod;
@@ -197,31 +194,35 @@ sub DIGEST {
    }
 
    if ( not $DIGEST ) {
-      my @report = DIGEST_MODS;
-      my $last   = pop @report;
-      fatal( 'tts.util.digest' => join(', ', @report), $last, $@ );
+      my @report     = DIGEST_MODS;
+      my $last_error = pop @report;
+      fatal( 'tts.util.digest' => join(', ', @report), $last_error, $@ );
    }
 
-   LOG( DIGESTER => $DIGEST . ' v' . $DIGEST->VERSION ) if DEBUG();
+   LOG( DIGESTER => $DIGEST . ' v' . $DIGEST->VERSION ) if DEBUG;
    return $DIGEST->new;
 }
 
 sub LOG {
-   return MYLOG( @_ ) if defined &MYLOG;
-   my $self    = shift if ref( $_[0] );
-   my $id      = shift;
-   my $message = shift;
+   my @args = @_;
+   return MYLOG( @args ) if defined &MYLOG;
+   my $self    = ref $args[0] ? shift @args : undef;
+   my $id      = shift @args;
+   my $message = shift @args;
       $id      = 'DEBUG'        if not defined $id;
       $message = '<NO MESSAGE>' if not defined $message;
       $id      =~ s{_}{ }xmsg;
-   warn sprintf( "[ % 15s ] %s\n", $id, $message );
+   $message = sprintf q{[ % 15s ] %s}, $id, $message;
+   warn "$message\n";
+   return;
 }
 
 sub _is_parent_object {
-   return ! defined $_[0]       ? 0
-         : ref $_[0]            ? 1
-         : $_[0] eq __PACKAGE__ ? 1
-         : $_[0] eq PARENT      ? 1
+   my $test = shift;
+   return ! defined $test       ? 0
+         : ref $test            ? 1
+         : $test eq __PACKAGE__ ? 1
+         : $test eq PARENT      ? 1
          :                        0
          ;
 }
@@ -240,8 +241,8 @@ TODO
 
 =head1 DESCRIPTION
 
-This document describes version C<0.81> of C<Text::Template::Simple::Util>
-released on C<13 September 2009>.
+This document describes version C<0.82> of C<Text::Template::Simple::Util>
+released on C<30 May 2010>.
 
 Contains utility functions for Text::Template::Simple.
 
@@ -314,12 +315,12 @@ Burak Gursoy <burak@cpan.org>.
 
 =head1 COPYRIGHT
 
-Copyright 2004 - 2009 Burak Gursoy. All rights reserved.
+Copyright 2004 - 2010 Burak Gursoy. All rights reserved.
 
 =head1 LICENSE
 
 This library is free software; you can redistribute it and/or modify 
-it under the same terms as Perl itself, either Perl version 5.10.0 or, 
+it under the same terms as Perl itself, either Perl version 5.10.1 or, 
 at your option, any later version of Perl 5 you may have available.
 
 =cut

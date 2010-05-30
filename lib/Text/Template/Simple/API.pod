@@ -414,6 +414,10 @@ Returns the L<Text::Template::Simple::IO> object.
 
 Returns the class name of the supplied connector.
 
+=head2 class_id
+
+Returns a class identifier.
+
 =head1 CLASS METHODS
 
 These are all global (i.e.: not local to any particular object).
