@@ -6,12 +6,13 @@ use warnings;
 use Test::More qw( no_plan );
 use Text::Template::Simple;
 
-my $t = Text::Template::Simple->new();
+ok( my $t = Text::Template::Simple->new(), 'Got the object' );
 
-my $got = $t->compile( File::Spec->catfile( qw( t data ), '028-dynamic.tts' ) );
+my $file = File::Spec->catfile( qw( t data ), '028-dynamic.tts' );
+ok( my $got = $t->compile( $file ), 'Compile' );
 my $expect = 'Dynamic: KLF-->Perl ROCKS!<--MUMULAND';
 
-is($got, $expect, 'Dynamic include got params' );
+is( $got, $expect, 'Dynamic include got params' );
 
 package Text::Template::Simple::Dummy;
 use strict;

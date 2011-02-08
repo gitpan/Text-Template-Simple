@@ -4,11 +4,11 @@ use warnings;
 use Test::More qw( no_plan );
 use Text::Template::Simple;
 
-my $t = Text::Template::Simple->new();
+ok( my $t = Text::Template::Simple->new(), 'Got the object' );
 
 #$t->DEBUG(10);
 
-my $got = $t->compile( 't/data/shared-var.tts' );
+ok( my $got = $t->compile( 't/data/shared-var.tts' ), 'Compile' );
 
 my $expected = <<'WANTED';
 Foo: 42

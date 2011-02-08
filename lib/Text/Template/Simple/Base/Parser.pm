@@ -3,7 +3,7 @@ use strict;
 use warnings;
 use vars qw($VERSION);
 
-$VERSION = '0.82';
+$VERSION = '0.83';
 
 use Text::Template::Simple::Util      qw(:all);
 use Text::Template::Simple::Constants qw(:all);
@@ -77,6 +77,9 @@ sub _walk {
                   $self->[POST_CHOMP]
                );
 
+   my $is_raw = sub { my($id) = @_; T_RAW     == $id || T_NOTADELIM == $id };
+   my $is_inc = sub { my($id) = @_; T_DYNAMIC == $id || T_STATIC    == $id };
+
    # fetch and walk the tree
    PARSER: foreach my $token ( @{ $toke->tokenize( $raw, $opt->{map_keys} ) } ) {
       my($str, $id, $chomp, undef) = @{ $token };
@@ -89,14 +92,11 @@ sub _walk {
       if ( T_DELIMSTART == $id ) { $inside++; next PARSER; }
       if ( T_DELIMEND   == $id ) { $inside--; next PARSER; }
 
-      my $is_raw = T_RAW     == $id || T_NOTADELIM == $id;
-      my $is_inc = T_DYNAMIC == $id || T_STATIC    == $id;
-
-      $code .= $is_raw          ? $h->{raw    }->( $self->_chomp( $str, $chomp ) )
+      $code .= $is_raw->($id)   ? $h->{raw    }->( $self->_chomp( $str, $chomp ) )
              : T_COMMAND == $id ? $h->{raw    }->( $self->_parse_command( $str ) )
              : T_CODE    == $id ? $h->{code   }->( $str                          )
              : T_CAPTURE == $id ? $h->{capture}->( $str                          )
-             : $is_inc          ? $h->{capture}->( $self->_walk_inc( $opt, $id, $str) )
+             : $is_inc->($id)   ? $h->{capture}->( $self->_walk_inc( $opt, $id, $str) )
              : T_MAPKEY  == $id ? $self->_walk_mapkey(  $mko, $mkc, $str         )
              :                    $self->_walk_unknown( $h, $uth, $id, $str      )
              ;
@@ -429,8 +429,8 @@ Private module.
 
 =head1 DESCRIPTION
 
-This document describes version C<0.82> of C<Text::Template::Simple::Base::Parser>
-released on C<30 May 2010>.
+This document describes version C<0.83> of C<Text::Template::Simple::Base::Parser>
+released on C<9 February 2011>.
 
 Private module.
 
@@ -463,12 +463,12 @@ Burak Gursoy <burak@cpan.org>.
 
 =head1 COPYRIGHT
 
-Copyright 2004 - 2010 Burak Gursoy. All rights reserved.
+Copyright 2004 - 2011 Burak Gursoy. All rights reserved.
 
 =head1 LICENSE
 
 This library is free software; you can redistribute it and/or modify 
-it under the same terms as Perl itself, either Perl version 5.10.1 or, 
+it under the same terms as Perl itself, either Perl version 5.12.1 or, 
 at your option, any later version of Perl 5 you may have available.
 
 =cut

@@ -3,7 +3,7 @@ use strict;
 use warnings;
 use vars qw($VERSION $OID $DID @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
 
-$VERSION = '0.82';
+$VERSION = '0.83';
 
 use constant MINUS_ONE           => -1;
 
@@ -320,8 +320,8 @@ TODO
 
 =head1 DESCRIPTION
 
-This document describes version C<0.82> of C<Text::Template::Simple::Constants>
-released on C<30 May 2010>.
+This document describes version C<0.83> of C<Text::Template::Simple::Constants>
+released on C<9 February 2011>.
 
 Constants for Text::Template::Simple.
 
@@ -331,12 +331,12 @@ Burak Gursoy <burak@cpan.org>.
 
 =head1 COPYRIGHT
 
-Copyright 2004 - 2010 Burak Gursoy. All rights reserved.
+Copyright 2004 - 2011 Burak Gursoy. All rights reserved.
 
 =head1 LICENSE
 
 This library is free software; you can redistribute it and/or modify 
-it under the same terms as Perl itself, either Perl version 5.10.1 or, 
+it under the same terms as Perl itself, either Perl version 5.12.1 or, 
 at your option, any later version of Perl 5 you may have available.
 
 =cut

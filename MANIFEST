@@ -73,6 +73,8 @@ t/data/027-dynamic.tts
 t/data/027-dynamic-inc.tts
 t/data/028-dynamic.tts
 t/lib/My.pm
+t/lib/MyUtil.pm
+t/lib/TTSConnector.pm
 builder/Build.pm
 eg/precompile.pl
 etc/flowchart.txt

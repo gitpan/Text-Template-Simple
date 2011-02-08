@@ -7,11 +7,9 @@ use subs qw( trim );
 use Test::More qw( no_plan );
 use Text::Template::Simple;
 
-my $t = Text::Template::Simple->new(
-   monolith => 1,
-);
+ok( my $t = Text::Template::Simple->new( monolith => 1 ), 'Got the object' );
 
-my $got      = trim $t->compile( 't/data/monolith.tts' );
+ok( my $got  = trim $t->compile( 't/data/monolith.tts' ), 'Compile' );
 my $expected = trim expected();
 
 is( $got, $expected, 'Testing Monolith' );

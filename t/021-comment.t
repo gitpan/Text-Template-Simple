@@ -20,6 +20,6 @@ COMMENT
 
 chomp $TEMPLATE;
 
-my $t = Text::Template::Simple->new();
+ok( my $t = Text::Template::Simple->new(), 'Got the object' );
 
 is( $t->compile( $TEMPLATE ), 'No comment', 'Comment removed successfully' );

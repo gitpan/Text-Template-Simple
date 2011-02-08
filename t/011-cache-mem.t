@@ -5,19 +5,19 @@ use Test::More qw( no_plan );
 use Text::Template::Simple;
 use constant TEMPLATE => 'Time now: <%=scalar localtime 1219952008 %>';
 
-my $t = Text::Template::Simple->new( cache => 1 );
+ok(my $t = Text::Template::Simple->new( cache => 1 ), 'object');
 
-my $raw1 = $t->compile( TEMPLATE );
+ok(my $raw1 = $t->compile( TEMPLATE ),'compile raw1');
 
 ok( $t->cache->has( data => TEMPLATE          ), 'Run 1: Cache has DATA' );
 ok( $t->cache->has( id   => $t->cache->id     ), 'Run 1: Cache has ID'   );
 
-my $raw2 = $t->compile( TEMPLATE );
+ok(my $raw2 = $t->compile( TEMPLATE ),'compile raw2');
 
 ok( $t->cache->has( data => TEMPLATE          ), 'Run 2: Cache has DATA' );
 ok( $t->cache->has( id   => $t->cache->id     ), 'Run 2: Cache has ID'   );
 
-my $raw3 = $t->compile( TEMPLATE, undef, { id => '11_cache_mem_t' } );
+ok(my $raw3 = $t->compile( TEMPLATE, undef, { id => '11_cache_mem_t' } ), 'compile raw3');
 
 ok( $t->cache->has( data => TEMPLATE          ), 'Run 3: Cache has DATA' );
 ok( $t->cache->has( id   => '11_cache_mem_t'  ), 'Run 3: Cache has ID'   );

@@ -1,18 +1,20 @@
 #!/usr/bin/env perl -w
 use strict;
 use warnings;
+use lib qw(t/lib lib);
 use Test::More qw( no_plan );
 use Text::Template::Simple;
 use Cwd;
+use MyUtil;
 
-my $t   = Text::Template::Simple->new();
-my $out = $t->compile( 't/data/static.tts' );
+ok( my $t   = Text::Template::Simple->new(),      'Got the object' );
+ok( my $out = $t->compile( 't/data/static.tts' ), 'Compile'        );
 
-my $pok = print "OUTPUT: $out\n";
+_p "OUTPUT: $out\n";
 
 my $confirm = confirm();
 
-ok( $out eq $confirm, "Valid output from static inclusion: '$out' eq '$confirm'" );
+is( $out, $confirm, 'Valid output from static inclusion' );
 
 sub confirm {
     return <<'CONFIRMED';

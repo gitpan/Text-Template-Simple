@@ -2,8 +2,10 @@
 use strict;
 use warnings;
 use Test::More qw( no_plan );
-use Text::Template::Simple;
 use Carp qw( croak );
+BEGIN {
+   use_ok('Text::Template::Simple');
+}
 
 local $SIG{__WARN__} = sub { # silence stack dumps
    my $msg = shift;
@@ -19,18 +21,19 @@ ok( simple('html_table'  ), 'HTML Table Dumper');
 
 my $ok = eval { require Text::Table; 1; };
 
-if ( ! $@ ) {
+if ( ! $@ && $ok ) {
    ok(simple('text_table'), 'Text Table Dumper');
 }
 
 sub simple {
    my $type = shift || croak 'type?';
-   my $template = Text::Template::Simple->new(
+   my @args = (
       header   => q~my $foo = shift; my $bar = shift;~,
       add_args => ['bar',['baz']],
       stack    => $type,
    );
-   my $result = $template->compile('t/data/test.tts', ['Burak']);
+   ok(my $template = Text::Template::Simple->new( @args ),'object');
+   ok(my $result = $template->compile('t/data/test.tts', ['Burak']),'result');
    #warn "[COMPILED] $result\n";
    return $result;
 }

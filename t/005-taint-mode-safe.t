@@ -5,17 +5,21 @@ use constant TAINTMODE => 1;
 # SEE ALSO: t/lib/My.pm
 use strict;
 use warnings;
-use lib qw(t/lib);
+use lib qw(t/lib lib);
 use Test::More qw( no_plan );
-use Text::Template::Simple;
+use MyUtil;
 
-my $t = Text::Template::Simple->new( safe => 1 );
+BEGIN {
+   use_ok('Text::Template::Simple');
+}
+
+ok( my $t = Text::Template::Simple->new( safe => 1 ), 'Object created');
 
 my $tmpl = q(<% my $name = shift %>Hello <%= $name %>, you are safe!);
 
-my $out = $t->compile( $tmpl, [ 'Burak' ] );
+ok( my $out = $t->compile( $tmpl, [ 'Burak' ] ), 'compile()');
 
-ok( $out                                 , 'Got compiled output' );
-ok( $out eq q{Hello Burak, you are safe!}, 'Output is correct'   );
+ok( $out                               , 'Got compiled output' );
+is( $out, q{Hello Burak, you are safe!}, 'Output is correct'   );
 
-my $pok = print $out, "\n";
+_p $out, "\n";

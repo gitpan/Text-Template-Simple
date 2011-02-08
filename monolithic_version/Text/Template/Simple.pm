@@ -34,7 +34,7 @@ use strict;
 use warnings;
 use vars qw($VERSION $OID $DID @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
 
-$VERSION = '0.82';
+$VERSION = '0.83';
 
 use constant MINUS_ONE           => -1;
 
@@ -345,7 +345,7 @@ use Text::Template::Simple::Constants qw( :info DIGEST_MODS EMPTY_STRING );
 use Carp qw( croak );
 use base qw( Exporter );
 
-$VERSION = '0.82';
+$VERSION = '0.83';
 
 BEGIN {
    if ( IS_WINDOWS ) {
@@ -573,7 +573,7 @@ use warnings;
 use vars qw($VERSION);
 use Text::Template::Simple::Dummy;
 
-$VERSION = '0.82';
+$VERSION = '0.83';
 
 sub compile { shift; return __PACKAGE__->_object->reval(shift) }
 
@@ -607,7 +607,7 @@ use overload q{""} => 'get';
 use Text::Template::Simple::Constants qw( MAX_FL RE_INVALID_CID );
 use Text::Template::Simple::Util      qw( LOG DEBUG DIGEST fatal );
 
-$VERSION = '0.82';
+$VERSION = '0.83';
 
 sub new {
    my $class = shift;
@@ -665,7 +665,7 @@ use strict;
 use warnings;
 use vars qw($VERSION);
 
-$VERSION = '0.82';
+$VERSION = '0.83';
 
 use Text::Template::Simple::Util      qw(:all);
 use Text::Template::Simple::Constants qw(:all);
@@ -739,6 +739,9 @@ sub _walk {
                   $self->[POST_CHOMP]
                );
 
+   my $is_raw = sub { my($id) = @_; T_RAW     == $id || T_NOTADELIM == $id };
+   my $is_inc = sub { my($id) = @_; T_DYNAMIC == $id || T_STATIC    == $id };
+
    # fetch and walk the tree
    PARSER: foreach my $token ( @{ $toke->tokenize( $raw, $opt->{map_keys} ) } ) {
       my($str, $id, $chomp, undef) = @{ $token };
@@ -751,14 +754,11 @@ sub _walk {
       if ( T_DELIMSTART == $id ) { $inside++; next PARSER; }
       if ( T_DELIMEND   == $id ) { $inside--; next PARSER; }
 
-      my $is_raw = T_RAW     == $id || T_NOTADELIM == $id;
-      my $is_inc = T_DYNAMIC == $id || T_STATIC    == $id;
-
-      $code .= $is_raw          ? $h->{raw    }->( $self->_chomp( $str, $chomp ) )
+      $code .= $is_raw->($id)   ? $h->{raw    }->( $self->_chomp( $str, $chomp ) )
              : T_COMMAND == $id ? $h->{raw    }->( $self->_parse_command( $str ) )
              : T_CODE    == $id ? $h->{code   }->( $str                          )
              : T_CAPTURE == $id ? $h->{capture}->( $str                          )
-             : $is_inc          ? $h->{capture}->( $self->_walk_inc( $opt, $id, $str) )
+             : $is_inc->($id)   ? $h->{capture}->( $self->_walk_inc( $opt, $id, $str) )
              : T_MAPKEY  == $id ? $self->_walk_mapkey(  $mko, $mkc, $str         )
              :                    $self->_walk_unknown( $h, $uth, $id, $str      )
              ;
@@ -1083,8 +1083,20 @@ use warnings;
 use vars qw($VERSION);
 use Text::Template::Simple::Util qw(:all);
 use Text::Template::Simple::Constants qw(:all);
+use constant E_IN_MONOLITH =>
+    'qq~%s Interpolated includes don\'t work under monolith option. '
+   .'Please disable monolith and use the \'SHARE\' directive in the include '
+   .'command: %s~';
+use constant E_IN_DIR   => q(q~%s '%s' is a directory~);
+use constant E_IN_SLURP => 'q~%s %s~';
+use constant TYPE_MAP   => qw(
+   @   ARRAY
+   %   HASH
+   *   GLOB
+   \   REFERENCE
+);
 
-$VERSION = '0.82';
+$VERSION = '0.83';
 
 sub _include_no_monolith {
    # no monolith eh?
@@ -1106,14 +1118,14 @@ sub _include_no_monolith {
 sub _include_static {
    my($self, $file, $text, $err, $opt) = @_;
    return $self->[MONOLITH]
-        ? 'q~' . escape(q{~} => $text) . q{~;}
+        ? sprintf('q~%s~;', escape(q{~} => $text))
         : $self->_include_no_monolith( T_STATIC, $file, $opt )
         ;
 }
 
 sub _include_dynamic {
    my($self, $file, $text, $err, $opt) = @_;
-   my $rv   = EMPTY_STRING;
+   my $rv = EMPTY_STRING;
 
    ++$self->[INSIDE_INCLUDE];
    $self->[COUNTER_INCLUDE] ||= {};
@@ -1167,29 +1179,18 @@ sub include {
    my $interpolate;
 
    if ( $exists ) {
-      $file        = $exists; # file path correction
-      $interpolate = 0;
+      $file = $exists; # file path correction
    }
    else {
       $interpolate = 1; # just guessing ...
-      return "qq~$err Interpolated includes don't work under monolith option. "
-            .q{Please disable monolith and use the 'SHARE' directive in the}
-            ." include command: $file~"
-         if $self->[MONOLITH];
+      return sprintf E_IN_MONOLITH, $err, $file if $self->[MONOLITH];
    }
 
-   return "q~$err '" . escape(q{~} => $file) . q{' is a directory~}
-      if $self->io->is_dir( $file );
-
-   if ( DEBUG ) {
-      require Text::Template::Simple::Tokenizer;
-      my $toke =  Text::Template::Simple::Tokenizer->new(
-                     @{ $self->[DELIMITERS] },
-                     $self->[PRE_CHOMP],
-                     $self->[POST_CHOMP]
-                  );
-      LOG( INCLUDE => $toke->_visualize_tid($type) . " => '$file'" );
+   if ( $self->io->is_dir( $file ) ) {
+      return sprintf E_IN_DIR, $err, escape(q{~} => $file);
    }
+
+   $self->_debug_include_type( $file, $type ) if DEBUG;
 
    if ( $interpolate ) {
       my $rv = $self->_interpolate( $file, $type );
@@ -1199,10 +1200,24 @@ sub include {
    }
 
    my $text = eval { $self->io->slurp($file); };
-   return "q~$err $@~" if $@;
+   if ( $@ ) {
+      return sprintf E_IN_SLURP, $err, $@;
+   }
 
    my $meth = '_include_' . ($is_dynamic ? 'dynamic' : 'static');
    return $self->$meth( $file, $text, $err, $opt );
+}
+
+sub _debug_include_type {
+   my($self, $file, $type) = @_;
+   require Text::Template::Simple::Tokenizer;
+   my $toke =  Text::Template::Simple::Tokenizer->new(
+                  @{ $self->[DELIMITERS] },
+                  $self->[PRE_CHOMP],
+                  $self->[POST_CHOMP]
+               );
+   LOG( INCLUDE => $toke->_visualize_tid($type) . " => '$file'" );
+   return;
 }
 
 sub _interpolate {
@@ -1222,56 +1237,53 @@ sub _interpolate {
    # die "You can not pass parameters to static includes"
    #    if $inc{PARAM} && T_STATIC  == $type;
 
+
+   $self->_interpolate_share_setup( \%inc ) if $inc{SHARE};
+
+   my $share  = $inc{SHARE}  ? sprintf(q{'%s', %s}, ($inc{SHARE}) x 2) : 'undef';
    my $filter = $inc{FILTER} ? escape( q{'} => $inc{FILTER} ) : EMPTY_STRING;
 
-   if ( $inc{SHARE} ) {
-      my @vars = map { trim $_ } split RE_FILTER_SPLIT, $inc{SHARE};
-      my %type = qw(
-                     @   ARRAY
-                     %   HASH
-                     *   GLOB
-                     \   REFERENCE
-                  );
-      my @buf;
-      foreach my $var ( @vars ) {
-         if ( $var !~ m{ \A \$ }xms ) {
-            my($char) = $var =~ m{ \A (.) }xms;
-            my $type_name  = $type{ $char } || '<UNKNOWN>';
-            fatal('tts.base.include._interpolate.bogus_share', $type_name, $var);
+   return
+      $self->_mini_compiler(
+         $self->_internal('sub_include') => {
+            OBJECT      => $self->[FAKER_SELF],
+            INCLUDE     => escape( q{'} => $inc{INCLUDE} ),
+            ERROR_TITLE => escape( q{'} => $etitle ),
+            TYPE        => $type,
+            PARAMS      => $inc{PARAM} ? qq{[$inc{PARAM}]} : 'undef',
+            FILTER      => $filter,
+            SHARE       => $share,
+         } => {
+            flatten => 1,
          }
-         $var =~ tr/;//d;
-         push @buf, $var;
+      );
+}
+
+sub _interpolate_share_setup {
+   my($self, $inc) = @_;
+   my @vars = map { trim $_ } split RE_FILTER_SPLIT, $inc->{SHARE};
+   my %type = TYPE_MAP;
+   my @buf;
+   foreach my $var ( @vars ) {
+      if ( $var !~ m{ \A \$ }xms ) {
+         my($char)     = $var =~ m{ \A (.) }xms;
+         my $type_name = $type{ $char } || '<UNKNOWN>';
+         fatal('tts.base.include._interpolate.bogus_share', $type_name, $var);
       }
-      $inc{SHARE} = join q{,}, @buf;
+      $var =~ tr/;//d;
+      push @buf, $var;
    }
-
-   my $share = $inc{SHARE} ? sprintf(q{'%s', %s}, ($inc{SHARE}) x 2) : 'undef';
-   my $rv = $self->_mini_compiler(
-               $self->_internal('sub_include') => {
-                  OBJECT      => $self->[FAKER_SELF],
-                  INCLUDE     => escape( q{'} => $inc{INCLUDE} ),
-                  ERROR_TITLE => escape( q{'} => $etitle ),
-                  TYPE        => $type,
-                  PARAMS      => $inc{PARAM} ? qq{[$inc{PARAM}]} : 'undef',
-                  FILTER      => $filter,
-                  SHARE       => $share,
-               } => {
-                  flatten => 1,
-               }
-            );
-
-   return $rv;
+   $inc->{SHARE} = join q{,}, @buf;
+   return;
 }
 
 sub _include_error {
-   my $self  = shift;
-   my $type  = shift;
-   my $val   = T_DYNAMIC == $type ? 'dynamic'
-             : T_STATIC  == $type ? 'static'
-             :                      'unknown'
-             ;
-   my $title = sprintf '[ %s include error ]', $val;
-   return $title;
+   my($self, $type) = @_;
+   my $val  = T_DYNAMIC == $type ? 'dynamic'
+            : T_STATIC  == $type ? 'static'
+            :                      'unknown'
+            ;
+   return sprintf '[ %s include error ]', $val;
 }
 
 package Text::Template::Simple::Base::Examine;
@@ -1281,7 +1293,7 @@ use vars qw($VERSION);
 use Text::Template::Simple::Util qw(:all);
 use Text::Template::Simple::Constants qw(:all);
 
-$VERSION = '0.82';
+$VERSION = '0.83';
 
 sub _examine {
    my $self   = shift;
@@ -1317,8 +1329,9 @@ sub _examine {
 
 sub _examine_glob {
    my($self, $thing) = @_;
-   fatal( 'tts.base.examine.notglob' => ref $thing ) if ref $thing ne 'GLOB';
-   fatal( 'tts.base.examine.notfh' ) if ! fileno $thing;
+   my $type = ref $thing;
+   fatal( 'tts.base.examine.notglob' => $type ) if $type ne 'GLOB';
+   fatal( 'tts.base.examine.notfh'            ) if ! fileno $thing;
    return $self->io->slurp( $thing );
 }
 
@@ -1347,25 +1360,26 @@ use vars qw($VERSION);
 use Text::Template::Simple::Util qw(:all);
 use Text::Template::Simple::Constants qw(:all);
 
-$VERSION = '0.82';
+$VERSION = '0.83';
 
 sub _init_compile_opts {
    my $self = shift;
    my $opt  = shift || {};
 
-   fatal('tts.base.compiler._compile.opt')   if not ishref($opt  );
+   fatal('tts.base.compiler._compile.opt') if ! ishref( $opt );
 
    # set defaults
    $opt->{id}       ||= EMPTY_STRING; # id is AUTO
-   $opt->{map_keys} ||= 0;  # use normal behavior
-   $opt->{chkmt}    ||= 0;  # check mtime of file template?
-   $opt->{_sub_inc} ||= 0;  # are we called from a dynamic include op?
+   $opt->{map_keys} ||= 0;            # use normal behavior
+   $opt->{chkmt}    ||= 0;            # check mtime of file template?
+   $opt->{_sub_inc} ||= 0;            # are we called from a dynamic include op?
    $opt->{_filter}  ||= EMPTY_STRING; # any filters?
 
    # first element is the shared names. if it's not defined, then there
    # are no shared variables from top level
-   delete $opt->{_share}
-      if isaref($opt->{_share}) && ! defined $opt->{_share}[0];
+   if ( isaref($opt->{_share}) && ! defined $opt->{_share}[0] ) {
+      delete $opt->{_share};
+   }
 
    $opt->{as_is} = $opt->{_sub_inc} && $opt->{_sub_inc} == T_STATIC;
 
@@ -1536,7 +1550,7 @@ use strict;
 use warnings;
 use vars qw($VERSION);
 
-$VERSION = '0.82';
+$VERSION = '0.83';
 
 use constant CMD_CHAR             =>  0;
 use constant CMD_ID               =>  1;
@@ -1872,7 +1886,7 @@ use constant MY_IO_LAYER      => 0;
 use constant MY_INCLUDE_PATHS => 1;
 use constant MY_TAINT_MODE    => 2;
 
-$VERSION = '0.82';
+$VERSION = '0.83';
 
 sub new {
    my $class = shift;
@@ -2057,7 +2071,7 @@ use vars qw($VERSION);
 use Text::Template::Simple::Caller;
 use Text::Template::Simple::Util qw();
 
-$VERSION = '0.82';
+$VERSION = '0.83';
 
 sub stack { # just a wrapper
    my $opt = shift || {};
@@ -2074,7 +2088,7 @@ use warnings;
 use vars qw($VERSION);
 use Text::Template::Simple::Dummy;
 
-$VERSION = '0.82';
+$VERSION = '0.83';
 
 sub compile {
     shift;
@@ -2099,7 +2113,7 @@ use constant BITMASK    => 9;
 use Text::Template::Simple::Util      qw( ishref fatal );
 use Text::Template::Simple::Constants qw( EMPTY_STRING );
 
-$VERSION = '0.82';
+$VERSION = '0.83';
 
 sub stack {
    my $self    = shift;
@@ -2292,7 +2306,7 @@ use Text::Template::Simple::Constants qw(:all);
 use Text::Template::Simple::Util      qw( DEBUG LOG ishref fatal );
 use Carp qw( croak );
 
-$VERSION = '0.82';
+$VERSION = '0.83';
 
 my $CACHE = {}; # in-memory template cache
 
@@ -2345,7 +2359,7 @@ sub reset { ## no critic (ProhibitBuiltinHomonyms)
 
       closedir $CDIRH;
    }
-   return;
+   return 1;
 }
 
 sub dumper {
@@ -2741,7 +2755,7 @@ use strict;
 use warnings;
 use vars qw( $VERSION );
 
-$VERSION = '0.82';
+$VERSION = '0.83';
 
 use File::Spec;
 use Text::Template::Simple::Constants qw(:all);
@@ -2997,8 +3011,8 @@ generated with an automatic build tool. If you experience problems
 with this version, please install and use the supported standard
 version. This version is B<NOT SUPPORTED>.
 
-This document describes version C<0.82> of C<Text::Template::Simple>
-released on C<30 May 2010>.
+This document describes version C<0.83> of C<Text::Template::Simple>
+released on C<9 February 2011>.
 
 This is a simple template module. There is no extra template/mini 
 language. Instead, it uses Perl as the template language. Templates
@@ -3424,12 +3438,12 @@ Burak Gursoy <burak@cpan.org>.
 
 =head1 COPYRIGHT
 
-Copyright 2004 - 2010 Burak Gursoy. All rights reserved.
+Copyright 2004 - 2011 Burak Gursoy. All rights reserved.
 
 =head1 LICENSE
 
 This library is free software; you can redistribute it and/or modify 
-it under the same terms as Perl itself, either Perl version 5.10.1 or, 
+it under the same terms as Perl itself, either Perl version 5.12.1 or, 
 at your option, any later version of Perl 5 you may have available.
 
 =cut

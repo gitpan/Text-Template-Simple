@@ -4,8 +4,20 @@ use warnings;
 use vars qw($VERSION);
 use Text::Template::Simple::Util qw(:all);
 use Text::Template::Simple::Constants qw(:all);
+use constant E_IN_MONOLITH =>
+    'qq~%s Interpolated includes don\'t work under monolith option. '
+   .'Please disable monolith and use the \'SHARE\' directive in the include '
+   .'command: %s~';
+use constant E_IN_DIR   => q(q~%s '%s' is a directory~);
+use constant E_IN_SLURP => 'q~%s %s~';
+use constant TYPE_MAP   => qw(
+   @   ARRAY
+   %   HASH
+   *   GLOB
+   \   REFERENCE
+);
 
-$VERSION = '0.82';
+$VERSION = '0.83';
 
 sub _include_no_monolith {
    # no monolith eh?
@@ -27,14 +39,14 @@ sub _include_no_monolith {
 sub _include_static {
    my($self, $file, $text, $err, $opt) = @_;
    return $self->[MONOLITH]
-        ? 'q~' . escape(q{~} => $text) . q{~;}
+        ? sprintf('q~%s~;', escape(q{~} => $text))
         : $self->_include_no_monolith( T_STATIC, $file, $opt )
         ;
 }
 
 sub _include_dynamic {
    my($self, $file, $text, $err, $opt) = @_;
-   my $rv   = EMPTY_STRING;
+   my $rv = EMPTY_STRING;
 
    ++$self->[INSIDE_INCLUDE];
    $self->[COUNTER_INCLUDE] ||= {};
@@ -88,29 +100,18 @@ sub include {
    my $interpolate;
 
    if ( $exists ) {
-      $file        = $exists; # file path correction
-      $interpolate = 0;
+      $file = $exists; # file path correction
    }
    else {
       $interpolate = 1; # just guessing ...
-      return "qq~$err Interpolated includes don't work under monolith option. "
-            .q{Please disable monolith and use the 'SHARE' directive in the}
-            ." include command: $file~"
-         if $self->[MONOLITH];
+      return sprintf E_IN_MONOLITH, $err, $file if $self->[MONOLITH];
    }
 
-   return "q~$err '" . escape(q{~} => $file) . q{' is a directory~}
-      if $self->io->is_dir( $file );
-
-   if ( DEBUG ) {
-      require Text::Template::Simple::Tokenizer;
-      my $toke =  Text::Template::Simple::Tokenizer->new(
-                     @{ $self->[DELIMITERS] },
-                     $self->[PRE_CHOMP],
-                     $self->[POST_CHOMP]
-                  );
-      LOG( INCLUDE => $toke->_visualize_tid($type) . " => '$file'" );
+   if ( $self->io->is_dir( $file ) ) {
+      return sprintf E_IN_DIR, $err, escape(q{~} => $file);
    }
+
+   $self->_debug_include_type( $file, $type ) if DEBUG;
 
    if ( $interpolate ) {
       my $rv = $self->_interpolate( $file, $type );
@@ -120,10 +121,24 @@ sub include {
    }
 
    my $text = eval { $self->io->slurp($file); };
-   return "q~$err $@~" if $@;
+   if ( $@ ) {
+      return sprintf E_IN_SLURP, $err, $@;
+   }
 
    my $meth = '_include_' . ($is_dynamic ? 'dynamic' : 'static');
    return $self->$meth( $file, $text, $err, $opt );
+}
+
+sub _debug_include_type {
+   my($self, $file, $type) = @_;
+   require Text::Template::Simple::Tokenizer;
+   my $toke =  Text::Template::Simple::Tokenizer->new(
+                  @{ $self->[DELIMITERS] },
+                  $self->[PRE_CHOMP],
+                  $self->[POST_CHOMP]
+               );
+   LOG( INCLUDE => $toke->_visualize_tid($type) . " => '$file'" );
+   return;
 }
 
 sub _interpolate {
@@ -143,56 +158,53 @@ sub _interpolate {
    # die "You can not pass parameters to static includes"
    #    if $inc{PARAM} && T_STATIC  == $type;
 
+
+   $self->_interpolate_share_setup( \%inc ) if $inc{SHARE};
+
+   my $share  = $inc{SHARE}  ? sprintf(q{'%s', %s}, ($inc{SHARE}) x 2) : 'undef';
    my $filter = $inc{FILTER} ? escape( q{'} => $inc{FILTER} ) : EMPTY_STRING;
 
-   if ( $inc{SHARE} ) {
-      my @vars = map { trim $_ } split RE_FILTER_SPLIT, $inc{SHARE};
-      my %type = qw(
-                     @   ARRAY
-                     %   HASH
-                     *   GLOB
-                     \   REFERENCE
-                  );
-      my @buf;
-      foreach my $var ( @vars ) {
-         if ( $var !~ m{ \A \$ }xms ) {
-            my($char) = $var =~ m{ \A (.) }xms;
-            my $type_name  = $type{ $char } || '<UNKNOWN>';
-            fatal('tts.base.include._interpolate.bogus_share', $type_name, $var);
+   return
+      $self->_mini_compiler(
+         $self->_internal('sub_include') => {
+            OBJECT      => $self->[FAKER_SELF],
+            INCLUDE     => escape( q{'} => $inc{INCLUDE} ),
+            ERROR_TITLE => escape( q{'} => $etitle ),
+            TYPE        => $type,
+            PARAMS      => $inc{PARAM} ? qq{[$inc{PARAM}]} : 'undef',
+            FILTER      => $filter,
+            SHARE       => $share,
+         } => {
+            flatten => 1,
          }
-         $var =~ tr/;//d;
-         push @buf, $var;
+      );
+}
+
+sub _interpolate_share_setup {
+   my($self, $inc) = @_;
+   my @vars = map { trim $_ } split RE_FILTER_SPLIT, $inc->{SHARE};
+   my %type = TYPE_MAP;
+   my @buf;
+   foreach my $var ( @vars ) {
+      if ( $var !~ m{ \A \$ }xms ) {
+         my($char)     = $var =~ m{ \A (.) }xms;
+         my $type_name = $type{ $char } || '<UNKNOWN>';
+         fatal('tts.base.include._interpolate.bogus_share', $type_name, $var);
       }
-      $inc{SHARE} = join q{,}, @buf;
+      $var =~ tr/;//d;
+      push @buf, $var;
    }
-
-   my $share = $inc{SHARE} ? sprintf(q{'%s', %s}, ($inc{SHARE}) x 2) : 'undef';
-   my $rv = $self->_mini_compiler(
-               $self->_internal('sub_include') => {
-                  OBJECT      => $self->[FAKER_SELF],
-                  INCLUDE     => escape( q{'} => $inc{INCLUDE} ),
-                  ERROR_TITLE => escape( q{'} => $etitle ),
-                  TYPE        => $type,
-                  PARAMS      => $inc{PARAM} ? qq{[$inc{PARAM}]} : 'undef',
-                  FILTER      => $filter,
-                  SHARE       => $share,
-               } => {
-                  flatten => 1,
-               }
-            );
-
-   return $rv;
+   $inc->{SHARE} = join q{,}, @buf;
+   return;
 }
 
 sub _include_error {
-   my $self  = shift;
-   my $type  = shift;
-   my $val   = T_DYNAMIC == $type ? 'dynamic'
-             : T_STATIC  == $type ? 'static'
-             :                      'unknown'
-             ;
-   my $title = sprintf '[ %s include error ]', $val;
-   return $title;
+   my($self, $type) = @_;
+   my $val  = T_DYNAMIC == $type ? 'dynamic'
+            : T_STATIC  == $type ? 'static'
+            :                      'unknown'
+            ;
+   return sprintf '[ %s include error ]', $val;
 }
 
 1;
@@ -213,8 +225,8 @@ Private module.
 
 =head1 DESCRIPTION
 
-This document describes version C<0.82> of C<Text::Template::Simple::Base::Include>
-released on C<30 May 2010>.
+This document describes version C<0.83> of C<Text::Template::Simple::Base::Include>
+released on C<9 February 2011>.
 
 Private module.
 
@@ -224,12 +236,12 @@ Burak Gursoy <burak@cpan.org>.
 
 =head1 COPYRIGHT
 
-Copyright 2004 - 2010 Burak Gursoy. All rights reserved.
+Copyright 2004 - 2011 Burak Gursoy. All rights reserved.
 
 =head1 LICENSE
 
 This library is free software; you can redistribute it and/or modify 
-it under the same terms as Perl itself, either Perl version 5.10.1 or, 
+it under the same terms as Perl itself, either Perl version 5.12.1 or, 
 at your option, any later version of Perl 5 you may have available.
 
 =cut

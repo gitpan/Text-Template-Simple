@@ -7,9 +7,9 @@ use Test::More qw( no_plan );
 use Text::Template::Simple;
 use constant EXPECT_NUM => 4;
 
-my $t = Text::Template::Simple->new();
+ok( my $t = Text::Template::Simple->new(), 'Got the object' );
 
-my $got = $t->compile(<<'THIS');
+ok( my $got = $t->compile(<<'THIS'), 'Compile' );
 <% for (1..4) {%>
    <%|- FILTER: foo;TEST-%>
 <% } %>

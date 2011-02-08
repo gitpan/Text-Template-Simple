@@ -7,7 +7,7 @@ use Test::More qw( no_plan );
 use Text::Template::Simple;
 use Text::Template::Simple::Constants qw( EMPTY_STRING );
 
-my $t = Text::Template::Simple->new();
+ok( my $t = Text::Template::Simple->new(), 'Got the object' );
 
 my $template = <<'EMPTY';
 <%+ t/data/empty.tts -%>

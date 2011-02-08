@@ -10,6 +10,6 @@ local $SIG{__WARN__} = sub {
     fail "This thing must not generate a single warning, but it did: ->$m<-";
 };
 
-my $t = Text::Template::Simple->new();
+ok( my $t = Text::Template::Simple->new(), 'Got the object' );
 
-ok( $t->compile(q/<%%>/) eq EMPTY_STRING, 'Nothing' ); # test edge case
+is( $t->compile(q/<%%>/), EMPTY_STRING, 'Test edge case' );

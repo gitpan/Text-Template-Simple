@@ -2,37 +2,39 @@
 use strict;
 use warnings;
 use Test::More qw( no_plan );
-use Text::Template::Simple;
+BEGIN {
+   use_ok('Text::Template::Simple');
+}
 
 ok(simple() , 'Simple test 1');
 ok(simple2(), 'Simple test 2');
 
-my $t = Text::Template::Simple->new();
+ok(my $t = Text::Template::Simple->new(), 'Got the object');
 
-ok( $t->cache->type eq 'OFF', 'Correct cache type is set' );
+is( $t->cache->type, 'OFF', 'Correct cache type is set' );
 
 sub simple {
-   my $template = Text::Template::Simple->new(
+   ok( my $template = Text::Template::Simple->new(
       header   => q~my $foo = shift; my $bar = shift;~,
       add_args => ['bar',['baz']],
-   );
-   my $result = $template->compile('t/data/test.tts', ['Burak']);
-   #warn "[COMPILED] $result\n";
+   ), 'simple() object');
+   ok( my $result = $template->compile('t/data/test.tts', ['Burak']), 'simple() result');
    return $result;
 }
 
 sub simple2 {
-   my $template = Text::Template::Simple->new;
-   my $result   = $template->compile(
-                  'Hello <%name%>. Foo is: <%foo%> and bar is <%bar%>.',
-                  [
-                     name => 'Burak',
-                     foo  => 'bar',
-                     bar  => 'baz',
-                  ],
-                  {
-                     map_keys => 1
-                  });
-   #warn "[COMPILED] $result\n";
+   ok(my $template = Text::Template::Simple->new(), 'simple2() object');
+   my @args = (
+      'Hello <%name%>. Foo is: <%foo%> and bar is <%bar%>.',
+      [
+         name => 'Burak',
+         foo  => 'bar',
+         bar  => 'baz',
+      ],
+      {
+         map_keys => 1
+      },
+   );
+   ok( my $result = $template->compile( @args ), 'simple2() result');
    return $result;
 }

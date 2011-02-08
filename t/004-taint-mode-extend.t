@@ -7,17 +7,22 @@ use strict;
 use warnings;
 use lib qw(t/lib lib);
 use Test::More qw( no_plan );
-use Text::Template::Simple;
 use Data::Dumper;
+use Carp qw();
 use My;
+use MyUtil;
+
+BEGIN {
+   use_ok('Text::Template::Simple');
+}
 
 ok($My::VERSION, 'My::VERSION defined');
 
-my $pok;
+my $info = "Extending Text::Template::Simple with My v$My::VERSION\n";
 
-$pok = print "Extending Text::Template::Simple with My v$My::VERSION\n";
+_p $info;
 
-my $t = Text::Template::Simple->new;
+ok( my $t = Text::Template::Simple->new, 'Object created');
 
 my $tmpl = <<'THE_TEMPLATE';
 <% my $url = shift %>
@@ -25,16 +30,13 @@ Function call  : <%=      hello  "Burak"          %>
 Global variable: X is <%= $GLOBAL{X}              %>
 THE_TEMPLATE
 
-my $out = $t->compile( $tmpl, [ 'http://search.cpan.org/' ] );
+ok( my $out = $t->compile( $tmpl, [ 'http://search.cpan.org/' ] ), 'Compiled');
 
 ok( $out, 'Got output' );
-
-$pok = print $out;
 
 my $d = Data::Dumper->new(
            [ \%Text::Template::Simple::Dummy:: ],
            [ '*SYMBOL'                         ]
         );
 
-$pok = print "\nDumping template namespace symbol table ...\n";
-$pok = print $d->Dump;
+_p $out, "\nDumping template namespace symbol table ...\n", $d->Dump;

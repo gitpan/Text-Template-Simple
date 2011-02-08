@@ -3,15 +3,17 @@ use constant TAINTMODE => 1;
 #!/usr/bin/env perl -w
 use strict;
 use warnings;
+use lib qw(t/lib lib);
 use Test::More qw( no_plan );
 use Text::Template::Simple;
+use MyUtil;
 
-my $t   = Text::Template::Simple->new();
-my $out = $t->compile( 't/data/dynamic.tts' );
+ok( my $t   = Text::Template::Simple->new(),       'Got the object' );
+ok( my $out = $t->compile( 't/data/dynamic.tts' ), 'Compile'        );
 
-my $pok = print "OUTPUT: $out\n";
+_p "OUTPUT: $out\n";
 
-ok( $out eq confirm(), 'Valid output from dynamic inclusion' );
+is( $out, confirm(), 'Valid output from dynamic inclusion' );
 
 sub confirm {
     return <<'CONFIRMED';

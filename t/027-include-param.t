@@ -5,8 +5,10 @@ use Test::More qw( no_plan );
 use Text::Template::Simple;
 use File::Spec;
 
-my $t = Text::Template::Simple->new();
+ok( my $t = Text::Template::Simple->new(), 'Got the object' );
 
-my $got = $t->compile( File::Spec->catfile( qw( t data ), '027-dynamic.tts' ) );
+my $file = File::Spec->catfile( qw( t data ), '027-dynamic.tts' );
+
+ok( my $got = $t->compile( $file ), 'Compile' );
 
 is( $got, 'Dynamic: Perl ROCKS!', 'Dynamic include got params');

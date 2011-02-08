@@ -3,9 +3,11 @@ use strict;
 use warnings;
 use Test::More qw( no_plan );
 
-use Text::Template::Simple;
+BEGIN {
+   use_ok('Text::Template::Simple');
+}
 
-my $t = Text::Template::Simple->new;
+ok(my $t = Text::Template::Simple->new,'object');
 
-ok( $t->compile(q/<%!f%>/) eq '<%f%>', 'Escaped delim 1' );
-ok( $t->compile(q/<%!f>/)  eq '<%f>' , 'Escaped delim 2' );
+is( $t->compile(q/<%!f%>/), '<%f%>', 'Escaped delim 1' );
+is( $t->compile(q/<%!f>/), '<%f>' ,  'Escaped delim 2' );

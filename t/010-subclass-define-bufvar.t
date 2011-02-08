@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use Test::More qw( no_plan );
 
-my $t = MyTTS->new;
+ok(my $t = MyTTS->new,'object');
 $t->DEBUG(0);
 
 ok( $t->compile(q/Just a test/), 'Define output buffer variables');
