@@ -3,7 +3,7 @@ use strict;
 use warnings;
 use vars qw($VERSION);
 
-$VERSION = '0.83';
+$VERSION = '0.84';
 
 use constant CMD_CHAR             =>  0;
 use constant CMD_ID               =>  1;
@@ -351,8 +351,8 @@ Text::Template::Simple::Tokenizer - Tokenizer
 
 =head1 DESCRIPTION
 
-This document describes version C<0.83> of C<Text::Template::Simple::Tokenizer>
-released on C<9 February 2011>.
+This document describes version C<0.84> of C<Text::Template::Simple::Tokenizer>
+released on C<15 November 2011>.
 
 Tokenizes the input with the defined delimiter pair.
 
@@ -389,7 +389,7 @@ Copyright 2004 - 2011 Burak Gursoy. All rights reserved.
 =head1 LICENSE
 
 This library is free software; you can redistribute it and/or modify 
-it under the same terms as Perl itself, either Perl version 5.12.1 or, 
+it under the same terms as Perl itself, either Perl version 5.12.3 or, 
 at your option, any later version of Perl 5 you may have available.
 
 =cut

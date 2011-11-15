@@ -3,7 +3,7 @@ use strict;
 use warnings;
 use vars qw( $VERSION );
 
-$VERSION = '0.83';
+$VERSION = '0.84';
 
 use File::Spec;
 use Text::Template::Simple::Constants qw(:all);
@@ -154,9 +154,7 @@ sub _init {
       if $self->[INCLUDE_PATHS] && ! isaref($self->[INCLUDE_PATHS]);
 
    $self->[IO_OBJECT] = $self->connector('IO')->new(
-                           $self->[IOLAYER],
-                           $self->[INCLUDE_PATHS],
-                           $self->[TAINT_MODE],
+                           @{ $self }[ IOLAYER, INCLUDE_PATHS, TAINT_MODE ],
                         );
 
    if ( $self->[CACHE_DIR] ) {
@@ -189,7 +187,7 @@ sub class_id {
    return sprintf q{%s v%s}, $class, $self->VERSION;
 }
 
-sub _tidy {
+sub _tidy { ## no critic (ProhibitUnusedPrivateSubroutines)
    my $self = shift;
    my $code = shift;
 
@@ -254,8 +252,8 @@ Where C<hello.tts> has this content:
 
 =head1 DESCRIPTION
 
-This document describes version C<0.83> of C<Text::Template::Simple>
-released on C<9 February 2011>.
+This document describes version C<0.84> of C<Text::Template::Simple>
+released on C<15 November 2011>.
 
 This is a simple template module. There is no extra template/mini 
 language. Instead, it uses Perl as the template language. Templates
@@ -686,7 +684,7 @@ Copyright 2004 - 2011 Burak Gursoy. All rights reserved.
 =head1 LICENSE
 
 This library is free software; you can redistribute it and/or modify 
-it under the same terms as Perl itself, either Perl version 5.12.1 or, 
+it under the same terms as Perl itself, either Perl version 5.12.3 or, 
 at your option, any later version of Perl 5 you may have available.
 
 =cut

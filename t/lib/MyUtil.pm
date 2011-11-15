@@ -8,7 +8,7 @@ use constant LEGACY_PERL => $] < 5.006;
 $VERSION = '0.10';
 @EXPORT  = qw( _p LEGACY_PERL );
 
-sub _p {
+sub _p { ## no critic (ProhibitUnusedPrivateSubroutines)
     my @args = @_;
     return if print @args;
     warn "@args\n";

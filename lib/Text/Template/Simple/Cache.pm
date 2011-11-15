@@ -1,3 +1,4 @@
+## no critic (ProhibitUnusedPrivateSubroutines)
 package Text::Template::Simple::Cache;
 use strict;
 use warnings;
@@ -6,7 +7,7 @@ use Text::Template::Simple::Constants qw(:all);
 use Text::Template::Simple::Util      qw( DEBUG LOG ishref fatal );
 use Carp qw( croak );
 
-$VERSION = '0.83';
+$VERSION = '0.84';
 
 my $CACHE = {}; # in-memory template cache
 
@@ -379,12 +380,12 @@ sub _populate_no_cache {
 sub _populate_memory {
    my($self, $parsed, $cache_id, $chkmt) = @_;
    my $parent = $self->[CACHE_PARENT];
-   $CACHE->{ $cache_id } = {}; # init
-   my($CODE, $error)                     = $parent->_wrap_compile($parsed);
-   $CACHE->{ $cache_id }->{CODE}         = $CODE;
-   $CACHE->{ $cache_id }->{MTIME}        = $chkmt if $chkmt;
-   $CACHE->{ $cache_id }->{NEEDS_OBJECT} = $parent->[NEEDS_OBJECT];
-   $CACHE->{ $cache_id }->{FAKER_SELF}   = $parent->[FAKER_SELF];
+   my $c = $CACHE->{ $cache_id } = {}; # init
+   my($CODE, $error)  = $parent->_wrap_compile($parsed);
+   $c->{CODE}         = $CODE;
+   $c->{MTIME}        = $chkmt if $chkmt;
+   $c->{NEEDS_OBJECT} = $parent->[NEEDS_OBJECT];
+   $c->{FAKER_SELF}   = $parent->[FAKER_SELF];
    LOG( MEM_POPUL => $cache_id ) if DEBUG >= DEBUG_LEVEL_INSANE;
    return $CODE, $error;
 }
@@ -431,7 +432,7 @@ sub _populate_disk {
 sub _get_meta {
    my $self = shift;
    my $raw  = shift;
-   my %meta = map { split m{:}xms, $_ } split m{\|}xms, $raw;
+   my %meta = map { split m{:}xms, $_ } split m{[|]}xms, $raw;
    return %meta;
 }
 
@@ -464,8 +465,8 @@ TODO
 
 =head1 DESCRIPTION
 
-This document describes version C<0.83> of C<Text::Template::Simple::Cache>
-released on C<9 February 2011>.
+This document describes version C<0.84> of C<Text::Template::Simple::Cache>
+released on C<15 November 2011>.
 
 Cache manager for C<Text::Template::Simple>.
 
@@ -570,7 +571,7 @@ Copyright 2004 - 2011 Burak Gursoy. All rights reserved.
 =head1 LICENSE
 
 This library is free software; you can redistribute it and/or modify 
-it under the same terms as Perl itself, either Perl version 5.12.1 or, 
+it under the same terms as Perl itself, either Perl version 5.12.3 or, 
 at your option, any later version of Perl 5 you may have available.
 
 =cut

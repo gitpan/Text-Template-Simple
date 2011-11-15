@@ -17,7 +17,7 @@ use base qw(Text::Template::Simple);
 # if you relied on the old interface or relied on the buffer var being $OUT,
 # then you have to subclass the module to restore that behaviour.
 # (not a good idea though)
-sub _output_buffer_var {
+sub _output_buffer_var { ## no critic (ProhibitUnusedPrivateSubroutines)
    my $self = shift;
    my $type = shift || 'scalar';
    return  $type eq 'hash'  ? '$OUT_HASH'  # map_keys buffer

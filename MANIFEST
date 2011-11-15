@@ -88,6 +88,7 @@ TODO
 builder/Build/Spec.pm
 t/201-pod.t
 t/202-pod-coverage.t
+Build.PL	Generated automatically
 Makefile.PL	Generated automatically
 t/003-taint-mode-simple.t
 t/004-taint-mode-extend.t
@@ -124,3 +125,4 @@ monolithic_version/README
 monolithic_version/Text/Template/Simple.pm	The monolithic version of Text::Template::Simple to ease dropping into web servers. Generated automatically.
 LICENSE
 META.yml
+META.json
