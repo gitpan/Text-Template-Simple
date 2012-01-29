@@ -4,7 +4,7 @@
       "Burak Gursoy <burak@cpan.org>"
    ],
    "dynamic_config" : 1,
-   "generated_by" : "Module::Build version 0.38, CPAN::Meta::Converter version 2.112621",
+   "generated_by" : "Module::Build version 0.38, CPAN::Meta::Converter version 2.113640",
    "license" : [
       "perl_5"
    ],
@@ -46,63 +46,63 @@
    "provides" : {
       "Text::Template::Simple" : {
          "file" : "lib/Text/Template/Simple.pm",
-         "version" : "0.84"
+         "version" : "0.85"
       },
       "Text::Template::Simple::Base::Compiler" : {
          "file" : "lib/Text/Template/Simple/Base/Compiler.pm",
-         "version" : "0.84"
+         "version" : "0.85"
       },
       "Text::Template::Simple::Base::Examine" : {
          "file" : "lib/Text/Template/Simple/Base/Examine.pm",
-         "version" : "0.84"
+         "version" : "0.85"
       },
       "Text::Template::Simple::Base::Include" : {
          "file" : "lib/Text/Template/Simple/Base/Include.pm",
-         "version" : "0.84"
+         "version" : "0.85"
       },
       "Text::Template::Simple::Base::Parser" : {
          "file" : "lib/Text/Template/Simple/Base/Parser.pm",
-         "version" : "0.84"
+         "version" : "0.85"
       },
       "Text::Template::Simple::Cache" : {
          "file" : "lib/Text/Template/Simple/Cache.pm",
-         "version" : "0.84"
+         "version" : "0.85"
       },
       "Text::Template::Simple::Cache::ID" : {
          "file" : "lib/Text/Template/Simple/Cache/ID.pm",
-         "version" : "0.84"
+         "version" : "0.85"
       },
       "Text::Template::Simple::Caller" : {
          "file" : "lib/Text/Template/Simple/Caller.pm",
-         "version" : "0.84"
+         "version" : "0.85"
       },
       "Text::Template::Simple::Compiler" : {
          "file" : "lib/Text/Template/Simple/Compiler.pm",
-         "version" : "0.84"
+         "version" : "0.85"
       },
       "Text::Template::Simple::Compiler::Safe" : {
          "file" : "lib/Text/Template/Simple/Compiler/Safe.pm",
-         "version" : "0.84"
+         "version" : "0.85"
       },
       "Text::Template::Simple::Constants" : {
          "file" : "lib/Text/Template/Simple/Constants.pm",
-         "version" : "0.84"
+         "version" : "0.85"
       },
       "Text::Template::Simple::Dummy" : {
          "file" : "lib/Text/Template/Simple/Dummy.pm",
-         "version" : "0.84"
+         "version" : "0.85"
       },
       "Text::Template::Simple::IO" : {
          "file" : "lib/Text/Template/Simple/IO.pm",
-         "version" : "0.84"
+         "version" : "0.85"
       },
       "Text::Template::Simple::Tokenizer" : {
          "file" : "lib/Text/Template/Simple/Tokenizer.pm",
-         "version" : "0.84"
+         "version" : "0.85"
       },
       "Text::Template::Simple::Util" : {
          "file" : "lib/Text/Template/Simple/Util.pm",
-         "version" : "0.84"
+         "version" : "0.85"
       }
    },
    "release_status" : "stable",
@@ -114,5 +114,5 @@
          "url" : "http://bitbucket.org/burak/cpan-text-template-simple/"
       }
    },
-   "version" : "0.84"
+   "version" : "0.85"
 }

@@ -2,7 +2,7 @@
 package Text::Template::Simple::Caller;
 use strict;
 use warnings;
-use vars qw($VERSION);
+
 use constant PACKAGE    => 0;
 use constant FILENAME   => 1;
 use constant LINE       => 2;
@@ -13,10 +13,11 @@ use constant EVALTEXT   => 6;
 use constant IS_REQUIRE => 7;
 use constant HINTS      => 8;
 use constant BITMASK    => 9;
+
 use Text::Template::Simple::Util      qw( ishref fatal );
 use Text::Template::Simple::Constants qw( EMPTY_STRING );
 
-$VERSION = '0.84';
+our $VERSION = '0.85';
 
 sub stack {
    my $self    = shift;
@@ -220,8 +221,8 @@ Text::Template::Simple::Caller - Caller stack tracer
 
 =head1 DESCRIPTION
 
-This document describes version C<0.84> of C<Text::Template::Simple::Caller>
-released on C<15 November 2011>.
+This document describes version C<0.85> of C<Text::Template::Simple::Caller>
+released on C<29 January 2012>.
 
 Caller stack tracer for Text::Template::Simple. This module is not used
 directly inside templates. You must use the global template function
@@ -271,7 +272,7 @@ Burak Gursoy <burak@cpan.org>.
 
 =head1 COPYRIGHT
 
-Copyright 2004 - 2011 Burak Gursoy. All rights reserved.
+Copyright 2004 - 2012 Burak Gursoy. All rights reserved.
 
 =head1 LICENSE
 

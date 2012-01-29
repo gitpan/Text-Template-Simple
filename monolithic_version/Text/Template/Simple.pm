@@ -32,14 +32,15 @@ sub ________monolith {}
 package Text::Template::Simple::Constants;
 use strict;
 use warnings;
-use vars qw($VERSION $OID $DID @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
 
-$VERSION = '0.84';
+our $VERSION = '0.85';
 
-use constant MINUS_ONE           => -1;
+my($OID, $DID);
+
+use constant RESET_FIELD         => -1;
 
 # object fields
-BEGIN { $OID = MINUS_ONE } # init object field id counter
+BEGIN { $OID = RESET_FIELD } # init object field id counter
 use constant DELIMITERS          => ++$OID;
 use constant AS_STRING           => ++$OID;
 use constant DELETE_WS           => ++$OID;
@@ -194,7 +195,7 @@ use base qw( Exporter );
 
 BEGIN {
 
-   %EXPORT_TAGS = (
+   our %EXPORT_TAGS = (
       info      =>   [qw(
                         IS_FLOCK
                         NEW_PERL
@@ -315,7 +316,7 @@ BEGIN {
                         MAX_RECURSION
                         CACHE_FMODE
                         CACHE_PARENT
-                        MINUS_ONE
+                        RESET_FIELD
                         EMPTY_STRING
                         MAX_PATH_LENGTH
                         DEVEL_SIZE_VERSION
@@ -332,28 +333,26 @@ BEGIN {
                      )],
    );
 
-   @EXPORT_OK        = map { @{ $EXPORT_TAGS{$_} } } keys %EXPORT_TAGS;
+   our @EXPORT_OK        = map { @{ $EXPORT_TAGS{$_} } } keys %EXPORT_TAGS;
    $EXPORT_TAGS{all} = \@EXPORT_OK;
-   @EXPORT           = @EXPORT_OK;
+   our @EXPORT           = @EXPORT_OK;
 
 }
 
 package Text::Template::Simple::Util;
 use strict;
 use warnings;
-use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-use Text::Template::Simple::Constants qw( :info DIGEST_MODS EMPTY_STRING );
-use Carp qw( croak );
 use base qw( Exporter );
+use Carp qw( croak );
+use Text::Template::Simple::Constants qw(
+   :info
+   DIGEST_MODS
+   EMPTY_STRING
+);
 
-$VERSION = '0.84';
+our $VERSION = '0.85';
 
 BEGIN {
-   if ( IS_WINDOWS ) {
-      local $@; # perl 5.5.4 does not seem to have a Win32.pm
-      my $ok = eval { require Win32; Win32->import; 1; };
-   }
-
    # create a wrapper for binmode() 
    if ( NEW_PERL ) {
       # older perl binmode() does not accept a second param
@@ -365,14 +364,14 @@ BEGIN {
    else {
       *binary_mode = sub { binmode $_[0] };
    }
-   %EXPORT_TAGS = (
+   our %EXPORT_TAGS = (
       macro => [qw( isaref      ishref iscref                  )],
       util  => [qw( binary_mode DIGEST trim rtrim ltrim escape )],
       debug => [qw( fatal       DEBUG  LOG  L                  )],
    );
-   @EXPORT_OK        = map { @{ $EXPORT_TAGS{$_} } } keys %EXPORT_TAGS;
+   our @EXPORT_OK    = map { @{ $EXPORT_TAGS{$_} } } keys %EXPORT_TAGS;
    $EXPORT_TAGS{all} = \@EXPORT_OK;
-   @EXPORT           =  @EXPORT_OK;
+   our @EXPORT       =  @EXPORT_OK;
 }
 
 my $lang = {
@@ -571,12 +570,15 @@ package Text::Template::Simple::Compiler::Safe;
 # Safe compiler. Totally experimental
 use strict;
 use warnings;
-use vars qw($VERSION);
+
 use Text::Template::Simple::Dummy;
 
-$VERSION = '0.84';
+our $VERSION = '0.85';
 
-sub compile { shift; return __PACKAGE__->_object->reval(shift) }
+sub compile {
+   shift;
+   return __PACKAGE__->_object->reval(shift);
+}
 
 sub _object {
    my $class = shift;
@@ -603,12 +605,12 @@ sub _permit {
 package Text::Template::Simple::Cache::ID;
 use strict;
 use warnings;
-use vars qw($VERSION);
 use overload q{""} => 'get';
+
 use Text::Template::Simple::Constants qw( MAX_FL RE_INVALID_CID );
 use Text::Template::Simple::Util      qw( LOG DEBUG DIGEST fatal );
 
-$VERSION = '0.84';
+our $VERSION = '0.85';
 
 sub new {
    my $class = shift;
@@ -665,9 +667,8 @@ sub DESTROY {
 package Text::Template::Simple::Base::Parser;
 use strict;
 use warnings;
-use vars qw($VERSION);
 
-$VERSION = '0.84';
+our $VERSION = '0.85';
 
 use Text::Template::Simple::Util      qw(:all);
 use Text::Template::Simple::Constants qw(:all);
@@ -857,7 +858,7 @@ sub _wrapper {
    my($self, $code, $cache_id, $faker, $map_keys, $h) = @_;
    my $buf_hash   = $self->[FAKER_HASH];
    my $wrapper    = EMPTY_STRING;
-   my $inside_inc = $self->[INSIDE_INCLUDE] != MINUS_ONE ? 1 : 0;
+   my $inside_inc = $self->[INSIDE_INCLUDE] != RESET_FIELD ? 1 : 0;
 
    # build the anonymous sub
    if ( ! $inside_inc ) {
@@ -1083,7 +1084,7 @@ TEMPLATE_CONSTANT
 package Text::Template::Simple::Base::Include;
 use strict;
 use warnings;
-use vars qw($VERSION);
+
 use Text::Template::Simple::Util qw(:all);
 use Text::Template::Simple::Constants qw(:all);
 use constant E_IN_MONOLITH =>
@@ -1099,7 +1100,7 @@ use constant TYPE_MAP   => qw(
    \   REFERENCE
 );
 
-$VERSION = '0.84';
+our $VERSION = '0.85';
 
 sub _include_no_monolith {
    # no monolith eh?
@@ -1293,11 +1294,11 @@ sub _include_error {
 package Text::Template::Simple::Base::Examine;
 use strict;
 use warnings;
-use vars qw($VERSION);
+
 use Text::Template::Simple::Util qw(:all);
 use Text::Template::Simple::Constants qw(:all);
 
-$VERSION = '0.84';
+our $VERSION = '0.85';
 
 sub _examine {
    my $self   = shift;
@@ -1361,11 +1362,11 @@ sub _examine_type {
 package Text::Template::Simple::Base::Compiler;
 use strict;
 use warnings;
-use vars qw($VERSION);
+
 use Text::Template::Simple::Util qw(:all);
 use Text::Template::Simple::Constants qw(:all);
 
-$VERSION = '0.84';
+our $VERSION = '0.85';
 
 sub _init_compile_opts {
    my $self = shift;
@@ -1553,20 +1554,19 @@ sub _mini_compiler {
 package Text::Template::Simple::Tokenizer;
 use strict;
 use warnings;
-use vars qw($VERSION);
 
-$VERSION = '0.84';
+our $VERSION = '0.85';
 
-use constant CMD_CHAR             =>  0;
-use constant CMD_ID               =>  1;
-use constant CMD_CB               =>  2; # callbacks
-use constant ID_DS                =>  0;
-use constant ID_DE                =>  1;
-use constant ID_PRE_CHOMP         =>  2;
-use constant ID_POST_CHOMP        =>  3;
-use constant SUBSTR_OFFSET_FIRST  =>  0;
-use constant SUBSTR_OFFSET_SECOND =>  1;
-use constant SUBSTR_LENGTH        =>  1;
+use constant CMD_CHAR             => 0;
+use constant CMD_ID               => 1;
+use constant CMD_CB               => 2; # callbacks
+use constant ID_DS                => 0;
+use constant ID_DE                => 1;
+use constant ID_PRE_CHOMP         => 2;
+use constant ID_POST_CHOMP        => 3;
+use constant SUBSTR_OFFSET_FIRST  => 0;
+use constant SUBSTR_OFFSET_SECOND => 1;
+use constant SUBSTR_LENGTH        => 1;
 
 use Text::Template::Simple::Util      qw( LOG DEBUG fatal );
 use Text::Template::Simple::Constants qw( :all );
@@ -1748,7 +1748,7 @@ sub _chomp_token {
    my($pre, $post) = ( $self->[ID_PRE_CHOMP], $self->[ID_POST_CHOMP] );
    my $c      = CHOMP_NONE;
 
-   my $copen  = $open_tok  eq DIR_CHOMP_NONE ? MINUS_ONE
+   my $copen  = $open_tok  eq DIR_CHOMP_NONE ? RESET_FIELD
               : $open_tok  eq DIR_COLLAPSE   ? do { $c |=  COLLAPSE_LEFT; 1 }
               : $pre       &  COLLAPSE_ALL   ? do { $c |=  COLLAPSE_LEFT; 1 }
               : $pre       &  CHOMP_ALL      ? do { $c |=     CHOMP_LEFT; 1 }
@@ -1756,7 +1756,7 @@ sub _chomp_token {
               :                                0
               ;
 
-   my $cclose = $close_tok eq DIR_CHOMP_NONE ? MINUS_ONE
+   my $cclose = $close_tok eq DIR_CHOMP_NONE ? RESET_FIELD
               : $close_tok eq DIR_COLLAPSE   ? do { $c |= COLLAPSE_RIGHT; 1 }
               : $post      &  COLLAPSE_ALL   ? do { $c |= COLLAPSE_RIGHT; 1 }
               : $post      &  CHOMP_ALL      ? do { $c |=    CHOMP_RIGHT; 1 }
@@ -1883,15 +1883,21 @@ sub DESTROY {
 package Text::Template::Simple::IO;
 use strict;
 use warnings;
-use vars qw($VERSION);
-use File::Spec;
-use Text::Template::Simple::Constants qw(:all);
-use Text::Template::Simple::Util qw( DEBUG LOG ishref binary_mode fatal );
 use constant MY_IO_LAYER      => 0;
 use constant MY_INCLUDE_PATHS => 1;
 use constant MY_TAINT_MODE    => 2;
 
-$VERSION = '0.84';
+use File::Spec;
+use Text::Template::Simple::Constants qw(:all);
+use Text::Template::Simple::Util qw(
+   binary_mode
+   fatal
+   ishref
+   DEBUG
+   LOG
+);
+
+our $VERSION = '0.85';
 
 sub new {
    my $class = shift;
@@ -1995,9 +2001,13 @@ sub _handle_looks_safe {
 
    my $tmode = $self->[MY_TAINT_MODE];
 
-   # owner neither superuser nor "me", whose
-   # real uid is in the $< variable
-   return if $i->uid != 0 && $i->uid != $<;
+   # ignore this check if the user is root
+   # can happen with cpan clients
+   if ( $< != 0 ) {
+      # owner neither superuser nor "me", whose
+      # real uid is in the $< variable
+      return if $i->uid != 0 && $i->uid != $<;
+   }
 
    # Check whether group or other can write file.
    # Read check is disabled by default
@@ -2072,11 +2082,10 @@ package Text::Template::Simple::Dummy;
 # have problems though). See the Pod for more info.
 use strict;
 use warnings;
-use vars qw($VERSION);
 use Text::Template::Simple::Caller;
 use Text::Template::Simple::Util qw();
 
-$VERSION = '0.84';
+our $VERSION = '0.85';
 
 sub stack { # just a wrapper
    my $opt = shift || {};
@@ -2090,10 +2099,9 @@ package Text::Template::Simple::Compiler;
 # the "normal" compiler
 use strict;
 use warnings;
-use vars qw($VERSION);
 use Text::Template::Simple::Dummy;
 
-$VERSION = '0.84';
+our $VERSION = '0.85';
 
 sub compile {
     shift;
@@ -2105,7 +2113,7 @@ sub compile {
 package Text::Template::Simple::Caller;
 use strict;
 use warnings;
-use vars qw($VERSION);
+
 use constant PACKAGE    => 0;
 use constant FILENAME   => 1;
 use constant LINE       => 2;
@@ -2116,10 +2124,11 @@ use constant EVALTEXT   => 6;
 use constant IS_REQUIRE => 7;
 use constant HINTS      => 8;
 use constant BITMASK    => 9;
+
 use Text::Template::Simple::Util      qw( ishref fatal );
 use Text::Template::Simple::Constants qw( EMPTY_STRING );
 
-$VERSION = '0.84';
+our $VERSION = '0.85';
 
 sub stack {
    my $self    = shift;
@@ -2308,12 +2317,12 @@ sub _text_table {
 package Text::Template::Simple::Cache;
 use strict;
 use warnings;
-use vars qw($VERSION);
+
+use Carp qw( croak );
 use Text::Template::Simple::Constants qw(:all);
 use Text::Template::Simple::Util      qw( DEBUG LOG ishref fatal );
-use Carp qw( croak );
 
-$VERSION = '0.84';
+our $VERSION = '0.85';
 
 my $CACHE = {}; # in-memory template cache
 
@@ -2760,9 +2769,8 @@ sub DESTROY {
 package Text::Template::Simple;
 use strict;
 use warnings;
-use vars qw( $VERSION );
 
-$VERSION = '0.84';
+our $VERSION = '0.85';
 
 use File::Spec;
 use Text::Template::Simple::Constants qw(:all);
@@ -2902,7 +2910,7 @@ sub _init {
    $self->[FAKER]          = $self->_output_buffer_var;
    $self->[FAKER_HASH]     = $self->_output_buffer_var('hash');
    $self->[FAKER_SELF]     = $self->_output_buffer_var('self');
-   $self->[INSIDE_INCLUDE] = MINUS_ONE; # must be -1 not 0
+   $self->[INSIDE_INCLUDE] = RESET_FIELD;
    $self->[NEEDS_OBJECT]   =  0; # the template needs $self ?
    $self->[DEEP_RECURSION] =  0; # recursion detector
 
@@ -3016,8 +3024,8 @@ generated with an automatic build tool. If you experience problems
 with this version, please install and use the supported standard
 version. This version is B<NOT SUPPORTED>.
 
-This document describes version C<0.84> of C<Text::Template::Simple>
-released on C<15 November 2011>.
+This document describes version C<0.85> of C<Text::Template::Simple>
+released on C<29 January 2012>.
 
 This is a simple template module. There is no extra template/mini 
 language. Instead, it uses Perl as the template language. Templates
@@ -3443,7 +3451,7 @@ Burak Gursoy <burak@cpan.org>.
 
 =head1 COPYRIGHT
 
-Copyright 2004 - 2011 Burak Gursoy. All rights reserved.
+Copyright 2004 - 2012 Burak Gursoy. All rights reserved.
 
 =head1 LICENSE
 

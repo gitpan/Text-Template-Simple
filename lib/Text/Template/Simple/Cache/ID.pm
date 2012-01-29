@@ -1,12 +1,12 @@
 package Text::Template::Simple::Cache::ID;
 use strict;
 use warnings;
-use vars qw($VERSION);
 use overload q{""} => 'get';
+
 use Text::Template::Simple::Constants qw( MAX_FL RE_INVALID_CID );
 use Text::Template::Simple::Util      qw( LOG DEBUG DIGEST fatal );
 
-$VERSION = '0.84';
+our $VERSION = '0.85';
 
 sub new {
    my $class = shift;
@@ -73,8 +73,8 @@ TODO
 
 =head1 DESCRIPTION
 
-This document describes version C<0.84> of C<Text::Template::Simple::Cache::ID>
-released on C<15 November 2011>.
+This document describes version C<0.85> of C<Text::Template::Simple::Cache::ID>
+released on C<29 January 2012>.
 
 TODO
 
@@ -102,7 +102,7 @@ Burak Gursoy <burak@cpan.org>.
 
 =head1 COPYRIGHT
 
-Copyright 2004 - 2011 Burak Gursoy. All rights reserved.
+Copyright 2004 - 2012 Burak Gursoy. All rights reserved.
 
 =head1 LICENSE
 

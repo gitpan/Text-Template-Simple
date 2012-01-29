@@ -15,13 +15,12 @@
 ########################################################################
 use strict;
 use warnings;
-use vars qw( $VERSION );
 use Cwd;
 use File::Find;
 use File::Spec::Functions qw( catfile );
 use Text::Template::Simple;
 
-$VERSION = '0.10';
+our $VERSION = '0.10';
 
 my $source_dir = '/full/path/to/original/templates';
 my $cache_dir  = '/full/path/to/cache/directory';

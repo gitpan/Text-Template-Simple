@@ -1,12 +1,10 @@
 package MyUtil;
 use strict;
 use warnings;
-use vars qw( $VERSION @EXPORT );
 use base qw( Exporter );
-use constant LEGACY_PERL => $] < 5.006;
 
-$VERSION = '0.10';
-@EXPORT  = qw( _p LEGACY_PERL );
+our $VERSION = '0.10';
+our @EXPORT  = qw( _p );
 
 sub _p { ## no critic (ProhibitUnusedPrivateSubroutines)
     my @args = @_;

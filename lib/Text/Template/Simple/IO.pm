@@ -1,15 +1,21 @@
 package Text::Template::Simple::IO;
 use strict;
 use warnings;
-use vars qw($VERSION);
-use File::Spec;
-use Text::Template::Simple::Constants qw(:all);
-use Text::Template::Simple::Util qw( DEBUG LOG ishref binary_mode fatal );
 use constant MY_IO_LAYER      => 0;
 use constant MY_INCLUDE_PATHS => 1;
 use constant MY_TAINT_MODE    => 2;
 
-$VERSION = '0.84';
+use File::Spec;
+use Text::Template::Simple::Constants qw(:all);
+use Text::Template::Simple::Util qw(
+   binary_mode
+   fatal
+   ishref
+   DEBUG
+   LOG
+);
+
+our $VERSION = '0.85';
 
 sub new {
    my $class = shift;
@@ -113,9 +119,13 @@ sub _handle_looks_safe {
 
    my $tmode = $self->[MY_TAINT_MODE];
 
-   # owner neither superuser nor "me", whose
-   # real uid is in the $< variable
-   return if $i->uid != 0 && $i->uid != $<;
+   # ignore this check if the user is root
+   # can happen with cpan clients
+   if ( $< != 0 ) {
+      # owner neither superuser nor "me", whose
+      # real uid is in the $< variable
+      return if $i->uid != 0 && $i->uid != $<;
+   }
 
    # Check whether group or other can write file.
    # Read check is disabled by default
@@ -195,8 +205,8 @@ TODO
 
 =head1 DESCRIPTION
 
-This document describes version C<0.84> of C<Text::Template::Simple::IO>
-released on C<15 November 2011>.
+This document describes version C<0.85> of C<Text::Template::Simple::IO>
+released on C<29 January 2012>.
 
 TODO
 
@@ -239,7 +249,7 @@ Burak Gursoy <burak@cpan.org>.
 
 =head1 COPYRIGHT
 
-Copyright 2004 - 2011 Burak Gursoy. All rights reserved.
+Copyright 2004 - 2012 Burak Gursoy. All rights reserved.
 
 =head1 LICENSE
 

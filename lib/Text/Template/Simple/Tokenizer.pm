@@ -1,20 +1,19 @@
 package Text::Template::Simple::Tokenizer;
 use strict;
 use warnings;
-use vars qw($VERSION);
 
-$VERSION = '0.84';
+our $VERSION = '0.85';
 
-use constant CMD_CHAR             =>  0;
-use constant CMD_ID               =>  1;
-use constant CMD_CB               =>  2; # callbacks
-use constant ID_DS                =>  0;
-use constant ID_DE                =>  1;
-use constant ID_PRE_CHOMP         =>  2;
-use constant ID_POST_CHOMP        =>  3;
-use constant SUBSTR_OFFSET_FIRST  =>  0;
-use constant SUBSTR_OFFSET_SECOND =>  1;
-use constant SUBSTR_LENGTH        =>  1;
+use constant CMD_CHAR             => 0;
+use constant CMD_ID               => 1;
+use constant CMD_CB               => 2; # callbacks
+use constant ID_DS                => 0;
+use constant ID_DE                => 1;
+use constant ID_PRE_CHOMP         => 2;
+use constant ID_POST_CHOMP        => 3;
+use constant SUBSTR_OFFSET_FIRST  => 0;
+use constant SUBSTR_OFFSET_SECOND => 1;
+use constant SUBSTR_LENGTH        => 1;
 
 use Text::Template::Simple::Util      qw( LOG DEBUG fatal );
 use Text::Template::Simple::Constants qw( :all );
@@ -196,7 +195,7 @@ sub _chomp_token {
    my($pre, $post) = ( $self->[ID_PRE_CHOMP], $self->[ID_POST_CHOMP] );
    my $c      = CHOMP_NONE;
 
-   my $copen  = $open_tok  eq DIR_CHOMP_NONE ? MINUS_ONE
+   my $copen  = $open_tok  eq DIR_CHOMP_NONE ? RESET_FIELD
               : $open_tok  eq DIR_COLLAPSE   ? do { $c |=  COLLAPSE_LEFT; 1 }
               : $pre       &  COLLAPSE_ALL   ? do { $c |=  COLLAPSE_LEFT; 1 }
               : $pre       &  CHOMP_ALL      ? do { $c |=     CHOMP_LEFT; 1 }
@@ -204,7 +203,7 @@ sub _chomp_token {
               :                                0
               ;
 
-   my $cclose = $close_tok eq DIR_CHOMP_NONE ? MINUS_ONE
+   my $cclose = $close_tok eq DIR_CHOMP_NONE ? RESET_FIELD
               : $close_tok eq DIR_COLLAPSE   ? do { $c |= COLLAPSE_RIGHT; 1 }
               : $post      &  COLLAPSE_ALL   ? do { $c |= COLLAPSE_RIGHT; 1 }
               : $post      &  CHOMP_ALL      ? do { $c |=    CHOMP_RIGHT; 1 }
@@ -351,8 +350,8 @@ Text::Template::Simple::Tokenizer - Tokenizer
 
 =head1 DESCRIPTION
 
-This document describes version C<0.84> of C<Text::Template::Simple::Tokenizer>
-released on C<15 November 2011>.
+This document describes version C<0.85> of C<Text::Template::Simple::Tokenizer>
+released on C<29 January 2012>.
 
 Tokenizes the input with the defined delimiter pair.
 
@@ -384,7 +383,7 @@ Burak Gursoy <burak@cpan.org>.
 
 =head1 COPYRIGHT
 
-Copyright 2004 - 2011 Burak Gursoy. All rights reserved.
+Copyright 2004 - 2012 Burak Gursoy. All rights reserved.
 
 =head1 LICENSE
 

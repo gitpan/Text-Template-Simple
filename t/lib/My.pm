@@ -1,9 +1,8 @@
 package My;
 use strict;
 use warnings;
-use vars qw($VERSION);
 
-$VERSION = '0.2';
+our $VERSION = '0.20';
 
 package Text::Template::Simple::Dummy;
 use strict;

@@ -2,9 +2,8 @@
 package Text::Template::Simple::Base::Parser;
 use strict;
 use warnings;
-use vars qw($VERSION);
 
-$VERSION = '0.84';
+our $VERSION = '0.85';
 
 use Text::Template::Simple::Util      qw(:all);
 use Text::Template::Simple::Constants qw(:all);
@@ -194,7 +193,7 @@ sub _wrapper {
    my($self, $code, $cache_id, $faker, $map_keys, $h) = @_;
    my $buf_hash   = $self->[FAKER_HASH];
    my $wrapper    = EMPTY_STRING;
-   my $inside_inc = $self->[INSIDE_INCLUDE] != MINUS_ONE ? 1 : 0;
+   my $inside_inc = $self->[INSIDE_INCLUDE] != RESET_FIELD ? 1 : 0;
 
    # build the anonymous sub
    if ( ! $inside_inc ) {
@@ -430,8 +429,8 @@ Private module.
 
 =head1 DESCRIPTION
 
-This document describes version C<0.84> of C<Text::Template::Simple::Base::Parser>
-released on C<15 November 2011>.
+This document describes version C<0.85> of C<Text::Template::Simple::Base::Parser>
+released on C<29 January 2012>.
 
 Private module.
 
@@ -464,7 +463,7 @@ Burak Gursoy <burak@cpan.org>.
 
 =head1 COPYRIGHT
 
-Copyright 2004 - 2011 Burak Gursoy. All rights reserved.
+Copyright 2004 - 2012 Burak Gursoy. All rights reserved.
 
 =head1 LICENSE
 

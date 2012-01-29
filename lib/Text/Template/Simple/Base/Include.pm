@@ -2,7 +2,7 @@
 package Text::Template::Simple::Base::Include;
 use strict;
 use warnings;
-use vars qw($VERSION);
+
 use Text::Template::Simple::Util qw(:all);
 use Text::Template::Simple::Constants qw(:all);
 use constant E_IN_MONOLITH =>
@@ -18,7 +18,7 @@ use constant TYPE_MAP   => qw(
    \   REFERENCE
 );
 
-$VERSION = '0.84';
+our $VERSION = '0.85';
 
 sub _include_no_monolith {
    # no monolith eh?
@@ -226,8 +226,8 @@ Private module.
 
 =head1 DESCRIPTION
 
-This document describes version C<0.84> of C<Text::Template::Simple::Base::Include>
-released on C<15 November 2011>.
+This document describes version C<0.85> of C<Text::Template::Simple::Base::Include>
+released on C<29 January 2012>.
 
 Private module.
 
@@ -237,7 +237,7 @@ Burak Gursoy <burak@cpan.org>.
 
 =head1 COPYRIGHT
 
-Copyright 2004 - 2011 Burak Gursoy. All rights reserved.
+Copyright 2004 - 2012 Burak Gursoy. All rights reserved.
 
 =head1 LICENSE
 

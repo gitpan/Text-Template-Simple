@@ -1,19 +1,17 @@
 package Text::Template::Simple::Util;
 use strict;
 use warnings;
-use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-use Text::Template::Simple::Constants qw( :info DIGEST_MODS EMPTY_STRING );
-use Carp qw( croak );
 use base qw( Exporter );
+use Carp qw( croak );
+use Text::Template::Simple::Constants qw(
+   :info
+   DIGEST_MODS
+   EMPTY_STRING
+);
 
-$VERSION = '0.84';
+our $VERSION = '0.85';
 
 BEGIN {
-   if ( IS_WINDOWS ) {
-      local $@; # perl 5.5.4 does not seem to have a Win32.pm
-      my $ok = eval { require Win32; Win32->import; 1; };
-   }
-
    # create a wrapper for binmode() 
    if ( NEW_PERL ) {
       # older perl binmode() does not accept a second param
@@ -25,14 +23,14 @@ BEGIN {
    else {
       *binary_mode = sub { binmode $_[0] };
    }
-   %EXPORT_TAGS = (
+   our %EXPORT_TAGS = (
       macro => [qw( isaref      ishref iscref                  )],
       util  => [qw( binary_mode DIGEST trim rtrim ltrim escape )],
       debug => [qw( fatal       DEBUG  LOG  L                  )],
    );
-   @EXPORT_OK        = map { @{ $EXPORT_TAGS{$_} } } keys %EXPORT_TAGS;
+   our @EXPORT_OK    = map { @{ $EXPORT_TAGS{$_} } } keys %EXPORT_TAGS;
    $EXPORT_TAGS{all} = \@EXPORT_OK;
-   @EXPORT           =  @EXPORT_OK;
+   our @EXPORT       =  @EXPORT_OK;
 }
 
 my $lang = {
@@ -241,8 +239,8 @@ TODO
 
 =head1 DESCRIPTION
 
-This document describes version C<0.84> of C<Text::Template::Simple::Util>
-released on C<15 November 2011>.
+This document describes version C<0.85> of C<Text::Template::Simple::Util>
+released on C<29 January 2012>.
 
 Contains utility functions for Text::Template::Simple.
 
@@ -315,7 +313,7 @@ Burak Gursoy <burak@cpan.org>.
 
 =head1 COPYRIGHT
 
-Copyright 2004 - 2011 Burak Gursoy. All rights reserved.
+Copyright 2004 - 2012 Burak Gursoy. All rights reserved.
 
 =head1 LICENSE
 

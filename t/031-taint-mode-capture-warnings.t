@@ -16,10 +16,7 @@ ok( my $t = Text::Template::Simple->new( @p ), 'Got the object' );
 
 ok( my $got = $t->compile(q/Warn<%= my $r %>this/), 'Compile' );
 
-my $w = 'Warnthis[warning] Use of uninitialized value';
-my $want = LEGACY_PERL
-         ? "$w at <ANON> line 1.\n"
-         : "$w in concatenation (.) or string at <ANON> line 1.\n"
-         ;
+my $w    = 'Warnthis[warning] Use of uninitialized value';
+my $want = "$w in concatenation (.) or string at <ANON> line 1.\n";
 
 is( $got, $want, 'Warning captured' );
