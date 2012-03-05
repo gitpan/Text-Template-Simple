@@ -7,7 +7,7 @@ use Carp qw( croak );
 use Text::Template::Simple::Constants qw(:all);
 use Text::Template::Simple::Util      qw( DEBUG LOG ishref fatal );
 
-our $VERSION = '0.85';
+our $VERSION = '0.86';
 
 my $CACHE = {}; # in-memory template cache
 
@@ -353,7 +353,7 @@ sub populate {
 }
 
 sub _populate_error {
-   my($self, $parsed, $cache_id, $error);
+   my($self, $parsed, $cache_id, $error) = @_;
    my $parent   = $self->[CACHE_PARENT];
    croak $parent->[VERBOSE_ERRORS]
          ?  $parent->_mini_compiler(
@@ -465,8 +465,8 @@ TODO
 
 =head1 DESCRIPTION
 
-This document describes version C<0.85> of C<Text::Template::Simple::Cache>
-released on C<29 January 2012>.
+This document describes version C<0.86> of C<Text::Template::Simple::Cache>
+released on C<5 March 2012>.
 
 Cache manager for C<Text::Template::Simple>.
 

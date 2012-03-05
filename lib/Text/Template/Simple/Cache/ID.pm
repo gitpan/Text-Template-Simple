@@ -6,7 +6,7 @@ use overload q{""} => 'get';
 use Text::Template::Simple::Constants qw( MAX_FL RE_INVALID_CID );
 use Text::Template::Simple::Util      qw( LOG DEBUG DIGEST fatal );
 
-our $VERSION = '0.85';
+our $VERSION = '0.86';
 
 sub new {
    my $class = shift;
@@ -73,8 +73,8 @@ TODO
 
 =head1 DESCRIPTION
 
-This document describes version C<0.85> of C<Text::Template::Simple::Cache::ID>
-released on C<29 January 2012>.
+This document describes version C<0.86> of C<Text::Template::Simple::Cache::ID>
+released on C<5 March 2012>.
 
 TODO
 

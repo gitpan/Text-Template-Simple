@@ -1,5 +1,9 @@
 Revision history for Perl extension Text::Template::Simple.
 
+0.86 Mon Mar  5 22:10:12 2012
+   => Fixed a stupid error where I forgot to unpack @_.
+   => Don't allow expressions as shared variables (won't work anyway)
+
 0.85 Sun Jan 29 01:39:43 2012
    => Fix taint check for users running as root (cpan clients)
    => Drop legacy perl support.

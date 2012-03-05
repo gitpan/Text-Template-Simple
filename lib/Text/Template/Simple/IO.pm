@@ -15,7 +15,7 @@ use Text::Template::Simple::Util qw(
    LOG
 );
 
-our $VERSION = '0.85';
+our $VERSION = '0.86';
 
 sub new {
    my $class = shift;
@@ -205,8 +205,8 @@ TODO
 
 =head1 DESCRIPTION
 
-This document describes version C<0.85> of C<Text::Template::Simple::IO>
-released on C<29 January 2012>.
+This document describes version C<0.86> of C<Text::Template::Simple::IO>
+released on C<5 March 2012>.
 
 TODO
 

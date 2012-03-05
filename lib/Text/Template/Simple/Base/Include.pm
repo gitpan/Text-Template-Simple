@@ -18,7 +18,7 @@ use constant TYPE_MAP   => qw(
    \   REFERENCE
 );
 
-our $VERSION = '0.85';
+our $VERSION = '0.86';
 
 sub _include_no_monolith {
    # no monolith eh?
@@ -193,6 +193,9 @@ sub _interpolate_share_setup {
          fatal('tts.base.include._interpolate.bogus_share', $type_name, $var);
       }
       $var =~ tr/;//d;
+      if ( $var =~ m{ [^a-zA-Z0-9_\$] }xms ) {
+         fatal('tts.base.include._interpolate.bogus_share_notbare', $var);
+      }
       push @buf, $var;
    }
    $inc->{SHARE} = join q{,}, @buf;
@@ -226,8 +229,8 @@ Private module.
 
 =head1 DESCRIPTION
 
-This document describes version C<0.85> of C<Text::Template::Simple::Base::Include>
-released on C<29 January 2012>.
+This document describes version C<0.86> of C<Text::Template::Simple::Base::Include>
+released on C<5 March 2012>.
 
 Private module.
 

@@ -3,7 +3,7 @@ package Text::Template::Simple::Base::Parser;
 use strict;
 use warnings;
 
-our $VERSION = '0.85';
+our $VERSION = '0.86';
 
 use Text::Template::Simple::Util      qw(:all);
 use Text::Template::Simple::Constants qw(:all);
@@ -429,8 +429,8 @@ Private module.
 
 =head1 DESCRIPTION
 
-This document describes version C<0.85> of C<Text::Template::Simple::Base::Parser>
-released on C<29 January 2012>.
+This document describes version C<0.86> of C<Text::Template::Simple::Base::Parser>
+released on C<5 March 2012>.
 
 Private module.
 

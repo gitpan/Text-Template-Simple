@@ -33,7 +33,7 @@ package Text::Template::Simple::Constants;
 use strict;
 use warnings;
 
-our $VERSION = '0.85';
+our $VERSION = '0.86';
 
 my($OID, $DID);
 
@@ -350,7 +350,7 @@ use Text::Template::Simple::Constants qw(
    EMPTY_STRING
 );
 
-our $VERSION = '0.85';
+our $VERSION = '0.86';
 
 BEGIN {
    # create a wrapper for binmode() 
@@ -439,6 +439,7 @@ my $lang = {
                                                     .q{type of %s named "%s". Consider converting it to a SCALAR or try }
                                                     .q{the monolith option to enable automatic variable sharing. }
                                                     .q{But please read the fine manual first},
+      q{tts.base.include._interpolate.bogus_share_notbare} => q{It looks like you've tried to share an expression (%s) instead of a simple variable.},
       q{tts.base.parser._internal.id}             => q{_internal(): id is missing},
       q{tts.base.parser._internal.rv}             => q{_internal(): id is invalid},
       q{tts.base.parser._parse.unbalanced}        => q{%d unbalanced %s delimiter(s) in template %s},
@@ -573,7 +574,7 @@ use warnings;
 
 use Text::Template::Simple::Dummy;
 
-our $VERSION = '0.85';
+our $VERSION = '0.86';
 
 sub compile {
    shift;
@@ -610,7 +611,7 @@ use overload q{""} => 'get';
 use Text::Template::Simple::Constants qw( MAX_FL RE_INVALID_CID );
 use Text::Template::Simple::Util      qw( LOG DEBUG DIGEST fatal );
 
-our $VERSION = '0.85';
+our $VERSION = '0.86';
 
 sub new {
    my $class = shift;
@@ -668,7 +669,7 @@ package Text::Template::Simple::Base::Parser;
 use strict;
 use warnings;
 
-our $VERSION = '0.85';
+our $VERSION = '0.86';
 
 use Text::Template::Simple::Util      qw(:all);
 use Text::Template::Simple::Constants qw(:all);
@@ -1100,7 +1101,7 @@ use constant TYPE_MAP   => qw(
    \   REFERENCE
 );
 
-our $VERSION = '0.85';
+our $VERSION = '0.86';
 
 sub _include_no_monolith {
    # no monolith eh?
@@ -1275,6 +1276,9 @@ sub _interpolate_share_setup {
          fatal('tts.base.include._interpolate.bogus_share', $type_name, $var);
       }
       $var =~ tr/;//d;
+      if ( $var =~ m{ [^a-zA-Z0-9_\$] }xms ) {
+         fatal('tts.base.include._interpolate.bogus_share_notbare', $var);
+      }
       push @buf, $var;
    }
    $inc->{SHARE} = join q{,}, @buf;
@@ -1298,7 +1302,7 @@ use warnings;
 use Text::Template::Simple::Util qw(:all);
 use Text::Template::Simple::Constants qw(:all);
 
-our $VERSION = '0.85';
+our $VERSION = '0.86';
 
 sub _examine {
    my $self   = shift;
@@ -1366,7 +1370,7 @@ use warnings;
 use Text::Template::Simple::Util qw(:all);
 use Text::Template::Simple::Constants qw(:all);
 
-our $VERSION = '0.85';
+our $VERSION = '0.86';
 
 sub _init_compile_opts {
    my $self = shift;
@@ -1491,7 +1495,7 @@ sub _cache_miss {
 
    my %popt   = ( %{ $opt }, cache_id => $cache_id, as_is => $opt->{as_is} );
    my $parsed = $self->_parse( $tmp, \%popt );
-   my $CODE      = $self->cache->populate( $cache_id, $parsed, $opt->{chkmt} );
+   my $CODE   = $self->cache->populate( $cache_id, $parsed, $opt->{chkmt} );
    $self->[HEADER] = $restore_header if $shead;
    return $CODE;
 }
@@ -1555,7 +1559,7 @@ package Text::Template::Simple::Tokenizer;
 use strict;
 use warnings;
 
-our $VERSION = '0.85';
+our $VERSION = '0.86';
 
 use constant CMD_CHAR             => 0;
 use constant CMD_ID               => 1;
@@ -1897,7 +1901,7 @@ use Text::Template::Simple::Util qw(
    LOG
 );
 
-our $VERSION = '0.85';
+our $VERSION = '0.86';
 
 sub new {
    my $class = shift;
@@ -2085,7 +2089,7 @@ use warnings;
 use Text::Template::Simple::Caller;
 use Text::Template::Simple::Util qw();
 
-our $VERSION = '0.85';
+our $VERSION = '0.86';
 
 sub stack { # just a wrapper
    my $opt = shift || {};
@@ -2101,7 +2105,7 @@ use strict;
 use warnings;
 use Text::Template::Simple::Dummy;
 
-our $VERSION = '0.85';
+our $VERSION = '0.86';
 
 sub compile {
     shift;
@@ -2128,7 +2132,7 @@ use constant BITMASK    => 9;
 use Text::Template::Simple::Util      qw( ishref fatal );
 use Text::Template::Simple::Constants qw( EMPTY_STRING );
 
-our $VERSION = '0.85';
+our $VERSION = '0.86';
 
 sub stack {
    my $self    = shift;
@@ -2322,7 +2326,7 @@ use Carp qw( croak );
 use Text::Template::Simple::Constants qw(:all);
 use Text::Template::Simple::Util      qw( DEBUG LOG ishref fatal );
 
-our $VERSION = '0.85';
+our $VERSION = '0.86';
 
 my $CACHE = {}; # in-memory template cache
 
@@ -2668,7 +2672,7 @@ sub populate {
 }
 
 sub _populate_error {
-   my($self, $parsed, $cache_id, $error);
+   my($self, $parsed, $cache_id, $error) = @_;
    my $parent   = $self->[CACHE_PARENT];
    croak $parent->[VERBOSE_ERRORS]
          ?  $parent->_mini_compiler(
@@ -2770,7 +2774,7 @@ package Text::Template::Simple;
 use strict;
 use warnings;
 
-our $VERSION = '0.85';
+our $VERSION = '0.86';
 
 use File::Spec;
 use Text::Template::Simple::Constants qw(:all);
@@ -3024,8 +3028,8 @@ generated with an automatic build tool. If you experience problems
 with this version, please install and use the supported standard
 version. This version is B<NOT SUPPORTED>.
 
-This document describes version C<0.85> of C<Text::Template::Simple>
-released on C<29 January 2012>.
+This document describes version C<0.86> of C<Text::Template::Simple>
+released on C<5 March 2012>.
 
 This is a simple template module. There is no extra template/mini 
 language. Instead, it uses Perl as the template language. Templates

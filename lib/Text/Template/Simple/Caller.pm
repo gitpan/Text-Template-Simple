@@ -17,7 +17,7 @@ use constant BITMASK    => 9;
 use Text::Template::Simple::Util      qw( ishref fatal );
 use Text::Template::Simple::Constants qw( EMPTY_STRING );
 
-our $VERSION = '0.85';
+our $VERSION = '0.86';
 
 sub stack {
    my $self    = shift;
@@ -221,8 +221,8 @@ Text::Template::Simple::Caller - Caller stack tracer
 
 =head1 DESCRIPTION
 
-This document describes version C<0.85> of C<Text::Template::Simple::Caller>
-released on C<29 January 2012>.
+This document describes version C<0.86> of C<Text::Template::Simple::Caller>
+released on C<5 March 2012>.
 
 Caller stack tracer for Text::Template::Simple. This module is not used
 directly inside templates. You must use the global template function

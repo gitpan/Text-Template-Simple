@@ -2,7 +2,7 @@ package Text::Template::Simple::Tokenizer;
 use strict;
 use warnings;
 
-our $VERSION = '0.85';
+our $VERSION = '0.86';
 
 use constant CMD_CHAR             => 0;
 use constant CMD_ID               => 1;
@@ -350,8 +350,8 @@ Text::Template::Simple::Tokenizer - Tokenizer
 
 =head1 DESCRIPTION
 
-This document describes version C<0.85> of C<Text::Template::Simple::Tokenizer>
-released on C<29 January 2012>.
+This document describes version C<0.86> of C<Text::Template::Simple::Tokenizer>
+released on C<5 March 2012>.
 
 Tokenizes the input with the defined delimiter pair.
 

@@ -6,7 +6,7 @@ use warnings;
 use Text::Template::Simple::Util qw(:all);
 use Text::Template::Simple::Constants qw(:all);
 
-our $VERSION = '0.85';
+our $VERSION = '0.86';
 
 sub _examine {
    my $self   = shift;
@@ -80,8 +80,8 @@ Private module.
 
 =head1 DESCRIPTION
 
-This document describes version C<0.85> of C<Text::Template::Simple::Base::Examine>
-released on C<29 January 2012>.
+This document describes version C<0.86> of C<Text::Template::Simple::Base::Examine>
+released on C<5 March 2012>.
 
 Private module.
 

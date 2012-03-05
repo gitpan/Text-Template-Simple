@@ -9,7 +9,7 @@ use Text::Template::Simple::Constants qw(
    EMPTY_STRING
 );
 
-our $VERSION = '0.85';
+our $VERSION = '0.86';
 
 BEGIN {
    # create a wrapper for binmode() 
@@ -98,6 +98,7 @@ my $lang = {
                                                     .q{type of %s named "%s". Consider converting it to a SCALAR or try }
                                                     .q{the monolith option to enable automatic variable sharing. }
                                                     .q{But please read the fine manual first},
+      q{tts.base.include._interpolate.bogus_share_notbare} => q{It looks like you've tried to share an expression (%s) instead of a simple variable.},
       q{tts.base.parser._internal.id}             => q{_internal(): id is missing},
       q{tts.base.parser._internal.rv}             => q{_internal(): id is invalid},
       q{tts.base.parser._parse.unbalanced}        => q{%d unbalanced %s delimiter(s) in template %s},
@@ -239,8 +240,8 @@ TODO
 
 =head1 DESCRIPTION
 
-This document describes version C<0.85> of C<Text::Template::Simple::Util>
-released on C<29 January 2012>.
+This document describes version C<0.86> of C<Text::Template::Simple::Util>
+released on C<5 March 2012>.
 
 Contains utility functions for Text::Template::Simple.
 

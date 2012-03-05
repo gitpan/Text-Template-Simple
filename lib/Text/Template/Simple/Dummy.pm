@@ -10,7 +10,7 @@ use warnings;
 use Text::Template::Simple::Caller;
 use Text::Template::Simple::Util qw();
 
-our $VERSION = '0.85';
+our $VERSION = '0.86';
 
 sub stack { # just a wrapper
    my $opt = shift || {};
@@ -34,8 +34,8 @@ TODO
 
 =head1 DESCRIPTION
 
-This document describes version C<0.85> of C<Text::Template::Simple::Dummy>
-released on C<29 January 2012>.
+This document describes version C<0.86> of C<Text::Template::Simple::Dummy>
+released on C<5 March 2012>.
 
 All templates are compiled into this class.
 
